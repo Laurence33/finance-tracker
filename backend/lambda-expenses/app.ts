@@ -5,9 +5,7 @@ import middy from '@middy/core'
 import cors from '@middy/http-cors'
 import jsonBodyParser from '@middy/http-json-body-parser'
 
-const client = new DynamoDBClient({
-    region: 'ap-southeast-1',
-});
+const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
 
 /**
