@@ -2,10 +2,10 @@ import middy from '@middy/core';
 import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { HttpMethod } from "ft-common-layer/types/HttpMethod";
 import { CreateExpenseRequestBody } from './types/Expense';
-import { Expense } from './models/Expense';
+import { Expense, EXPENSE_PK } from './models/Expense';
 
 const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
@@ -24,6 +24,8 @@ const SINGLE_TABLE_NAME = process.env.DDB_TABLE_NAME || 'SingleTable';
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
         switch (event.httpMethod) {
+            case HttpMethod.GET:
+                return await getExpenses();
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
                 return createExpense(body);
@@ -79,6 +81,24 @@ export async function createExpense(body: CreateExpenseRequestBody) {
         body: JSON.stringify({
             message: 'Expense recorded successfully',
             data: expense.toNormalItem(),
+        }),
+    };
+}
+
+export async function getExpenses() {
+    const command = new QueryCommand({
+        TableName: SINGLE_TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: {
+            ":pk": EXPENSE_PK
+        }
+    });
+    const response = await docClient.send(command);
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            message: 'Expenses retrieved successfully',
+            data: response.Items?.map(item => new Expense(item, true).toNormalItem()),
         }),
     };
 }

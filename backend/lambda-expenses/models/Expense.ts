@@ -1,16 +1,24 @@
 /* eslint-disable prettier/prettier */
 import { CreateExpenseRequestBody } from '../types/Expense';
 
+export const EXPENSE_PK = 'Expense#Expense';
 export class Expense {
-  private PK = 'Expense#Expense';
+  private PK = EXPENSE_PK;
   private timestamp: string;
   private fundSource: string;
   private amount: number;
 
-  constructor(body: CreateExpenseRequestBody) {
-    this.timestamp = body.timestamp.replace('T', ' ');
-    this.fundSource = body.fundSource;
-    this.amount = body.amount;
+  constructor(body: CreateExpenseRequestBody | Record<string, any>, fromDdb = false) {
+    if (!fromDdb) {
+      this.timestamp = body.timestamp.replace('T', ' ');
+      this.fundSource = body.fundSource;
+      this.amount = body.amount;
+    }
+    else {
+      this.timestamp = body.SK;
+      this.fundSource = body.fundSource;
+      this.amount = body.amount;
+    }
   }
 
   toDdbItem() {

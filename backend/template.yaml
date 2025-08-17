@@ -66,6 +66,11 @@ Resources:
           Properties:
             Path: /expenses
             Method: post
+        GetExpenses:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /expenses
+            Method: get
         ExpensesOptions:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
