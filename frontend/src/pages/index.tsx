@@ -11,7 +11,7 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import FormHelperText from '@mui/material/FormHelperText';
+import { HttpClient } from '../utils/httpClient';
 
 type FormDataType = {
   amount: number;
@@ -37,9 +37,16 @@ export default function Home() {
     });
   };
 
-  const submitHandler = (event: React.FormEvent) => {
+  const submitHandler = async (event: React.FormEvent) => {
     event.preventDefault();
     console.log('Form submitted:', formData);
+    try {
+      const response = await HttpClient.post('/expenses', formData);
+      console.log('Response from server:', response);
+      // setFormData(initalFormData);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
   };
 
   return (
