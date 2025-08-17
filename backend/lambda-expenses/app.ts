@@ -1,13 +1,16 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { PutCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { HttpMethod } from "ft-common-layer/types/HttpMethod";
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
 import jsonBodyParser from '@middy/http-json-body-parser';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { HttpMethod } from "ft-common-layer/types/HttpMethod";
+import { CreateExpenseRequestBody } from './types/Expense';
+import { Expense } from './models/Expense';
 
 const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
+const SINGLE_TABLE_NAME = process.env.DDB_TABLE_NAME || 'SingleTable';
 
 /**
  *
@@ -21,53 +24,22 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        if (event.httpMethod === HttpMethod.OPTIONS) {
-            return {
-                statusCode: 204,
-                body: '',
-            };
-        } else if (event.httpMethod === HttpMethod.POST) {
-            const body: any = event.body;
-            // {
-            //     "timestamp": "2025-08-17T10:14:52",
-            //     "amount": 250,
-            //     "fundSource": "cash",
-            // }
-            if (!body?.amount || !body?.fundSource || !body?.amount) {
+        switch (event.httpMethod) {
+            case HttpMethod.POST:
+                return createExpense(event.body);
+            case HttpMethod.OPTIONS:
+                return {
+                    statusCode: 204,
+                    body: '',
+                };
+            default:
                 return {
                     statusCode: 400,
                     body: JSON.stringify({
-                        message: 'Invalid request body. Required fields: amount, fundSource, timestamp.',
+                        message: 'Invalid request method.',
                     }),
                 };
-            }
-
-            const tableName = process.env.DDB_TABLE_NAME || 'SingleTable';
-            const newExpenseItem = {
-                PK: 'Expense#Expense',
-                SK: body.timestamp.replace('T', ' '),
-                fundSource: body.fundSource,
-                amount: body.amount,
-            };
-            const command = new PutCommand({
-                TableName: tableName,
-                Item: newExpenseItem,
-            });
-            await docClient.send(command);
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    message: 'Expense recorded successfully',
-                    data: newExpenseItem,
-                }),
-            };
         }
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'hello world',
-            }),
-        };
     } catch (err) {
         console.log(err);
         return {
@@ -78,6 +50,38 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
         };
     }
 };
+
+export async function createExpense(body: CreateExpenseRequestBody) {
+    // {
+    //     "timestamp": "2025-08-17T10:14:52",
+    //     "amount": 250,
+    //     "fundSource": "cash",
+    // }
+    if (!body?.timestamp || !body?.fundSource || !body?.amount) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                message: 'Invalid request body. Required fields: amount, fundSource, timestamp.',
+            }),
+        };
+    }
+
+    const expense = new Expense(body);
+    const command = new PutCommand({
+        TableName: SINGLE_TABLE_NAME,
+        Item: expense.toDdbItem(),
+    });
+
+    await docClient.send(command);
+
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            message: 'Expense recorded successfully',
+            data: expense.toNormalItem(),
+        }),
+    };
+}
 
 export const lambdaHandler = middy()
     .use(jsonBodyParser())
