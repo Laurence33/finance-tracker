@@ -34,15 +34,15 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             console.log('Received POST request with body:', body);
 
             // {
-            //     "PK": "Expense#Expense",
-            //     "SK": "2025-08-17 10:14:52",
-            //     "amount": 250
+            //     "timestamp": "2025-08-17T10:14:52",
+            //     "amount": 250,
+            //     "fundSource": "cash",
             // }
-            if (!body.PK || !body.SK || !body.amount) {
+            if (!body.amount || !body.fundSource || !body.amount) {
                 return {
                     statusCode: 400,
                     body: JSON.stringify({
-                        message: 'Invalid request body. Required fields: PK, SK, time, amount.',
+                        message: 'Invalid request body. Required fields: amount, fundSource, timestamp.',
                     }),
                     headers: {
                         'Access-Control-Allow-Origin': '*',
@@ -53,10 +53,16 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             }
 
             const tableName = process.env.DDB_TABLE_NAME || "SingleTable";
+            const newExpenseItem = {
+                PK: 'Expense#Expense',
+                SK: body.timestamp.replace('T', ' '),
+                fundSource: body.fundSource,
+                amount: body.amount,
+            };
             console.log('Using DynamoDB table:', tableName);
             const command = new PutCommand({
                 TableName: tableName,
-                Item: body,
+                Item: newExpenseItem,
             });
             const response = await docClient.send(command);
             console.log('DynamoDB response:', response);
@@ -65,7 +71,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 statusCode: 200,
                 body: JSON.stringify({
                     message: 'Expense recorded successfully',
-                    data: body,
+                    data: newExpenseItem,
                 }),
                 headers: {
                     'Access-Control-Allow-Origin': '*',

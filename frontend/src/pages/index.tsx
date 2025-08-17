@@ -21,7 +21,7 @@ type FormDataType = {
 
 const initalFormData: FormDataType = {
   amount: 0,
-  timestamp: TZDate.tz('asia/singapore').toISOString().slice(0, 16), // Default to current time in Singapore timezone
+  timestamp: TZDate.tz('asia/singapore').toISOString().slice(0, 23), // Default to current time in Singapore timezone
   fundSource: '',
 };
 
@@ -43,7 +43,7 @@ export default function Home() {
     try {
       const response = await HttpClient.post('/expenses', formData);
       console.log('Response from server:', response);
-      // setFormData(initalFormData);
+      setFormData(initalFormData);
     } catch (error) {
       console.error('Error submitting form:', error);
     }
