@@ -1,9 +1,10 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import middy from '@middy/core'
-import cors from '@middy/http-cors'
-import jsonBodyParser from '@middy/http-json-body-parser'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { PutCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { HttpMethod } from "ft-common-layer/types/HttpMethod";
+import middy from '@middy/core';
+import cors from '@middy/http-cors';
+import jsonBodyParser from '@middy/http-json-body-parser';
 
 const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
@@ -20,12 +21,12 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        if (event.httpMethod === 'OPTIONS') {
+        if (event.httpMethod === HttpMethod.OPTIONS) {
             return {
                 statusCode: 204,
                 body: '',
             };
-        } else if (event.httpMethod === 'POST') {
+        } else if (event.httpMethod === HttpMethod.POST) {
             const body: any = event.body;
             // {
             //     "timestamp": "2025-08-17T10:14:52",
@@ -41,7 +42,7 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
                 };
             }
 
-            const tableName = process.env.DDB_TABLE_NAME || "SingleTable";
+            const tableName = process.env.DDB_TABLE_NAME || 'SingleTable';
             const newExpenseItem = {
                 PK: 'Expense#Expense',
                 SK: body.timestamp.replace('T', ' '),
@@ -80,9 +81,11 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 
 export const lambdaHandler = middy()
     .use(jsonBodyParser())
-    .use(cors({
-        headers: 'Content-Type',
-        methods: 'POST, OPTIONS',
-        origins: ['http://localhost:3001']
-    }))
+    .use(
+        cors({
+            headers: 'Content-Type',
+            methods: 'POST, OPTIONS',
+            origins: ['http://localhost:3001'],
+        }),
+    )
     .handler(handler);

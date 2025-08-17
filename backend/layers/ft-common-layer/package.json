@@ -1,0 +1,13 @@
+{
+  "name": "ft-common-layer-build",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "clean": "rimraf nodejs/node_modules/ft-common-layer && mkdir -p nodejs/node_modules/ft-common-layer",
+    "build": "npm run clean && tsc -p tsconfig.json && node ./write-manifest.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0"
+  }
+}
