@@ -1,6 +1,5 @@
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
-import jsonBodyParser from '@middy/http-json-body-parser';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
@@ -26,7 +25,8 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
     try {
         switch (event.httpMethod) {
             case HttpMethod.POST:
-                return createExpense(event.body);
+                const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
+                return createExpense(body);
             case HttpMethod.OPTIONS:
                 return {
                     statusCode: 204,
@@ -84,12 +84,11 @@ export async function createExpense(body: CreateExpenseRequestBody) {
 }
 
 export const lambdaHandler = middy()
-    .use(jsonBodyParser())
     .use(
         cors({
             headers: 'Content-Type',
             methods: 'POST, OPTIONS',
-            origins: ['http://localhost:3001'],
+            origins: ['http://localhost:8001'],
         }),
     )
     .handler(handler);
