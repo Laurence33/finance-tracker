@@ -11,20 +11,57 @@ Globals:
     Timeout: 3
 
 Resources:
-  HelloWorldFunction:
+  DDBSingleTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SingleTable
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: LSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: LSI1
+          KeySchema:
+            - AttributeName: PK
+              KeyType: HASH
+            - AttributeName: LSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST # On-demand billing (no need to set RCU/WCU)
+  ExpensesFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello-world/
+      CodeUri: lambda-expenses/
       Handler: app.lambdaHandler
       Runtime: nodejs22.x
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /hello
-            Method: get
+            Path: /expenses
+            Method: post
+        ExpensesOptions:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /expenses
+            Method: options
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -33,6 +70,9 @@ Resources:
         Sourcemap: true
         EntryPoints: 
         - app.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
@@ -41,9 +81,15 @@ Outputs:
   HelloWorldApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
+  ExpensesFunction:
     Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
+    Value: !GetAtt ExpensesFunction.Arn
+  ExpensesFunctionIamRole:
     Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+    Value: !GetAtt ExpensesFunctionRole.Arn
+  DDBSingleTableName:
+    Description: DynamoDB table name
+    Value: !Ref DDBSingleTable
+  DDBSingleTableArn:
+    Description: DynamoDB table ARN
+    Value: !GetAtt DDBSingleTable.Arn
