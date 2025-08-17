@@ -1,6 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import middy from '@middy/core'
+import cors from '@middy/http-cors'
 
 const client = new DynamoDBClient({
     region: 'ap-southeast-1',
@@ -17,16 +19,11 @@ const docClient = DynamoDBDocumentClient.from(client);
  *
  */
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
         if (event.httpMethod === 'OPTIONS') {
             return {
                 statusCode: 204,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                },
                 body: '',
             };
         } else if (event.httpMethod === 'POST') {
@@ -44,11 +41,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                     body: JSON.stringify({
                         message: 'Invalid request body. Required fields: amount, fundSource, timestamp.',
                     }),
-                    headers: {
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                    },
                 };
             }
 
@@ -73,11 +65,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                     message: 'Expense recorded successfully',
                     data: newExpenseItem,
                 }),
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                },
             };
         }
         return {
@@ -85,11 +72,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body: JSON.stringify({
                 message: 'hello world',
             }),
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type',
-            },
         };
     } catch (err) {
         console.log(err);
@@ -101,3 +83,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         };
     }
 };
+
+export const lambdaHandler = middy()
+    .use(cors({
+        headers: 'Content-Type',
+        methods: 'POST, OPTIONS',
+        origins: ['http://localhost:3001']
+    }))
+    .handler(handler);

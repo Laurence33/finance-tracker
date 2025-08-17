@@ -1,9 +1,12 @@
 {
-  "name": "hello_world",
+  "name": "finance_tracker",
   "version": "1.0.0",
   "description": "hello world sample for NodeJS",
   "main": "app.js",
-  "repository": "https://github.com/awslabs/aws-sam-cli/tree/develop/samcli/local/init/templates/cookiecutter-aws-sam-hello-nodejs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awslabs/aws-sam-cli.git#develop"
+  },
   "author": "SAM CLI",
   "license": "MIT",
   "scripts": {
@@ -15,6 +18,8 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.868.0",
     "@aws-sdk/lib-dynamodb": "^3.868.0",
+    "@middy/core": "^6.4.3",
+    "@middy/http-cors": "^6.4.3",
     "esbuild": "^0.14.14"
   },
   "devDependencies": {
@@ -32,5 +37,12 @@
     "ts-jest": "^29.0.5",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.4"
-  }
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "bugs": {
+    "url": "https://github.com/awslabs/aws-sam-cli/issues"
+  },
+  "homepage": "https://github.com/awslabs/aws-sam-cli/tree/develop#readme"
 }
