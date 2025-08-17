@@ -3,6 +3,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import middy from '@middy/core'
 import cors from '@middy/http-cors'
+import jsonBodyParser from '@middy/http-json-body-parser'
 
 const client = new DynamoDBClient({
     region: 'ap-southeast-1',
@@ -27,15 +28,13 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
                 body: '',
             };
         } else if (event.httpMethod === 'POST') {
-            const body = JSON.parse(event.body || '{}');
-            console.log('Received POST request with body:', body);
-
+            const body: any = event.body;
             // {
             //     "timestamp": "2025-08-17T10:14:52",
             //     "amount": 250,
             //     "fundSource": "cash",
             // }
-            if (!body.amount || !body.fundSource || !body.amount) {
+            if (!body?.amount || !body?.fundSource || !body?.amount) {
                 return {
                     statusCode: 400,
                     body: JSON.stringify({
@@ -51,14 +50,11 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
                 fundSource: body.fundSource,
                 amount: body.amount,
             };
-            console.log('Using DynamoDB table:', tableName);
             const command = new PutCommand({
                 TableName: tableName,
                 Item: newExpenseItem,
             });
-            const response = await docClient.send(command);
-            console.log('DynamoDB response:', response);
-
+            await docClient.send(command);
             return {
                 statusCode: 200,
                 body: JSON.stringify({
@@ -78,13 +74,14 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
         return {
             statusCode: 500,
             body: JSON.stringify({
-                message: 'some error happened',
+                message: 'Unexpected error occurred',
             }),
         };
     }
 };
 
 export const lambdaHandler = middy()
+    .use(jsonBodyParser())
     .use(cors({
         headers: 'Content-Type',
         methods: 'POST, OPTIONS',
