@@ -3,7 +3,7 @@ import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { HttpMethod } from "ft-common-layer/types/HttpMethod";
+import { HttpMethod } from 'ft-common-layer/types/HttpMethod';
 import { CreateExpenseRequestBody } from './types/Expense';
 import { Expense, EXPENSE_PK } from './models/Expense';
 
@@ -28,7 +28,7 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
                 return await getExpenses();
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
-                return createExpense(body);
+                return await createExpense(body);
             case HttpMethod.OPTIONS:
                 return {
                     statusCode: 204,
