@@ -66,4 +66,80 @@ export class ExpensesService {
 
     return createSuccessResponse(HttpStatus.NO_CONTENT);
   }
+
+  async updateExpense(timestamp: string, body: Partial<CreateExpenseRequestBody>) {
+    if (!isValidDate(timestamp)) {
+      return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid or missing timestamp');
+    }
+
+    const validationResult = CreateExpenseValidator.partial().safeParse(body);
+    if (!validationResult.success) {
+      const errors = treeifyError(validationResult.error).properties;
+      return createBadRequestResponse(
+        HttpStatus.BAD_REQUEST,
+        'Validation failed',
+        errors
+      );
+    }
+
+    // Fetch existing expense
+    const getCmd = new QueryCommand({
+      TableName: SINGLE_TABLE_NAME,
+      KeyConditionExpression: 'PK = :pk AND SK = :sk',
+      ExpressionAttributeValues: {
+        ':pk': EXPENSE_PK,
+        ':sk': timestamp,
+      },
+    });
+    const getResponse = await ddbDocClient.send(getCmd);
+    if (!getResponse.Items || getResponse.Items.length === 0) {
+      return createBadRequestResponse(HttpStatus.NOT_FOUND, 'Expense not found');
+    }
+
+
+    const existingExpense = new Expense(getResponse.Items[0], true).toNormalItem();
+
+    // If the timestamp is changed in the update, we need to delete the old item
+    if (
+      validationResult.data.timestamp &&
+      validationResult.data.timestamp !== existingExpense.timestamp
+    ) {
+      // need to check if the new timestamp already exists
+      const checkCmd = new QueryCommand({
+        TableName: SINGLE_TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk AND SK = :sk',
+        ExpressionAttributeValues: {
+          ':pk': EXPENSE_PK,
+          ':sk': validationResult.data.timestamp,
+        },
+      });
+      const checkResult = await ddbDocClient.send(checkCmd);
+      if (checkResult.Items && checkResult.Items.length > 0) {
+        return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'An expense with the new timestamp already exists.');
+      }
+
+      const deleteCmd = new DeleteCommand({
+        TableName: SINGLE_TABLE_NAME,
+        Key: {
+          PK: EXPENSE_PK,
+          SK: existingExpense.timestamp,
+        },
+      });
+      await ddbDocClient.send(deleteCmd);
+    }
+
+    const updatedData = { ...existingExpense, ...validationResult.data };
+    const updatedExpense = new Expense(updatedData);
+    const putCmd = new PutCommand({
+      TableName: SINGLE_TABLE_NAME,
+      Item: updatedExpense.toDdbItem(),
+    });
+    await ddbDocClient.send(putCmd);
+
+    return createSuccessResponse(HttpStatus.OK, {
+      message: 'Expense updated successfully',
+      data: updatedExpense.toNormalItem(),
+    });
+  }
+
 }

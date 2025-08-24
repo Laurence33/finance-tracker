@@ -24,14 +24,17 @@ import { ExpensesService } from 'services/ExpensesService';
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
         const expensesService = new ExpensesService();
+        const timestamp = event.queryStringParameters?.timestamp;
         switch (event.httpMethod) {
             case HttpMethod.GET:
                 return await expensesService.getExpenses();
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
                 return await expensesService.createExpense(body);
+            case HttpMethod.PATCH:
+                const putBody = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
+                return await expensesService.updateExpense(timestamp || '', putBody);
             case HttpMethod.DELETE:
-                const timestamp = event.queryStringParameters?.timestamp;
                 return await expensesService.deleteExpense(timestamp);
             case HttpMethod.OPTIONS:
                 return createSuccessResponse(HttpStatus.NO_CONTENT);
