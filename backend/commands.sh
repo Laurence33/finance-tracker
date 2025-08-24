@@ -1,3 +1,6 @@
+# Building the ft-common-layer using WSL shell before doing sam build
+npm run build
+
 # start the AWS SAM local API (API Gateway)
 sam local start-api
 sam local start-api --env-vars env.json
@@ -25,3 +28,6 @@ sam deploy \
 
 # delete the AWS SAM application
 sam delete --stack-name finance-tracker-stack
+
+
+

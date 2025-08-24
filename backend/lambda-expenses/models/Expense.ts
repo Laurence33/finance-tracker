@@ -1,6 +1,5 @@
 /* eslint-disable prettier/prettier */
 import { CreateExpenseRequestBody } from '../types/Expense';
-
 export const EXPENSE_PK = 'Expense#Expense';
 export class Expense {
   private PK = EXPENSE_PK;
