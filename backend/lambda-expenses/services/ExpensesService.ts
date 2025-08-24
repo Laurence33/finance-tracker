@@ -21,6 +21,11 @@ export class ExpensesService {
       );
     }
 
+    const checkExpense = await getExpense(validationResult.data.timestamp);
+    if (checkExpense) {
+      return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'An expense with the same timestamp already exists.');
+    }
+
     const expense = new Expense(validationResult.data);
     const command = new PutCommand({
       TableName: SINGLE_TABLE_NAME,
