@@ -12,6 +12,7 @@
         "forceConsistentCasingInFileNames": true,
         "baseUrl": ".",
         "paths": {
+            "ft-common-layer": ["../layers/ft-common-layer/src"],
             "ft-common-layer/*": ["../layers/ft-common-layer/src/*"]
         }
     },

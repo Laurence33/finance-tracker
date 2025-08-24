@@ -3,7 +3,13 @@ import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { HttpMethod } from 'ft-common-layer/types/HttpMethod';
+import {
+    HttpMethod,
+    HttpStatus,
+    createBadRequestResponse,
+    createSuccessResponse,
+    createServerErrorResponse,
+} from 'ft-common-layer';
 import { CreateExpenseRequestBody } from './types/Expense';
 import { Expense, EXPENSE_PK } from './models/Expense';
 
@@ -30,26 +36,13 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
                 return await createExpense(body);
             case HttpMethod.OPTIONS:
-                return {
-                    statusCode: 204,
-                    body: '',
-                };
+                return createSuccessResponse(HttpStatus.NO_CONTENT);
             default:
-                return {
-                    statusCode: 400,
-                    body: JSON.stringify({
-                        message: 'Invalid request method.',
-                    }),
-                };
+                return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
     } catch (err) {
         console.log(err);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                message: 'Unexpected error occurred',
-            }),
-        };
+        return createServerErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Unexpected error occurred.');
     }
 };
 
@@ -60,12 +53,10 @@ export async function createExpense(body: CreateExpenseRequestBody) {
     //     "fundSource": "cash",
     // }
     if (!body?.timestamp || !body?.fundSource || !body?.amount) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                message: 'Invalid request body. Required fields: amount, fundSource, timestamp.',
-            }),
-        };
+        return createBadRequestResponse(
+            HttpStatus.BAD_REQUEST,
+            'Invalid request body. Required fields: amount, fundSource, timestamp.',
+        );
     }
 
     const expense = new Expense(body);
@@ -76,13 +67,10 @@ export async function createExpense(body: CreateExpenseRequestBody) {
 
     await docClient.send(command);
 
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            message: 'Expense recorded successfully',
-            data: expense.toNormalItem(),
-        }),
-    };
+    return createSuccessResponse(HttpStatus.OK, {
+        message: 'Expense recorded successfully',
+        data: expense.toNormalItem(),
+    });
 }
 
 export async function getExpenses() {
@@ -94,13 +82,10 @@ export async function getExpenses() {
         },
     });
     const response = await docClient.send(command);
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            message: 'Expenses retrieved successfully',
-            data: response.Items?.map((item) => new Expense(item, true).toNormalItem()),
-        }),
-    };
+    return createSuccessResponse(HttpStatus.OK, {
+        message: 'Expenses retrieved successfully',
+        data: response.Items?.map((item) => new Expense(item, true).toNormalItem()),
+    });
 }
 
 export const lambdaHandler = middy()
