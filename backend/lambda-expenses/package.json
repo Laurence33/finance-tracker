@@ -21,7 +21,8 @@
     "@middy/core": "^6.4.3",
     "@middy/http-cors": "^6.4.3",
     "@middy/http-json-body-parser": "^6.4.3",
-    "esbuild": "^0.14.14"
+    "esbuild": "^0.14.14",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@jest/globals": "^29.2.0",

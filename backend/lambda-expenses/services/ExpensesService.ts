@@ -1,28 +1,27 @@
 /* eslint-disable prettier/prettier */
 import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { treeifyError } from 'zod/v4';
 import { createBadRequestResponse, createSuccessResponse, HttpStatus } from 'ft-common-layer';
+import { CreateExpenseValidator } from 'validators/CreateExpenseValidator';
 import { Expense, EXPENSE_PK } from 'models/Expense';
 import { CreateExpenseRequestBody } from 'types/Expense';
 import { ddbDocClient } from './ddb-client';
 
 const SINGLE_TABLE_NAME = process.env.DDB_TABLE_NAME || 'SingleTable';
-
 export class ExpensesService {
   async createExpense(body: CreateExpenseRequestBody) {
-    // {
-    //     "timestamp": "2025-08-17T10:14:52",
-    //     "amount": 250,
-    //     "fundSource": "cash",
-    // }
-    // TODO: move this to a validator middleware
-    if (!body?.timestamp || !body?.fundSource || !body?.amount) {
+
+    const validationResult = CreateExpenseValidator.safeParse(body);
+    if (!validationResult.success) {
+      const errors = treeifyError(validationResult.error).properties;
       return createBadRequestResponse(
         HttpStatus.BAD_REQUEST,
-        'Invalid request body. Required fields: amount, fundSource, timestamp.',
+        'Validation failed',
+        errors
       );
     }
 
-    const expense = new Expense(body);
+    const expense = new Expense(validationResult.data);
     const command = new PutCommand({
       TableName: SINGLE_TABLE_NAME,
       Item: expense.toDdbItem(),
