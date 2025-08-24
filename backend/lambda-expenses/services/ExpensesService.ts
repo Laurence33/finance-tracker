@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
-import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { treeifyError } from 'zod/v4';
-import { createBadRequestResponse, createSuccessResponse, HttpStatus } from 'ft-common-layer';
+import { createBadRequestResponse, createSuccessResponse, HttpStatus, isValidDate } from 'ft-common-layer';
 import { CreateExpenseValidator } from 'validators/CreateExpenseValidator';
 import { Expense, EXPENSE_PK } from 'models/Expense';
 import { CreateExpenseRequestBody } from 'types/Expense';
@@ -48,5 +48,22 @@ export class ExpensesService {
       message: 'Expenses retrieved successfully',
       data: response.Items?.map((item) => new Expense(item, true).toNormalItem()),
     });
+  }
+
+  async deleteExpense(timestamp?: string) {
+    if (!isValidDate(timestamp || '')) {
+      return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid or missing timestamp');
+    }
+
+    const deleteCmd = new DeleteCommand({
+      TableName: SINGLE_TABLE_NAME,
+      Key: {
+        PK: EXPENSE_PK,
+        SK: timestamp,
+      },
+    });
+    await ddbDocClient.send(deleteCmd);
+
+    return createSuccessResponse(HttpStatus.NO_CONTENT);
   }
 }

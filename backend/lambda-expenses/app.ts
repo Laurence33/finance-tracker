@@ -30,6 +30,9 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
                 return await expensesService.createExpense(body);
+            case HttpMethod.DELETE:
+                const timestamp = event.queryStringParameters?.timestamp;
+                return await expensesService.deleteExpense(timestamp);
             case HttpMethod.OPTIONS:
                 return createSuccessResponse(HttpStatus.NO_CONTENT);
             default:
