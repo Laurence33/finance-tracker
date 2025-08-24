@@ -1,8 +1,6 @@
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import {
     HttpMethod,
     HttpStatus,
@@ -12,9 +10,6 @@ import {
 } from 'ft-common-layer';
 import { CreateExpenseRequestBody } from './types/Expense';
 import { ExpensesService } from 'services/ExpensesService';
-
-const client = new DynamoDBClient();
-export const docClient = DynamoDBDocumentClient.from(client);
 
 /**
  *

@@ -1,9 +1,9 @@
 /* eslint-disable prettier/prettier */
-import { docClient } from 'app';
 import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { createBadRequestResponse, createSuccessResponse, HttpStatus } from 'ft-common-layer';
 import { Expense, EXPENSE_PK } from 'models/Expense';
 import { CreateExpenseRequestBody } from 'types/Expense';
+import { ddbDocClient } from './ddb-client';
 
 const SINGLE_TABLE_NAME = process.env.DDB_TABLE_NAME || 'SingleTable';
 
@@ -28,7 +28,7 @@ export class ExpensesService {
       Item: expense.toDdbItem(),
     });
 
-    await docClient.send(command);
+    await ddbDocClient.send(command);
 
     return createSuccessResponse(HttpStatus.OK, {
       message: 'Expense recorded successfully',
@@ -44,7 +44,7 @@ export class ExpensesService {
         ':pk': EXPENSE_PK,
       },
     });
-    const response = await docClient.send(command);
+    const response = await ddbDocClient.send(command);
     return createSuccessResponse(HttpStatus.OK, {
       message: 'Expenses retrieved successfully',
       data: response.Items?.map((item) => new Expense(item, true).toNormalItem()),
