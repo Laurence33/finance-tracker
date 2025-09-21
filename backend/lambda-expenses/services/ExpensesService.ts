@@ -1,13 +1,20 @@
 /* eslint-disable prettier/prettier */
 import { PutCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { treeifyError } from 'zod/v4';
-import { createBadRequestResponse, createSuccessResponse, HttpStatus, isValidDate } from 'ft-common-layer';
+import {
+    createBadRequestResponse,
+    createSuccessResponse,
+    HttpStatus,
+    isValidDate,
+    DDBConstants,
+} from 'ft-common-layer';
 import { CreateExpenseValidator } from 'validators/CreateExpenseValidator';
-import { Expense, EXPENSE_PK } from 'models/Expense';
+import { Expense } from 'models/Expense';
 import { CreateExpenseRequestBody } from 'types/Expense';
 import { ddbDocClient } from './ddb-client';
 
-const SINGLE_TABLE_NAME = process.env.DDB_TABLE_NAME || 'SingleTable';
+const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
+const EXPENSE_PK = DDBConstants.PARTITIONS.EXPENSE;
 export class ExpensesService {
     async createExpense(body: CreateExpenseRequestBody) {
         const validationResult = CreateExpenseValidator.safeParse(body);

@@ -1,7 +1,7 @@
+import { DDBConstants } from 'ft-common-layer';
 import { CreateExpenseRequestBody } from '../types/Expense';
-export const EXPENSE_PK = 'Expense#Expense';
 export class Expense {
-    private PK = EXPENSE_PK;
+    private PK = DDBConstants.PARTITIONS.EXPENSE;
     private timestamp: string;
     private fundSource: string;
     private amount: number;
