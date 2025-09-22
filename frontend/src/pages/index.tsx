@@ -1,20 +1,11 @@
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
-import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import React, { useState, useEffect } from 'react';
-import { TZDate } from '@date-fns/tz';
 import { HttpClient } from '../utils/httpClient';
+import CreateExpenseForm from '@/components/molecules/CreateExpenseForm';
+import { Expense } from '@/types/Expense';
 
 interface SnackBarState {
   open: boolean;
@@ -22,26 +13,7 @@ interface SnackBarState {
   severity: 'success' | 'error' | 'warning' | 'info';
 }
 
-type FormDataType = {
-  amount: number;
-  timestamp: string;
-  fundSource: string;
-};
-
-const initalFormData: FormDataType = {
-  amount: 0,
-  timestamp: TZDate.tz('asia/singapore').toISOString().slice(0, 23), // Default to current time in Singapore timezone
-  fundSource: '',
-};
-
-type Expense = {
-  amount: number;
-  timestamp: string;
-  fundSource: string;
-};
-
 export default function Home() {
-  const [formData, setFormData] = useState<FormDataType>(initalFormData);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -70,41 +42,23 @@ export default function Home() {
     }
   }
 
-  const onChangeHandler = (event: any, field: string) => {
-    let value = event.target.value;
-    if (event.target.type === 'number') {
-      value = parseFloat(event.target.value);
-    }
-    setFormData((prevFormData) => {
-      return {
-        ...prevFormData,
-        [field]: value,
-      };
-    });
-  };
+  function showSuccessSnackBar(message: string) {
+    setSnackBarState((prevState) => ({
+      ...prevState,
+      open: true,
+      message: message,
+      severity: 'success',
+    }));
+  }
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
-    console.log('Form submitted:', formData);
-    try {
-      await HttpClient.post('/expenses', formData);
-      setFormData(initalFormData);
-      fetchExpenses();
-      setSnackBarState((prevState) => ({
-        ...prevState,
-        open: true,
-        message: 'Expense added successfully!',
-        severity: 'success',
-      }));
-    } catch (error: any) {
-      setSnackBarState((prevState) => ({
-        ...prevState,
-        open: true,
-        message: error.message,
-        severity: 'error',
-      }));
-    }
-  };
+  function showErrorSnackBar(message: string) {
+    setSnackBarState((prevState) => ({
+      ...prevState,
+      open: true,
+      message: message,
+      severity: 'error',
+    }));
+  }
 
   const handleSnackBarClose = () => {
     setSnackBarState({ ...snackBarState, open: false });
@@ -137,54 +91,11 @@ export default function Home() {
         alignItems="center"
         sx={{ mt: 5 }}
       >
-        <form onSubmit={submitHandler}>
-          <Box component="div" sx={{ p: 2, maxWidth: 280 }}>
-            <FormControl sx={{ mb: 2, minWidth: 120, width: '100%' }}>
-              <InputLabel id="fund-source-label">Fund Source</InputLabel>
-              <Select
-                required
-                labelId="fund-source-label"
-                id="fund-source-select-helper"
-                value={formData.fundSource}
-                label="Fund Source"
-                onChange={(event) => onChangeHandler(event, 'fundSource')}
-              >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                <MenuItem value={'cash'}>Cash</MenuItem>
-                <MenuItem value={'bank'}>Bank</MenuItem>
-                <MenuItem value={'gcash'}>GCash</MenuItem>
-              </Select>
-            </FormControl>
-            <Box component="div" sx={{ mb: 2 }}>
-              <TextField
-                sx={{ width: '100%' }}
-                required
-                id="outlined-basic"
-                label="Amount"
-                variant="outlined"
-                type="number"
-                value={formData.amount}
-                onChange={(event) => onChangeHandler(event, 'amount')}
-              />
-            </Box>
-            <Box component="div" sx={{ mb: 2 }}>
-              <TextField
-                required
-                id="outlined-basic"
-                label="Timestamp"
-                variant="outlined"
-                type="datetime-local"
-                value={formData.timestamp}
-                onChange={(event) => onChangeHandler(event, 'timestamp')}
-              />
-            </Box>
-            <Button type="submit" variant="contained">
-              Submit
-            </Button>
-          </Box>
-        </form>
+        <CreateExpenseForm
+          fetchExpenses={fetchExpenses}
+          showErrorSnackBar={showErrorSnackBar}
+          showSuccessSnackBar={showSuccessSnackBar}
+        />
 
         <Box
           component="div"
