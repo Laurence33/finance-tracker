@@ -71,10 +71,14 @@ export default function Home() {
   }
 
   const onChangeHandler = (event: any, field: string) => {
+    let value = event.target.value;
+    if (event.target.type === 'number') {
+      value = parseFloat(event.target.value);
+    }
     setFormData((prevFormData) => {
       return {
         ...prevFormData,
-        [field]: event.target.value,
+        [field]: value,
       };
     });
   };
