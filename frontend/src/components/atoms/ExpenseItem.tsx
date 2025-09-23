@@ -19,12 +19,10 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
       </Box>
       <Box
         sx={{
-          borderLeft: '1px solid #ccc',
           boxShadow: '-2px 0 12px -6px rgba(0,0,0,0.8)',
         }}
         paddingLeft=".5rem"
         paddingRight=".25rem"
-        bgcolor={'grey.100'}
         borderRadius={'4px'}
       >
         <Stack
