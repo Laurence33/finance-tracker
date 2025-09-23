@@ -1,22 +1,36 @@
 import { Expense } from '@/types/Expense';
 import { Box, Divider, IconButton, Stack } from '@mui/material';
-import { MdDelete } from 'react-icons/md';
-import { MdEdit } from 'react-icons/md';
+import { MdDelete, MdEdit } from 'react-icons/md';
+import ExpenseIconRenderer from './ExpenseIcon';
 
 export default function ExpenseItem({ expense }: { expense: Expense }) {
   return (
     <Stack
       direction="row"
       justifyContent={'space-between'}
-      spacing={0.5}
       key={expense.timestamp}
       sx={{ border: '1px solid #ccc', borderRadius: '4px' }}
     >
-      <Box sx={{ p: 1 }}>
-        <div>{expense.fundSource}</div>
-        <div>₱{expense.amount}</div>
-        <div>{expense.timestamp}</div>
-      </Box>
+      <Stack direction="row">
+        <Stack
+          direction="column"
+          alignItems={'center'}
+          justifyContent={'center'}
+          padding={'.5rem'}
+        >
+          <ExpenseIconRenderer fundSource={expense.fundSource} />
+        </Stack>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+          }}
+        >
+          <Box>₱{expense.amount}</Box>
+          <Box sx={{ color: '#636363ff' }}>{expense.timestamp}</Box>
+        </Box>
+      </Stack>
       <Box
         sx={{
           boxShadow: '-2px 0 12px -6px rgba(0,0,0,0.8)',

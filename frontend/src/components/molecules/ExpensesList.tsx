@@ -6,7 +6,7 @@ export default function ExpenseList({ expenses }: { expenses: Expense[] }) {
   return (
     <Box
       component="div"
-      sx={{ ml: 6, p: 2, width: 300, height: 280, overflow: 'scroll' }}
+      sx={{ ml: 6, p: 2, width: 340, height: 280, overflow: 'scroll' }}
     >
       <Stack spacing={1}>
         {expenses.map((expense) => (
