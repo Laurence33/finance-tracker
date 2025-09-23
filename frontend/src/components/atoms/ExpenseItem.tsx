@@ -41,16 +41,6 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
           <IconButton color="error" aria-label="delete expense">
             <MdDelete fontSize={'1.25rem'} />
           </IconButton>
-          {/* <Stack
-            padding={'.25rem'}
-            bgcolor={'primary.main'}
-            borderRadius={'4px'}
-          >
-            <MdEdit fontSize={'1.25rem'} color="white" />
-          </Stack> */}
-          {/* <Stack padding={'.25rem'} bgcolor={'error.main'} borderRadius={'4px'}>
-            <MdDelete fontSize={'1.25rem'} color={'white'} />
-          </Stack> */}
         </Stack>
       </Box>
     </Stack>
