@@ -14,7 +14,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
     >
       <Box sx={{ p: 1 }}>
         <div>{expense.fundSource}</div>
-        <div>${expense.amount}</div>
+        <div>₱{expense.amount}</div>
         <div>{expense.timestamp}</div>
       </Box>
       <Box
