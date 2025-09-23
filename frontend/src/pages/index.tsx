@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { HttpClient } from '../utils/httpClient';
 import CreateExpenseForm from '@/components/molecules/CreateExpenseForm';
 import { Expense } from '@/types/Expense';
+import ExpenseList from '@/components/molecules/ExpensesList';
 
 interface SnackBarState {
   open: boolean;
@@ -85,6 +86,7 @@ export default function Home() {
           {snackBarState.message}
         </Alert>
       </Snackbar>
+
       <Box
         display="flex"
         justifyContent="center"
@@ -97,23 +99,7 @@ export default function Home() {
           showSuccessSnackBar={showSuccessSnackBar}
         />
 
-        <Box
-          component="div"
-          sx={{ ml: 6, p: 2, width: 280, height: 280, overflow: 'scroll' }}
-        >
-          <Stack spacing={1}>
-            {expenses.map((expense) => (
-              <Box
-                key={expense.timestamp}
-                sx={{ p: 1, border: '1px solid #ccc', borderRadius: '4px' }}
-              >
-                <div>{expense.fundSource}</div>
-                <div>${expense.amount}</div>
-                <div>{expense.timestamp}</div>
-              </Box>
-            ))}
-          </Stack>
-        </Box>
+        <ExpenseList expenses={expenses} />
       </Box>
     </>
   );
