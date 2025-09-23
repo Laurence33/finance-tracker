@@ -1,5 +1,5 @@
 import { Expense } from '@/types/Expense';
-import { Box, IconButton, Stack } from '@mui/material';
+import { Box, Divider, IconButton, Stack } from '@mui/material';
 import { MdDelete } from 'react-icons/md';
 import { MdEdit } from 'react-icons/md';
 
@@ -33,6 +33,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
           <IconButton color="primary" aria-label="edit expense" sx={{}}>
             <MdEdit fontSize={'1.25rem'} />
           </IconButton>
+          <Divider flexItem />
           <IconButton color="error" aria-label="delete expense">
             <MdDelete fontSize={'1.25rem'} />
           </IconButton>
