@@ -1,15 +1,53 @@
 import { Expense } from '@/types/Expense';
-import { Box } from '@mui/material';
+import { Box, IconButton, Stack } from '@mui/material';
+import { MdDelete } from 'react-icons/md';
+import { MdEdit } from 'react-icons/md';
 
 export default function ExpenseItem({ expense }: { expense: Expense }) {
   return (
-    <Box
+    <Stack
+      direction="row"
+      justifyContent={'space-between'}
+      spacing={0.5}
       key={expense.timestamp}
-      sx={{ p: 1, border: '1px solid #ccc', borderRadius: '4px' }}
+      sx={{ border: '1px solid #ccc', borderRadius: '4px' }}
     >
-      <div>{expense.fundSource}</div>
-      <div>${expense.amount}</div>
-      <div>{expense.timestamp}</div>
-    </Box>
+      <Box sx={{ p: 1 }}>
+        <div>{expense.fundSource}</div>
+        <div>${expense.amount}</div>
+        <div>{expense.timestamp}</div>
+      </Box>
+      <Box
+        paddingLeft=".5rem"
+        paddingRight=".25rem"
+        bgcolor={'grey.100'}
+        borderRadius={'4px'}
+      >
+        <Stack
+          spacing={0.125}
+          direction="column"
+          alignItems={'center'}
+          justifyContent={'space-around'}
+          justifyItems={'center'}
+        >
+          <IconButton color="primary" aria-label="edit expense" sx={{}}>
+            <MdEdit fontSize={'1.25rem'} />
+          </IconButton>
+          <IconButton color="error" aria-label="delete expense">
+            <MdDelete fontSize={'1.25rem'} />
+          </IconButton>
+          {/* <Stack
+            padding={'.25rem'}
+            bgcolor={'primary.main'}
+            borderRadius={'4px'}
+          >
+            <MdEdit fontSize={'1.25rem'} color="white" />
+          </Stack> */}
+          {/* <Stack padding={'.25rem'} bgcolor={'error.main'} borderRadius={'4px'}>
+            <MdDelete fontSize={'1.25rem'} color={'white'} />
+          </Stack> */}
+        </Stack>
+      </Box>
+    </Stack>
   );
 }
