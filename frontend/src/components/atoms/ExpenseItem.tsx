@@ -27,7 +27,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
             justifyContent: 'center',
           }}
         >
-          <Box>₱{expense.amount}</Box>
+          <Box fontWeight={700}>₱{expense.amount}</Box>
           <Box sx={{ color: '#636363ff' }}>{expense.timestamp}</Box>
         </Box>
       </Stack>
