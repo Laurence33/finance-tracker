@@ -1,3 +1,4 @@
+import { AppContext } from '@/context/AppContext';
 import { HttpClient } from '@/utils/httpClient';
 import { TZDate } from '@date-fns/tz';
 import {
@@ -10,7 +11,7 @@ import {
   Button,
   Stack,
 } from '@mui/material';
-import { useState } from 'react';
+import { use, useState } from 'react';
 
 type CreateExpenseFormDataType = {
   amount: number;
@@ -24,15 +25,9 @@ const initialFormData: CreateExpenseFormDataType = {
   fundSource: '',
 };
 
-export default function CreateExpenseForm({
-  fetchExpenses,
-  showSuccessSnackBar,
-  showErrorSnackBar,
-}: {
-  fetchExpenses: () => void;
-  showSuccessSnackBar: (message: string) => void;
-  showErrorSnackBar: (message: string) => void;
-}) {
+export default function CreateExpenseForm() {
+  const { showErrorSnackBar, showSuccessSnackBar, fetchExpenses } =
+    use(AppContext);
   const [formData, setFormData] =
     useState<CreateExpenseFormDataType>(initialFormData);
 
@@ -50,7 +45,6 @@ export default function CreateExpenseForm({
   };
   const submitHandler = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log('Form submitted:', formData);
     try {
       await HttpClient.post('/expenses', formData);
       setFormData({
