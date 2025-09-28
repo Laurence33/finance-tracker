@@ -37,26 +37,6 @@ export default function Home() {
 
   return (
     <>
-      <Snackbar
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-        open={snackBarState.open}
-        onClose={handleSnackBarClose}
-        // message={snackBarState.message}
-        autoHideDuration={5000}
-      >
-        <Alert
-          onClose={handleSnackBarClose}
-          severity={snackBarState.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackBarState.message}
-        </Alert>
-      </Snackbar>
-
       <Box
         display="flex"
         justifyContent="center"

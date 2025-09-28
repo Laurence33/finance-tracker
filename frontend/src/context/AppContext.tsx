@@ -1,4 +1,5 @@
 import { SnackBarState } from '@/types/SnackBarState';
+import { Alert, Snackbar } from '@mui/material';
 import { createContext, useState } from 'react';
 
 interface AppContextType {
@@ -59,5 +60,28 @@ export default function AppContextProvider({
     handleSnackBarClose,
   };
 
-  return <AppContext value={contextValue}>{children}</AppContext>;
+  return (
+    <AppContext value={contextValue}>
+      <Snackbar
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        open={snackBarState.open}
+        onClose={handleSnackBarClose}
+        // message={snackBarState.message}
+        autoHideDuration={5000}
+      >
+        <Alert
+          onClose={handleSnackBarClose}
+          severity={snackBarState.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackBarState.message}
+        </Alert>
+      </Snackbar>
+      {children}
+    </AppContext>
+  );
 }
