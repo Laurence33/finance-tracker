@@ -52,6 +52,7 @@ export class ExpensesService {
             ExpressionAttributeValues: {
                 ':pk': EXPENSE_PK,
             },
+            ScanIndexForward: false, // order by SK descending (latest first)
         });
         const response = await ddbDocClient.send(command);
         return createSuccessResponse(HttpStatus.OK, {
