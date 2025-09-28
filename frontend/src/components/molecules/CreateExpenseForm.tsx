@@ -35,6 +35,7 @@ export default function CreateExpenseForm() {
     let value = event.target.value;
     if (event.target.type === 'number') {
       value = parseFloat(event.target.value);
+      if (isNaN(value)) value = '';
     }
     setFormData((prevFormData) => {
       return {
