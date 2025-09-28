@@ -4,10 +4,7 @@ import ExpenseItem from '../atoms/ExpenseItem';
 
 export default function ExpenseList({ expenses }: { expenses: Expense[] }) {
   return (
-    <Box
-      component="div"
-      sx={{ ml: 6, p: 2, height: '85vh', overflow: 'scroll' }}
-    >
+    <Box component="div" sx={{ height: '85vh', overflow: 'scroll' }}>
       <Stack spacing={1}>
         {expenses.map((expense) => (
           <ExpenseItem key={expense.timestamp} expense={expense} />

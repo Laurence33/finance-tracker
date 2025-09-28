@@ -27,7 +27,7 @@ export default function Home() {
   return (
     <>
       <ExpenseDialog />
-      <Box sx={{ mt: 5, px: 2, maxWidth: '100%' }}>
+      <Box sx={{ mt: 5, px: 6, maxWidth: '100%' }}>
         <Stack direction="row" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography variant="h6" gutterBottom>
             Total Expenses: {totalExpenses}
