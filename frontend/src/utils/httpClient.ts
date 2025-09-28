@@ -50,6 +50,15 @@ export class HttpClient {
     }
   }
 
+  static async patch<T>(url: string, data: any): Promise<T | void> {
+    try {
+      const response = await httpClient.patch<T>(url, data);
+      return response.data;
+    } catch (error: any) {
+      return handleHttpException(error);
+    }
+  }
+
   static async delete<T>(url: string): Promise<T | void> {
     try {
       const response = await httpClient.delete<T>(url);
