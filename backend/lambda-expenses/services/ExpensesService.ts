@@ -55,9 +55,14 @@ export class ExpensesService {
             ScanIndexForward: false, // order by SK descending (latest first)
         });
         const response = await ddbDocClient.send(command);
+        const expenses = response.Items?.map((item) => new Expense(item).toNormalItem());
+        const totalExpenses = expenses?.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
         return createSuccessResponse(HttpStatus.OK, {
             message: 'Expenses retrieved successfully',
-            data: response.Items?.map((item) => new Expense(item).toNormalItem()),
+            data: {
+                expenses,
+                totalExpenses,
+            },
         });
     }
 

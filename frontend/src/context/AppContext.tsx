@@ -6,6 +6,8 @@ import { createContext, useState } from 'react';
 
 interface AppContextType {
   expenses: Expense[];
+  totalExpenses: number;
+  setTotalExpenses: (total: number) => void;
   selectedExpense: Expense | null;
   setSelectedExpense: (expense: Expense | null) => void;
   fetchExpenses: () => Promise<void>;
@@ -21,6 +23,8 @@ interface AppContextType {
 
 export const AppContext = createContext<AppContextType>({
   expenses: [],
+  totalExpenses: 0,
+  setTotalExpenses: () => {},
   selectedExpense: null,
   setSelectedExpense: () => {},
   fetchExpenses: async () => {},
@@ -44,6 +48,7 @@ export default function AppContextProvider({
   children: React.ReactNode;
 }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formAction, setFormAction] = useState<'create' | 'update'>('create');
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
@@ -58,7 +63,8 @@ export default function AppContextProvider({
     try {
       const response = await HttpClient.get<any>('/expenses');
       if (response && response.data) {
-        setExpenses(response.data);
+        setExpenses(response.data.expenses || []);
+        setTotalExpenses(response.data.totalExpenses || 0);
       }
     } catch (error: any) {
       console.error('Error fetching expenses:', error);
@@ -90,6 +96,8 @@ export default function AppContextProvider({
 
   const contextValue = {
     expenses,
+    totalExpenses,
+    setTotalExpenses,
     selectedExpense,
     setSelectedExpense,
     formAction,
