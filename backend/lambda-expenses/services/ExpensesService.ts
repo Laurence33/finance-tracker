@@ -45,12 +45,13 @@ export class ExpensesService {
         });
     }
 
-    async getExpenses() {
+    async getExpenses(month: string) {
         const command = new QueryCommand({
             TableName: SINGLE_TABLE_NAME,
-            KeyConditionExpression: 'PK = :pk',
+            KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk_prefix)',
             ExpressionAttributeValues: {
                 ':pk': EXPENSE_PK,
+                ':sk_prefix': month,
             },
             ScanIndexForward: false, // order by SK descending (latest first)
         });

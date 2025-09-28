@@ -27,7 +27,8 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
         const timestamp = event.queryStringParameters?.timestamp;
         switch (event.httpMethod) {
             case HttpMethod.GET:
-                return await expensesService.getExpenses();
+                const month = event.queryStringParameters?.month || new Date().toISOString().slice(0, 7);
+                return await expensesService.getExpenses(month);
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
                 return await expensesService.createExpense(body);
