@@ -37,7 +37,6 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
   };
 
   const deleteClickHandler = async () => {
-    console.log('Delete clicked for expense:', expense);
     handleClickOpen();
   };
 
