@@ -7,12 +7,7 @@ import { HttpClient } from '../utils/httpClient';
 import CreateExpenseForm from '@/components/molecules/CreateExpenseForm';
 import { Expense } from '@/types/Expense';
 import ExpenseList from '@/components/molecules/ExpensesList';
-
-interface SnackBarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'warning' | 'info';
-}
+import { SnackBarState } from '@/types/SnackBarState';
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
