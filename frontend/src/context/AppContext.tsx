@@ -1,8 +1,12 @@
+import { Expense } from '@/types/Expense';
 import { SnackBarState } from '@/types/SnackBarState';
+import { HttpClient } from '@/utils/httpClient';
 import { Alert, Snackbar } from '@mui/material';
 import { createContext, useState } from 'react';
 
 interface AppContextType {
+  expenses: Expense[];
+  fetchExpenses: () => Promise<void>;
   snackBarState: SnackBarState;
   showSuccessSnackBar: (message: string) => void;
   showErrorSnackBar: (message: string) => void;
@@ -10,6 +14,8 @@ interface AppContextType {
 }
 
 export const AppContext = createContext<AppContextType>({
+  expenses: [],
+  fetchExpenses: async () => {},
   snackBarState: {
     open: false,
     message: '',
@@ -25,11 +31,25 @@ export default function AppContextProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
     message: '',
     severity: 'success',
   });
+
+  async function fetchExpenses() {
+    try {
+      const response = await HttpClient.get<any>('/expenses');
+      if (response && response.data) {
+        setExpenses(response.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching expenses:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
 
   function showSuccessSnackBar(message: string) {
     setSnackBarState((prevState) => ({
@@ -54,6 +74,8 @@ export default function AppContextProvider({
   };
 
   const contextValue = {
+    expenses,
+    fetchExpenses,
     snackBarState,
     showSuccessSnackBar,
     showErrorSnackBar,

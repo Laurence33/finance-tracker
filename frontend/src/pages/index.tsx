@@ -7,24 +7,12 @@ import ExpenseList from '@/components/molecules/ExpensesList';
 import { AppContext } from '@/context/AppContext';
 
 export default function Home() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const { showErrorSnackBar, showSuccessSnackBar } = use(AppContext);
+  const { showErrorSnackBar, showSuccessSnackBar, expenses, fetchExpenses } =
+    use(AppContext);
 
   useEffect(() => {
     fetchExpenses();
   }, []);
-
-  async function fetchExpenses() {
-    try {
-      const response = await HttpClient.get<any>('/expenses');
-      if (response && response.data) {
-        setExpenses(response.data);
-      }
-    } catch (error: any) {
-      console.error('Error fetching expenses:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
 
   return (
     <>
