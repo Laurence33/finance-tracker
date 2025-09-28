@@ -8,6 +8,7 @@ import {
   MenuItem,
   TextField,
   Button,
+  Stack,
 } from '@mui/material';
 import { useState } from 'react';
 
@@ -62,7 +63,7 @@ export default function CreateExpenseForm({
 
   return (
     <form onSubmit={submitHandler}>
-      <Box component="div" sx={{ p: 2, maxWidth: 280 }}>
+      <Box component="div" sx={{ maxWidth: 340 }}>
         <FormControl sx={{ mb: 2, minWidth: 120, width: '100%' }}>
           <InputLabel id="fund-source-label">Fund Source</InputLabel>
           <Select
@@ -100,13 +101,16 @@ export default function CreateExpenseForm({
             label="Timestamp"
             variant="outlined"
             type="datetime-local"
+            fullWidth={true}
             value={formData.timestamp}
             onChange={(event) => onChangeHandler(event, 'timestamp')}
           />
         </Box>
-        <Button type="submit" variant="contained">
-          Submit
-        </Button>
+        <Stack direction="row" justifyContent="end" sx={{ mt: 3 }}>
+          <Button type="submit" variant="contained">
+            Submit
+          </Button>
+        </Stack>
       </Box>
     </form>
   );
