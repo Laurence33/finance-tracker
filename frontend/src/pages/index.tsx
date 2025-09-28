@@ -2,20 +2,22 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { HttpClient } from '../utils/httpClient';
 import CreateExpenseForm from '@/components/molecules/CreateExpenseForm';
 import { Expense } from '@/types/Expense';
 import ExpenseList from '@/components/molecules/ExpensesList';
 import { SnackBarState } from '@/types/SnackBarState';
+import { AppContext } from '@/context/AppContext';
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [snackBarState, setSnackBarState] = useState<SnackBarState>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+  const {
+    snackBarState,
+    showErrorSnackBar,
+    showSuccessSnackBar,
+    handleSnackBarClose,
+  } = use(AppContext);
 
   useEffect(() => {
     fetchExpenses();
@@ -29,36 +31,9 @@ export default function Home() {
       }
     } catch (error: any) {
       console.error('Error fetching expenses:', error);
-      setSnackBarState((prevState) => ({
-        ...prevState,
-        open: true,
-        message: error.message,
-        severity: 'error',
-      }));
+      showErrorSnackBar(error.message);
     }
   }
-
-  function showSuccessSnackBar(message: string) {
-    setSnackBarState((prevState) => ({
-      ...prevState,
-      open: true,
-      message: message,
-      severity: 'success',
-    }));
-  }
-
-  function showErrorSnackBar(message: string) {
-    setSnackBarState((prevState) => ({
-      ...prevState,
-      open: true,
-      message: message,
-      severity: 'error',
-    }));
-  }
-
-  const handleSnackBarClose = () => {
-    setSnackBarState({ ...snackBarState, open: false });
-  };
 
   return (
     <>
