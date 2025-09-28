@@ -51,7 +51,7 @@ export const lambdaHandler = middy()
     .use(
         cors({
             headers: 'Content-Type',
-            methods: 'POST, OPTIONS, DELETE',
+            methods: 'POST, OPTIONS, DELETE, PATCH',
             origins: ['http://localhost:8001'], // TODO: maybe put this to the env variables
         }),
     )
