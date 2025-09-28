@@ -1,6 +1,6 @@
 import { AppContext } from '@/context/AppContext';
+import { currentTimestampForInput } from '@/utils/date-functions';
 import { HttpClient } from '@/utils/httpClient';
-import { TZDate } from '@date-fns/tz';
 import {
   Box,
   FormControl,
@@ -21,7 +21,7 @@ type CreateExpenseFormDataType = {
 
 const initialFormData: CreateExpenseFormDataType = {
   amount: 0,
-  timestamp: TZDate.tz('asia/singapore').toISOString().slice(0, 23), // Default to current time in Singapore timezone
+  timestamp: currentTimestampForInput(),
   fundSource: '',
 };
 
@@ -49,7 +49,7 @@ export default function CreateExpenseForm() {
       await HttpClient.post('/expenses', formData);
       setFormData({
         ...initialFormData,
-        timestamp: TZDate.tz('asia/singapore').toISOString().slice(0, 23),
+        timestamp: currentTimestampForInput(),
       });
       fetchExpenses();
       showSuccessSnackBar('Expense added successfully!');
