@@ -53,7 +53,10 @@ export default function CreateExpenseForm({
     console.log('Form submitted:', formData);
     try {
       await HttpClient.post('/expenses', formData);
-      setFormData(initialFormData);
+      setFormData({
+        ...initialFormData,
+        timestamp: TZDate.tz('asia/singapore').toISOString().slice(0, 23),
+      });
       fetchExpenses();
       showSuccessSnackBar('Expense added successfully!');
     } catch (error: any) {
