@@ -18,8 +18,14 @@ import { HttpClient } from '@/utils/httpClient';
 import { AppContext } from '@/context/AppContext';
 
 export default function ExpenseItem({ expense }: { expense: Expense }) {
-  const { fetchExpenses, showSuccessSnackBar, showErrorSnackBar } =
-    use(AppContext);
+  const {
+    fetchExpenses,
+    showSuccessSnackBar,
+    showErrorSnackBar,
+    setSelectedExpense,
+    setFormAction,
+    setExpenseFormOpen,
+  } = use(AppContext);
   const [open, setOpen] = useState(false);
 
   const handleClickOpen = () => {
@@ -44,6 +50,12 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
       console.error('Error deleting expense:', error);
       showErrorSnackBar(error.message);
     }
+  };
+
+  const editClickHandler = () => {
+    setSelectedExpense(expense);
+    setFormAction('update');
+    setExpenseFormOpen(true);
   };
 
   return (
@@ -112,7 +124,11 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
             justifyContent={'space-around'}
             justifyItems={'center'}
           >
-            <IconButton color="primary" aria-label="edit expense" sx={{}}>
+            <IconButton
+              color="primary"
+              aria-label="edit expense"
+              onClick={editClickHandler}
+            >
               <MdEdit fontSize={'1.25rem'} />
             </IconButton>
             <Divider flexItem />

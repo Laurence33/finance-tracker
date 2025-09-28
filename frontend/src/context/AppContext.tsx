@@ -6,15 +6,23 @@ import { createContext, useState } from 'react';
 
 interface AppContextType {
   expenses: Expense[];
+  selectedExpense: Expense | null;
+  setSelectedExpense: (expense: Expense | null) => void;
   fetchExpenses: () => Promise<void>;
   snackBarState: SnackBarState;
   showSuccessSnackBar: (message: string) => void;
   showErrorSnackBar: (message: string) => void;
   handleSnackBarClose: () => void;
+  formAction: 'create' | 'update';
+  setFormAction: (action: 'create' | 'update') => void;
+  expenseFormOpen: boolean;
+  setExpenseFormOpen: (open: boolean) => void;
 }
 
 export const AppContext = createContext<AppContextType>({
   expenses: [],
+  selectedExpense: null,
+  setSelectedExpense: () => {},
   fetchExpenses: async () => {},
   snackBarState: {
     open: false,
@@ -24,6 +32,10 @@ export const AppContext = createContext<AppContextType>({
   showSuccessSnackBar: () => {},
   showErrorSnackBar: () => {},
   handleSnackBarClose: () => {},
+  formAction: 'create',
+  setFormAction: () => {},
+  expenseFormOpen: false,
+  setExpenseFormOpen: () => {},
 });
 
 export default function AppContextProvider({
@@ -32,6 +44,9 @@ export default function AppContextProvider({
   children: React.ReactNode;
 }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [formAction, setFormAction] = useState<'create' | 'update'>('create');
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -75,6 +90,12 @@ export default function AppContextProvider({
 
   const contextValue = {
     expenses,
+    selectedExpense,
+    setSelectedExpense,
+    formAction,
+    setFormAction,
+    expenseFormOpen,
+    setExpenseFormOpen,
     fetchExpenses,
     snackBarState,
     showSuccessSnackBar,
