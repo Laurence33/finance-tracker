@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { treeifyError } from 'zod';
 import {
     createSuccessResponse,
@@ -12,7 +12,8 @@ import { FundSource } from 'models/FundSource';
 import { CreateFundSourceValidator } from 'validators/CreateFundSourceValidator';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
-const EXPENSE_PK = DDBConstants.PARTITIONS.FUND_SOURCE;
+const FUND_SOURCE_PK = DDBConstants.PARTITIONS.FUND_SOURCE;
+const EXPENSE_PK = DDBConstants.PARTITIONS.EXPENSE;
 
 export class FundSourcesService {
     async getAll() {
@@ -20,7 +21,7 @@ export class FundSourcesService {
             TableName: SINGLE_TABLE_NAME,
             KeyConditionExpression: 'PK = :pk',
             ExpressionAttributeValues: {
-                ':pk': EXPENSE_PK,
+                ':pk': FUND_SOURCE_PK,
             },
         });
         const response = await ddbDocClient.send(command);
@@ -46,7 +47,7 @@ export class FundSourcesService {
             TableName: SINGLE_TABLE_NAME,
             KeyConditionExpression: 'PK = :pk',
             ExpressionAttributeValues: {
-                ':pk': EXPENSE_PK,
+                ':pk': FUND_SOURCE_PK,
             },
         });
         const getAllResponse = await ddbDocClient.send(getAllCmd);
@@ -89,5 +90,40 @@ export class FundSourcesService {
             message: 'Fund Source recorded successfully',
             data: fundSource.toNormalItem(),
         });
+    }
+
+    async delete(name: string | undefined) {
+        if (!name) {
+            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Fund source name is required for deletion.');
+        }
+
+        const checkCmd = new QueryCommand({
+            TableName: SINGLE_TABLE_NAME,
+            KeyConditionExpression: 'PK = :pk AND LSI1SK = :sk',
+            IndexName: 'LSI1',
+            ExpressionAttributeValues: {
+                ':pk': EXPENSE_PK,
+                ':sk': name,
+            },
+            Limit: 1, // we only need to know if at least one exists
+        });
+        const checkResponse = await ddbDocClient.send(checkCmd);
+        if (checkResponse.Items && checkResponse.Items.length > 0) {
+            return createBadRequestResponse(
+                HttpStatus.BAD_REQUEST,
+                'Cannot delete fund source that is in use by expenses.',
+            );
+        }
+
+        const deleteCmd = new DeleteCommand({
+            TableName: SINGLE_TABLE_NAME,
+            Key: {
+                PK: FUND_SOURCE_PK,
+                SK: name,
+            },
+        });
+        await ddbDocClient.send(deleteCmd);
+
+        return createSuccessResponse(HttpStatus.NO_CONTENT);
     }
 }

@@ -9,7 +9,10 @@ export class Expense {
     constructor(data: CreateExpenseRequestBody | Record<string, any>) {
         if (data.SK) this.timestamp = data.SK; // from DynamoDB
         else this.timestamp = data.timestamp.replace('T', ' ');
-        this.fundSource = data.fundSource;
+
+        if (data.LSI1SK) this.fundSource = data.LSI1SK; // from DynamoDB
+        else this.fundSource = data.fundSource;
+
         this.amount = data.amount;
     }
 
@@ -17,7 +20,7 @@ export class Expense {
         return {
             PK: this.PK,
             SK: this.timestamp,
-            fundSource: this.fundSource,
+            LSI1SK: this.fundSource,
             amount: this.amount,
         };
     }
