@@ -145,6 +145,13 @@ Resources:
             Method: post
             RestApiId:
               Ref: ApiGatewayApi
+        PatchFundSources:
+          Type: Api
+          Properties:
+            Path: /fund-sources/{name}
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
         DeleteFundSources:
           Type: Api
           Properties:

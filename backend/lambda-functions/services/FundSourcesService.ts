@@ -10,6 +10,7 @@ import {
 import { ddbDocClient } from './ddb-client';
 import { FundSource } from 'models/FundSource';
 import { CreateFundSourceValidator } from 'validators/CreateFundSourceValidator';
+import { UpdateFundSourceValidator } from 'validators/UpdateFundSourceValidator';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 const FUND_SOURCE_PK = DDBConstants.PARTITIONS.FUND_SOURCE;
@@ -125,5 +126,54 @@ export class FundSourcesService {
         await ddbDocClient.send(deleteCmd);
 
         return createSuccessResponse(HttpStatus.NO_CONTENT);
+    }
+
+    async update(name: string | undefined, body: any) {
+        if (!name) {
+            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Fund source name is required for update.');
+        }
+
+        const validationResult = UpdateFundSourceValidator.partial().safeParse(body);
+        if (!validationResult.success) {
+            const errors = treeifyError(validationResult.error).properties;
+            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
+        }
+
+        const checkFundSource = await getFundSource(name);
+        if (!checkFundSource) {
+            return createBadRequestResponse(HttpStatus.NOT_FOUND, 'Fund Source not found');
+        }
+
+        const existingExpense = checkFundSource.toNormalItem();
+
+        const updatedData = { ...existingExpense, ...validationResult.data };
+        const updatedFundSource = new FundSource(updatedData);
+        const putCmd = new PutCommand({
+            TableName: SINGLE_TABLE_NAME,
+            Item: updatedFundSource.toDdbItem(),
+        });
+        await ddbDocClient.send(putCmd);
+
+        return createSuccessResponse(HttpStatus.OK, {
+            message: 'Fund Source updated successfully',
+            data: updatedFundSource.toNormalItem(),
+        });
+    }
+}
+
+async function getFundSource(name: string) {
+    const getCmd = new QueryCommand({
+        TableName: SINGLE_TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk AND SK = :sk',
+        ExpressionAttributeValues: {
+            ':pk': FUND_SOURCE_PK,
+            ':sk': name,
+        },
+    });
+    const response = await ddbDocClient.send(getCmd);
+    if (response.Items && response.Items.length > 0) {
+        return new FundSource(response.Items[0]);
+    } else {
+        return null;
     }
 }

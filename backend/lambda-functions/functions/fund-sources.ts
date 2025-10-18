@@ -17,13 +17,15 @@ import { FundSourcesService } from 'services/FundSourcesService';
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
         const fundSourcesService = new FundSourcesService();
+        const name = event.pathParameters?.name;
         switch (event.httpMethod) {
             case HttpMethod.GET:
                 return await fundSourcesService.getAll();
             case HttpMethod.POST:
                 return await fundSourcesService.create(event.body ? JSON.parse(event.body) : {});
+            case HttpMethod.PATCH:
+                return await fundSourcesService.update(name, event.body ? JSON.parse(event.body) : {});
             case HttpMethod.DELETE:
-                const name = event.pathParameters?.name;
                 return await fundSourcesService.delete(name);
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
