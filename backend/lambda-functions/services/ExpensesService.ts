@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { PutCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { treeifyError } from 'zod/v4';
 import {
