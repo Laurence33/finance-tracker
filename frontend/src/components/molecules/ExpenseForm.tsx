@@ -33,6 +33,7 @@ export default function ExpenseForm() {
     selectedExpense,
     setExpenseFormOpen,
     formAction,
+    fundSources,
   } = use(AppContext);
   const [formData, setFormData] = useState<ExpenseFormDataType>(
     formAction == 'update'
@@ -94,9 +95,11 @@ export default function ExpenseForm() {
             <MenuItem value="">
               <em>None</em>
             </MenuItem>
-            <MenuItem value={'cash'}>Cash</MenuItem>
-            <MenuItem value={'bank'}>Bank</MenuItem>
-            <MenuItem value={'gcash'}>GCash</MenuItem>
+            {fundSources.map((fundSource) => (
+              <MenuItem key={fundSource.name} value={fundSource.name}>
+                {fundSource.name}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
         <Box component="div" sx={{ mb: 2 }}>

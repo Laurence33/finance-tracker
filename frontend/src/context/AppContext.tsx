@@ -1,4 +1,5 @@
 import { Expense } from '@/types/Expense';
+import { FundSource } from '@/types/FundSource';
 import { SnackBarState } from '@/types/SnackBarState';
 import { HttpClient } from '@/utils/httpClient';
 import { TZDate } from '@date-fns/tz';
@@ -23,6 +24,8 @@ interface AppContextType {
   setExpenseFormOpen: (open: boolean) => void;
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
+  fundSources: FundSource[];
+  setFundSources: (fundSources: FundSource[]) => void;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -46,6 +49,8 @@ export const AppContext = createContext<AppContextType>({
   setExpenseFormOpen: () => {},
   selectedMonth: format(TZDate.tz('asia/singapore'), 'yyyy-MM'),
   setSelectedMonth: () => {},
+  fundSources: [],
+  setFundSources: () => {},
 });
 
 export default function AppContextProvider({
@@ -61,6 +66,7 @@ export default function AppContextProvider({
   const [selectedMonth, setSelectedMonth] = useState<string>(
     format(TZDate.tz('asia/singapore'), 'yyyy-MM')
   );
+  const [fundSources, setFundSources] = useState<FundSource[]>([]);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -69,8 +75,24 @@ export default function AppContextProvider({
   });
 
   useEffect(() => {
+    fetchFundSources();
+  }, []);
+
+  useEffect(() => {
     fetchExpenses();
   }, [selectedMonth]);
+
+  async function fetchFundSources() {
+    try {
+      const response = await HttpClient.get<any>('/fund-sources');
+      if (response && response.data) {
+        setFundSources(response.data.fundSources || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching expenses:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
 
   async function fetchExpenses() {
     try {
@@ -115,6 +137,8 @@ export default function AppContextProvider({
     setTotalExpenses,
     selectedExpense,
     setSelectedExpense,
+    fundSources,
+    setFundSources,
     formAction,
     setFormAction,
     expenseFormOpen,
