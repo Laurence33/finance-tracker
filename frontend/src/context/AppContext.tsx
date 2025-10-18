@@ -1,7 +1,9 @@
 import { Expense } from '@/types/Expense';
 import { SnackBarState } from '@/types/SnackBarState';
 import { HttpClient } from '@/utils/httpClient';
+import { TZDate } from '@date-fns/tz';
 import { Alert, Snackbar } from '@mui/material';
+import { format } from 'date-fns';
 import { createContext, useState } from 'react';
 
 interface AppContextType {
@@ -19,6 +21,8 @@ interface AppContextType {
   setFormAction: (action: 'create' | 'update') => void;
   expenseFormOpen: boolean;
   setExpenseFormOpen: (open: boolean) => void;
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -40,6 +44,8 @@ export const AppContext = createContext<AppContextType>({
   setFormAction: () => {},
   expenseFormOpen: false,
   setExpenseFormOpen: () => {},
+  selectedMonth: format(TZDate.tz('asia/singapore'), 'yyyy-MM'),
+  setSelectedMonth: () => {},
 });
 
 export default function AppContextProvider({
@@ -52,6 +58,9 @@ export default function AppContextProvider({
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formAction, setFormAction] = useState<'create' | 'update'>('create');
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    format(TZDate.tz('asia/singapore'), 'yyyy-MM')
+  );
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -109,6 +118,8 @@ export default function AppContextProvider({
     showSuccessSnackBar,
     showErrorSnackBar,
     handleSnackBarClose,
+    selectedMonth,
+    setSelectedMonth,
   };
 
   return (

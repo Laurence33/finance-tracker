@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import ExpenseList from '@/components/molecules/ExpensesList';
 import { AppContext } from '@/context/AppContext';
 import ExpenseDialog from '@/components/organisms/ExpenseDialog';
+import MonthSelector from '@/components/molecules/MonthSelector';
 
 export default function Home() {
   const {
@@ -40,6 +41,7 @@ export default function Home() {
             Add Expense
           </Button>
         </Stack>
+        <MonthSelector />
         <ExpenseList expenses={expenses} />
       </Box>
     </>
