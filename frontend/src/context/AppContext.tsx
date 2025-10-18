@@ -4,7 +4,7 @@ import { HttpClient } from '@/utils/httpClient';
 import { TZDate } from '@date-fns/tz';
 import { Alert, Snackbar } from '@mui/material';
 import { format } from 'date-fns';
-import { createContext, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 
 interface AppContextType {
   expenses: Expense[];
@@ -68,9 +68,15 @@ export default function AppContextProvider({
     severity: 'success',
   });
 
+  useEffect(() => {
+    fetchExpenses();
+  }, [selectedMonth]);
+
   async function fetchExpenses() {
     try {
-      const response = await HttpClient.get<any>('/expenses');
+      const response = await HttpClient.get<any>(
+        '/expenses?month=' + selectedMonth
+      );
       if (response && response.data) {
         setExpenses(response.data.expenses || []);
         setTotalExpenses(response.data.totalExpenses || 0);
