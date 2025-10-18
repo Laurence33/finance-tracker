@@ -41,6 +41,10 @@ export default function ExpenseForm() {
       : { ...initialFormData, timestamp: currentTimestampForInput() }
   );
 
+  // TODO: it might be a good idea to refresh the fund sources list here when the form loads
+  // in case there are new fund sources added since the page load
+  // but let's handle that later
+
   const onChangeHandler = (event: any, field: string) => {
     let value = event.target.value;
     if (event.target.type === 'number') {
@@ -97,7 +101,7 @@ export default function ExpenseForm() {
             </MenuItem>
             {fundSources.map((fundSource) => (
               <MenuItem key={fundSource.name} value={fundSource.name}>
-                {fundSource.name}
+                {fundSource.displayText}
               </MenuItem>
             ))}
           </Select>
