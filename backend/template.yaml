@@ -44,6 +44,12 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST # On-demand billing (no need to set RCU/WCU)
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration: 
+        Type: REGIONAL
   ExpensesFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -66,26 +72,36 @@ Resources:
           Properties:
             Path: /expenses
             Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
         GetExpenses:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /expenses
             Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
         DeleteExpense:
           Type: Api
           Properties:
             Path: /expenses
             Method: delete 
+            RestApiId:
+              Ref: ApiGatewayApi
         PutExpense:
           Type: Api
           Properties:
             Path: /expenses
             Method: patch 
+            RestApiId:
+              Ref: ApiGatewayApi
         ExpensesOptions:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /expenses
             Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -120,11 +136,15 @@ Resources:
           Properties:
             Path: /fund-sources
             Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
         ExpensesOptions:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /fund-sources
             Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -142,9 +162,6 @@ Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
   ExpensesFunction:
     Description: "Hello World Lambda Function ARN"
     Value: !GetAtt ExpensesFunction.Arn
