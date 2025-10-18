@@ -32,10 +32,12 @@ export default function ExpenseForm() {
     fetchExpenses,
     selectedExpense,
     setExpenseFormOpen,
+    formAction,
   } = use(AppContext);
-  const { formAction } = use(AppContext);
   const [formData, setFormData] = useState<ExpenseFormDataType>(
-    formAction == 'update' ? selectedExpense! : initialFormData
+    formAction == 'update'
+      ? selectedExpense!
+      : { ...initialFormData, timestamp: currentTimestampForInput() }
   );
 
   const onChangeHandler = (event: any, field: string) => {
