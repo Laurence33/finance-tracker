@@ -1,13 +1,8 @@
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import {
-    HttpMethod,
-    HttpStatus,
-    createBadRequestResponse,
-    createSuccessResponse,
-    createServerErrorResponse,
-} from 'ft-common-layer';
+import { HttpMethod, HttpStatus, createBadRequestResponse, createServerErrorResponse } from 'ft-common-layer';
+import { FundSourcesService } from 'services/FundSourcesService';
 
 /**
  *
@@ -21,11 +16,10 @@ import {
 
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        // const expensesService = new ExpensesService();
+        const fundSourcesService = new FundSourcesService();
         switch (event.httpMethod) {
             case HttpMethod.GET:
-                // return await expensesService.getExpenses(month);
-                return createSuccessResponse(HttpStatus.OK, "Hi, I'm the new lambda for fund sources!");
+                return await fundSourcesService.getAll();
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
