@@ -7,7 +7,9 @@ export class FundSource {
     private displayText: string;
 
     constructor(data: Record<string, any>) {
-        this.name = data.SK; // from DynamoDB
+        if (data.SK) this.name = data.SK; // from DynamoDB
+        else this.name = data.name;
+
         this.balance = data.balance;
         this.displayText = data.displayText;
     }

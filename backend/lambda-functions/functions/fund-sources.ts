@@ -20,6 +20,8 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
         switch (event.httpMethod) {
             case HttpMethod.GET:
                 return await fundSourcesService.getAll();
+            case HttpMethod.POST:
+                return await fundSourcesService.create(event.body ? JSON.parse(event.body) : {});
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
