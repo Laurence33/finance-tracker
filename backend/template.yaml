@@ -48,7 +48,7 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
-      EndpointConfiguration: 
+      EndpointConfiguration:
         Type: REGIONAL
   ExpensesFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -85,14 +85,14 @@ Resources:
           Type: Api
           Properties:
             Path: /expenses
-            Method: delete 
+            Method: delete
             RestApiId:
               Ref: ApiGatewayApi
         PutExpense:
           Type: Api
           Properties:
             Path: /expenses
-            Method: patch 
+            Method: patch
             RestApiId:
               Ref: ApiGatewayApi
         ExpensesOptions:
@@ -131,14 +131,14 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref DDBSingleTable
       Events:
-        GetExpenses:
+        GetFundSources:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /fund-sources
             Method: get
             RestApiId:
               Ref: ApiGatewayApi
-        ExpensesOptions:
+        FundSourcesOptions:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /fund-sources
