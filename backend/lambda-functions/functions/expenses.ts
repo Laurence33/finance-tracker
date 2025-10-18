@@ -8,7 +8,7 @@ import {
     createSuccessResponse,
     createServerErrorResponse,
 } from 'ft-common-layer';
-import { CreateExpenseRequestBody } from './types/Expense';
+import { CreateExpenseRequestBody } from '../types/Expense';
 import { ExpensesService } from 'services/ExpensesService';
 
 /**
