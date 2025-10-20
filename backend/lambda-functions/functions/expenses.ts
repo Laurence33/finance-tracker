@@ -48,12 +48,10 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
     }
 };
 
-export const lambdaHandler = middy()
-    .use(
-        cors({
-            headers: 'Content-Type',
-            methods: 'POST, OPTIONS, DELETE, PATCH',
-            origins: ['http://localhost:8001'], // TODO: maybe put this to the env variables
-        }),
-    )
-    .handler(handler);
+export const lambdaHandler = middy(handler).use(
+    cors({
+        headers: 'Content-Type',
+        methods: 'POST, OPTIONS, DELETE, PATCH',
+        origins: ['http://localhost:8001'], // TODO: maybe put this to the env variables
+    }),
+);
