@@ -1,11 +1,11 @@
 {
     "compilerOptions": {
-        "target": "es2020",
+        "target": "esnext",
         "strict": true,
         "preserveConstEnums": true,
         "noEmit": true,
         "sourceMap": false,
-        "module": "es2015",
+        "module": "es2020",
         "moduleResolution": "node",
         "esModuleInterop": true,
         "skipLibCheck": true,
@@ -16,5 +16,5 @@
             "ft-common-layer/*": ["../layers/ft-common-layer/src/*"]
         }
     },
-    "exclude": ["node_modules", "**/*.test.ts"]
+    "exclude": ["node_modules", "**/*.test.ts", "jest.config.ts"]
 }

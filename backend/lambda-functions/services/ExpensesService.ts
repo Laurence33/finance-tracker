@@ -7,9 +7,9 @@ import {
     isValidDate,
     DDBConstants,
 } from 'ft-common-layer';
-import { CreateExpenseValidator } from 'validators/CreateExpenseValidator';
-import { Expense } from 'models/Expense';
-import { CreateExpenseRequestBody } from 'types/Expense';
+import { CreateExpenseValidator } from '../validators/CreateExpenseValidator';
+import { Expense } from '../models/Expense';
+import { CreateExpenseRequestBody } from '../types/Expense';
 import { ddbDocClient } from './ddb-client';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;

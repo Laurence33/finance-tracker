@@ -9,7 +9,7 @@ import {
     createServerErrorResponse,
 } from 'ft-common-layer';
 import { CreateExpenseRequestBody } from '../types/Expense';
-import { ExpensesService } from 'services/ExpensesService';
+import { ExpensesService } from '../services/ExpensesService';
 
 /**
  *
@@ -21,7 +21,7 @@ import { ExpensesService } from 'services/ExpensesService';
  *
  */
 
-const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
         const expensesService = new ExpensesService();
         const timestamp = event.queryStringParameters?.timestamp;

@@ -1,17 +1,32 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { lambdaHandler } from '../../app';
-import { expect, describe, it } from '@jest/globals';
+import { handler } from '../../functions/expenses';
+import { ExpensesService } from '../../services/ExpensesService';
+import { expect, describe, it, jest, beforeEach, afterEach } from '@jest/globals';
 
-describe('Unit test for app handler', function () {
+describe('Unit test for expenses handler', function () {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(ExpensesService.prototype, 'getExpenses').mockResolvedValue({
+            statusCode: 200,
+            body: JSON.stringify({
+                message: 'hello world',
+            }),
+        });
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
     it('verifies successful response', async () => {
         const event: APIGatewayProxyEvent = {
-            httpMethod: 'get',
+            httpMethod: 'GET',
             body: '',
             headers: {},
             isBase64Encoded: false,
             multiValueHeaders: {},
             multiValueQueryStringParameters: {},
-            path: '/hello',
+            path: '/expenses',
             pathParameters: {},
             queryStringParameters: {},
             requestContext: {
@@ -53,7 +68,7 @@ describe('Unit test for app handler', function () {
             resource: '',
             stageVariables: {},
         };
-        const result: APIGatewayProxyResult = await lambdaHandler(event);
+        const result: APIGatewayProxyResult = await handler(event);
 
         expect(result.statusCode).toEqual(200);
         expect(result.body).toEqual(

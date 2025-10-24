@@ -3,13 +3,19 @@
  * https://jestjs.io/docs/configuration
  */
 
-export default {
-    transform: {
-        '^.+\\.ts?$': 'ts-jest',
-    },
+import type { Config } from 'jest';
+import { createDefaultEsmPreset } from 'ts-jest';
+
+const config: Config = {
+    ...createDefaultEsmPreset(),
     clearMocks: true,
     collectCoverage: true,
     coverageDirectory: 'coverage',
     coverageProvider: 'v8',
     testMatch: ['**/tests/unit/*.test.ts'],
+    moduleNameMapper: {
+        '^ft-common-layer(.*)$': '<rootDir>/../layers/ft-common-layer/nodejs/node_modules/ft-common-layer$1',
+    },
 };
+
+export default config;
