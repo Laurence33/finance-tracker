@@ -3,5 +3,6 @@ export const DDBConstants = {
   PARTITIONS: {
     EXPENSE: 'Expense#Expense',
     FUND_SOURCE: 'FundSource#FundSource',
+    TAGS: 'Tags#Tags',
   },
 }

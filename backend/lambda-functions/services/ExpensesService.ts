@@ -11,6 +11,7 @@ import { CreateExpenseValidator } from '../validators/CreateExpenseValidator';
 import { Expense } from '../models/Expense';
 import { CreateExpenseRequestBody } from '../types/Expense';
 import { ddbDocClient } from './ddb-client';
+import { TagsService } from './TagsService';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 const EXPENSE_PK = DDBConstants.PARTITIONS.EXPENSE;
@@ -31,7 +32,14 @@ export class ExpensesService {
         }
 
         // TODO: check if valid fund source
-        // TODO: check if valid tags
+
+        const tags = await TagsService.getAll();
+        for (const tag of validationResult.data.tags) {
+            const found = tags.find((dbTag) => dbTag.name === tag);
+            if (!found) {
+                return createBadRequestResponse(HttpStatus.BAD_REQUEST, `Tag '${tag}' does not exist.`);
+            }
+        }
 
         const expense = new Expense(validationResult.data);
         const command = new PutCommand({
@@ -87,6 +95,15 @@ export class ExpensesService {
         if (!validationResult.success) {
             const errors = treeifyError(validationResult.error).properties;
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
+        }
+
+        const tags = await TagsService.getAll();
+        // validationResult.data always have 1+ tag when defined because of zod validation
+        for (const tag of validationResult.data.tags || []) {
+            const found = tags.find((dbTag) => dbTag.name === tag);
+            if (!found) {
+                return createBadRequestResponse(HttpStatus.BAD_REQUEST, `Tag '${tag}' does not exist.`);
+            }
         }
 
         // Fetch existing expense
