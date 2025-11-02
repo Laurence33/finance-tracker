@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "start:api": "sam local start-api --env-vars env.json",
+    "dev": "sam build && npm run start:api"
+  },
   "devDependencies": {
     "@types/node": "^24.5.2"
   }
