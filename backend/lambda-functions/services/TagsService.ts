@@ -1,5 +1,5 @@
 import { QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { DDBConstants } from 'ft-common-layer';
+import { createSuccessResponse, DDBConstants, HttpStatus } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { Tags } from 'models/Tags';
 
@@ -18,5 +18,16 @@ export class TagsService {
         const response = await ddbDocClient.send(command);
         const fundSources = response.Items?.map((item) => new Tags(item).toNormalItem());
         return fundSources || [];
+    }
+
+    async getAll() {
+        const response = await TagsService.getAll();
+        const tags = response.map((item) => new Tags(item).toNormalItem());
+        return createSuccessResponse(HttpStatus.OK, {
+            message: 'Expenses retrieved successfully',
+            data: {
+                tags,
+            },
+        });
     }
 }

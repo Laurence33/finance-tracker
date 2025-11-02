@@ -12,17 +12,20 @@ import {
   Stack,
 } from '@mui/material';
 import { use, useState } from 'react';
+import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
 
 type ExpenseFormDataType = {
   amount: number;
   timestamp: string;
   fundSource: string;
+  tags: string[];
 };
 
 const initialFormData: ExpenseFormDataType = {
   amount: 0,
   timestamp: currentTimestampForInput(),
   fundSource: '',
+  tags: [],
 };
 
 export default function ExpenseForm() {
@@ -34,6 +37,7 @@ export default function ExpenseForm() {
     setExpenseFormOpen,
     formAction,
     fundSources,
+    tags,
   } = use(AppContext);
   const [formData, setFormData] = useState<ExpenseFormDataType>(
     formAction == 'update'
@@ -83,6 +87,15 @@ export default function ExpenseForm() {
     }
   };
 
+  const setSelectedTags = (tags: string[]) => {
+    setFormData((prevFormData) => {
+      return {
+        ...prevFormData,
+        tags: tags,
+      };
+    });
+  };
+
   return (
     <form onSubmit={submitHandler}>
       <Box component="div" sx={{ maxWidth: 340 }}>
@@ -128,6 +141,15 @@ export default function ExpenseForm() {
             fullWidth={true}
             value={formData.timestamp}
             onChange={(event) => onChangeHandler(event, 'timestamp')}
+          />
+        </Box>
+        <Box component="div" sx={{ mb: 2 }}>
+          <ChipSelectMultiple
+            label="Tags"
+            required={true}
+            list={tags.map((tag) => tag.name)}
+            setSelectedItems={setSelectedTags}
+            selectedItems={formData.tags}
           />
         </Box>
         <Stack direction="row" justifyContent="end" sx={{ mt: 3 }}>

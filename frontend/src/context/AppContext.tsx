@@ -1,6 +1,7 @@
 import { Expense } from '@/types/Expense';
 import { FundSource } from '@/types/FundSource';
 import { SnackBarState } from '@/types/SnackBarState';
+import { Tags } from '@/types/Tags';
 import { HttpClient } from '@/utils/httpClient';
 import { TZDate } from '@date-fns/tz';
 import { Alert, Snackbar } from '@mui/material';
@@ -26,6 +27,9 @@ interface AppContextType {
   setSelectedMonth: (month: string) => void;
   fundSources: FundSource[];
   setFundSources: (fundSources: FundSource[]) => void;
+  tags: Tags[];
+  setTags: (tags: Tags[]) => void;
+  fetchTags: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -51,6 +55,9 @@ export const AppContext = createContext<AppContextType>({
   setSelectedMonth: () => {},
   fundSources: [],
   setFundSources: () => {},
+  tags: [],
+  setTags: () => {},
+  fetchTags: async () => {},
 });
 
 export default function AppContextProvider({
@@ -67,6 +74,7 @@ export default function AppContextProvider({
     format(TZDate.tz('asia/singapore'), 'yyyy-MM')
   );
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
+  const [tags, setTags] = useState<Tags[]>([]);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -76,6 +84,7 @@ export default function AppContextProvider({
 
   useEffect(() => {
     fetchFundSources();
+    fetchTags();
   }, []);
 
   useEffect(() => {
@@ -105,6 +114,18 @@ export default function AppContextProvider({
       }
     } catch (error: any) {
       console.error('Error fetching expenses:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
+  async function fetchTags() {
+    try {
+      const response = await HttpClient.get<any>('/tags');
+      if (response && response.data) {
+        setTags(response.data.tags || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching tags:', error);
       showErrorSnackBar(error.message);
     }
   }
@@ -150,6 +171,9 @@ export default function AppContextProvider({
     handleSnackBarClose,
     selectedMonth,
     setSelectedMonth,
+    tags,
+    setTags,
+    fetchTags,
   };
 
   return (
