@@ -3,4 +3,5 @@ export type Expense = {
   timestamp: string;
   fundSource: string;
   tags: string[];
+  notes: string;
 };

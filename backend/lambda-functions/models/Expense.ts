@@ -6,6 +6,7 @@ export class Expense {
     private fundSource: string;
     private amount: number;
     private tags: string[];
+    private notes: string;
 
     constructor(data: CreateExpenseRequestBody | Record<string, any>) {
         if (data.SK) this.timestamp = data.SK; // from DynamoDB
@@ -16,6 +17,7 @@ export class Expense {
 
         this.amount = data.amount;
         this.tags = data.tags || [];
+        this.notes = data.notes || '';
     }
 
     toDdbItem() {
@@ -25,6 +27,7 @@ export class Expense {
             LSI1SK: this.fundSource,
             amount: this.amount,
             tags: this.tags,
+            notes: this.notes,
         };
     }
 
@@ -34,6 +37,7 @@ export class Expense {
             fundSource: this.fundSource,
             amount: this.amount,
             tags: this.tags,
+            notes: this.notes,
         };
     }
 }

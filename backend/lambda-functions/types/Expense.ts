@@ -3,6 +3,7 @@ export type CreateExpenseRequestBody = {
     amount: number;
     fundSource: string; // e.g., "cash", "credit", "debit"
     tags: string[];
+    notes: string;
     SK?: string;
     LSI1SK?: string;
 };

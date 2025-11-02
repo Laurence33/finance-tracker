@@ -19,6 +19,7 @@ type ExpenseFormDataType = {
   timestamp: string;
   fundSource: string;
   tags: string[];
+  notes: string;
 };
 
 const initialFormData: ExpenseFormDataType = {
@@ -26,6 +27,7 @@ const initialFormData: ExpenseFormDataType = {
   timestamp: currentTimestampForInput(),
   fundSource: '',
   tags: [],
+  notes: '',
 };
 
 export default function ExpenseForm() {
@@ -150,6 +152,18 @@ export default function ExpenseForm() {
             list={tags.map((tag) => tag.name)}
             setSelectedItems={setSelectedTags}
             selectedItems={formData.tags}
+          />
+        </Box>
+        <Box component="div" sx={{ mb: 2 }}>
+          <TextField
+            sx={{ width: '100%' }}
+            id="outlined-basic"
+            label="Notes"
+            variant="outlined"
+            multiline
+            minRows={3}
+            value={formData.notes || ''}
+            onChange={(event) => onChangeHandler(event, 'notes')}
           />
         </Box>
         <Stack direction="row" justifyContent="end" sx={{ mt: 3 }}>
