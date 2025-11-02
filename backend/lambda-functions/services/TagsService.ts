@@ -1,5 +1,5 @@
 import { QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { createSuccessResponse, HttpStatus, DDBConstants } from 'ft-common-layer';
+import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { Tags } from 'models/Tags';
 
