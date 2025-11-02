@@ -177,3 +177,16 @@ async function getFundSource(name: string) {
         return null;
     }
 }
+
+export async function getAllFundSources() {
+    const command = new QueryCommand({
+        TableName: SINGLE_TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: {
+            ':pk': FUND_SOURCE_PK,
+        },
+    });
+    const response = await ddbDocClient.send(command);
+    const fundSources = response.Items?.map((item) => new FundSource(item).toNormalItem());
+    return fundSources || [];
+}

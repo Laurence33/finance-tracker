@@ -12,6 +12,7 @@ import { Expense } from '../models/Expense';
 import { CreateExpenseRequestBody } from '../types/Expense';
 import { ddbDocClient } from './ddb-client';
 import { TagsService } from './TagsService';
+import { getAllFundSources } from './FundSourcesService';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 const EXPENSE_PK = DDBConstants.PARTITIONS.EXPENSE;
@@ -31,7 +32,14 @@ export class ExpensesService {
             );
         }
 
-        // TODO: check if valid fund source
+        const fundSources = await getAllFundSources();
+        const foundFundSource = fundSources.find((fs) => fs.name === validationResult.data.fundSource);
+        if (!foundFundSource) {
+            return createBadRequestResponse(
+                HttpStatus.BAD_REQUEST,
+                `Fund source '${validationResult.data.fundSource}' does not exist.`,
+            );
+        }
 
         const tags = await TagsService.getAll();
         for (const tag of validationResult.data.tags) {
