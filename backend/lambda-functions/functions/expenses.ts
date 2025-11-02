@@ -10,6 +10,7 @@ import {
 } from 'ft-common-layer';
 import { CreateExpenseRequestBody } from '../types/Expense';
 import { ExpensesService } from '../services/ExpensesService';
+import ExpensesController from 'controllers/ExpensesController';
 
 /**
  *
@@ -28,15 +29,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         switch (event.httpMethod) {
             case HttpMethod.GET:
                 const month = event.queryStringParameters?.month || new Date().toISOString().slice(0, 7);
-                return await expensesService.getExpenses(month);
+                return await ExpensesController.get(month);
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
-                return await expensesService.createExpense(body);
+                return await ExpensesController.post(body);
             case HttpMethod.PATCH:
                 const putBody = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
-                return await expensesService.updateExpense(timestamp || '', putBody);
+                return await ExpensesController.patch(timestamp || '', putBody);
             case HttpMethod.DELETE:
-                return await expensesService.deleteExpense(timestamp);
+                return await ExpensesController.delete(timestamp);
             case HttpMethod.OPTIONS:
                 return createSuccessResponse(HttpStatus.NO_CONTENT);
             default:

@@ -1,5 +1,4 @@
 import { PutCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { treeifyError } from 'zod/v4';
 import {
     createBadRequestResponse,
     createSuccessResponse,
@@ -7,49 +6,32 @@ import {
     isValidDate,
     DDBConstants,
 } from 'ft-common-layer';
-import { CreateExpenseValidator } from '../validators/CreateExpenseValidator';
 import { Expense } from '../models/Expense';
 import { CreateExpenseRequestBody } from '../types/Expense';
 import { ddbDocClient } from './ddb-client';
-import { TagsService } from './TagsService';
-import { getAllFundSources } from './FundSourcesService';
+import { BadRequestException, NotFoundException } from 'utils/Exceptions';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 const EXPENSE_PK = DDBConstants.PARTITIONS.EXPENSE;
 export class ExpensesService {
-    async createExpense(body: CreateExpenseRequestBody) {
-        const validationResult = CreateExpenseValidator.safeParse(body);
-        if (!validationResult.success) {
-            const errors = treeifyError(validationResult.error).properties;
-            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
+    async getExpense(timestamp: string): Promise<Expense | null> {
+        const command = new QueryCommand({
+            TableName: SINGLE_TABLE_NAME,
+            KeyConditionExpression: 'PK = :pk AND SK = :sk',
+            ExpressionAttributeValues: {
+                ':pk': EXPENSE_PK,
+                ':sk': timestamp,
+            },
+        });
+        const response = await ddbDocClient.send(command);
+        if (!response.Items || response.Items.length === 0) {
+            return null;
         }
+        return new Expense(response.Items[0]);
+    }
 
-        const checkExpense = await getExpense(validationResult.data.timestamp);
-        if (checkExpense) {
-            return createBadRequestResponse(
-                HttpStatus.BAD_REQUEST,
-                'An expense with the same timestamp already exists.',
-            );
-        }
-
-        const fundSources = await getAllFundSources();
-        const foundFundSource = fundSources.find((fs) => fs.name === validationResult.data.fundSource);
-        if (!foundFundSource) {
-            return createBadRequestResponse(
-                HttpStatus.BAD_REQUEST,
-                `Fund source '${validationResult.data.fundSource}' does not exist.`,
-            );
-        }
-
-        const tags = await TagsService.getAll();
-        for (const tag of validationResult.data.tags) {
-            const found = tags.find((dbTag) => dbTag.name === tag);
-            if (!found) {
-                return createBadRequestResponse(HttpStatus.BAD_REQUEST, `Tag '${tag}' does not exist.`);
-            }
-        }
-
-        const expense = new Expense(validationResult.data);
+    async create(body: CreateExpenseRequestBody) {
+        const expense = new Expense(body);
         const command = new PutCommand({
             TableName: SINGLE_TABLE_NAME,
             Item: expense.toDdbItem(),
@@ -57,13 +39,10 @@ export class ExpensesService {
 
         await ddbDocClient.send(command);
 
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Expense recorded successfully',
-            data: expense.toNormalItem(),
-        });
+        return expense.toNormalItem();
     }
 
-    async getExpenses(month: string) {
+    async getAll(month: string) {
         const command = new QueryCommand({
             TableName: SINGLE_TABLE_NAME,
             KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk_prefix)',
@@ -75,14 +54,7 @@ export class ExpensesService {
         });
         const response = await ddbDocClient.send(command);
         const expenses = response.Items?.map((item) => new Expense(item).toNormalItem());
-        const totalExpenses = expenses?.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Expenses retrieved successfully',
-            data: {
-                expenses,
-                totalExpenses,
-            },
-        });
+        return expenses || [];
     }
 
     async deleteExpense(timestamp?: string) {
@@ -90,53 +62,30 @@ export class ExpensesService {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid or missing timestamp');
         }
 
-        await deleteExpenseItem(timestamp || '');
+        await this.delete(timestamp || '');
         return createSuccessResponse(HttpStatus.NO_CONTENT);
     }
 
     async updateExpense(timestamp: string, body: Partial<CreateExpenseRequestBody>) {
-        if (!isValidDate(timestamp)) {
-            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid or missing timestamp');
-        }
-
-        const validationResult = CreateExpenseValidator.partial().safeParse(body);
-        if (!validationResult.success) {
-            const errors = treeifyError(validationResult.error).properties;
-            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
-        }
-
-        const tags = await TagsService.getAll();
-        // validationResult.data always have 1+ tag when defined because of zod validation
-        for (const tag of validationResult.data.tags || []) {
-            const found = tags.find((dbTag) => dbTag.name === tag);
-            if (!found) {
-                return createBadRequestResponse(HttpStatus.BAD_REQUEST, `Tag '${tag}' does not exist.`);
-            }
-        }
-
         // Fetch existing expense
-        const checkExpense = await getExpense(timestamp);
+        const checkExpense = await this.getExpense(timestamp);
         if (!checkExpense) {
-            return createBadRequestResponse(HttpStatus.NOT_FOUND, 'Expense not found');
+            throw new NotFoundException('Expense not found');
         }
 
         const existingExpense = checkExpense.toNormalItem();
 
         // If the timestamp is changed in the update, we need to delete the old item
-        if (validationResult.data.timestamp && validationResult.data.timestamp !== existingExpense.timestamp) {
+        if (body.timestamp && body.timestamp !== existingExpense.timestamp) {
             // need to check if the new timestamp already exists
-            const checkNewExpense = await getExpense(validationResult.data.timestamp);
+            const checkNewExpense = await this.getExpense(body.timestamp);
             if (checkNewExpense) {
-                return createBadRequestResponse(
-                    HttpStatus.BAD_REQUEST,
-                    'An expense with the new timestamp already exists.',
-                );
+                throw new BadRequestException('An expense with the new timestamp already exists.');
             }
 
-            await deleteExpenseItem(existingExpense.timestamp);
+            await this.delete(existingExpense.timestamp);
         }
-
-        const updatedData = { ...existingExpense, ...validationResult.data };
+        const updatedData = { ...existingExpense, ...body };
         const updatedExpense = new Expense(updatedData);
         const putCmd = new PutCommand({
             TableName: SINGLE_TABLE_NAME,
@@ -144,36 +93,18 @@ export class ExpensesService {
         });
         await ddbDocClient.send(putCmd);
 
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Expense updated successfully',
-            data: updatedExpense.toNormalItem(),
+        return updatedExpense;
+    }
+    async delete(timestamp: string) {
+        const deleteCmd = new DeleteCommand({
+            TableName: SINGLE_TABLE_NAME,
+            Key: {
+                PK: EXPENSE_PK,
+                SK: timestamp,
+            },
         });
+        await ddbDocClient.send(deleteCmd);
     }
 }
 
-async function deleteExpenseItem(timestamp: string) {
-    const deleteCmd = new DeleteCommand({
-        TableName: SINGLE_TABLE_NAME,
-        Key: {
-            PK: EXPENSE_PK,
-            SK: timestamp,
-        },
-    });
-    await ddbDocClient.send(deleteCmd);
-}
-
-async function getExpense(timestamp: string): Promise<Expense | null> {
-    const command = new QueryCommand({
-        TableName: SINGLE_TABLE_NAME,
-        KeyConditionExpression: 'PK = :pk AND SK = :sk',
-        ExpressionAttributeValues: {
-            ':pk': EXPENSE_PK,
-            ':sk': timestamp,
-        },
-    });
-    const response = await ddbDocClient.send(command);
-    if (!response.Items || response.Items.length === 0) {
-        return null;
-    }
-    return new Expense(response.Items[0]);
-}
+export default new ExpensesService();

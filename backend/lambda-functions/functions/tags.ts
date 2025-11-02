@@ -1,9 +1,8 @@
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import TagsController from 'controllers/TagsController';
 import { HttpMethod, HttpStatus, createBadRequestResponse, createServerErrorResponse } from 'ft-common-layer';
-import { FundSourcesService } from 'services/FundSourcesService';
-import { TagsService } from 'services/TagsService';
 
 /**
  *
@@ -17,11 +16,9 @@ import { TagsService } from 'services/TagsService';
 
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const tagsService = new TagsService();
-        const name = event.pathParameters?.name;
         switch (event.httpMethod) {
             case HttpMethod.GET:
-                return await tagsService.getAll();
+                return await TagsController.get();
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }

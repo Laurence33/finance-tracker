@@ -1,5 +1,5 @@
 import { QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { createSuccessResponse, DDBConstants, HttpStatus } from 'ft-common-layer';
+import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { Tags } from 'models/Tags';
 
@@ -7,7 +7,7 @@ const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 const TAGS_PK = DDBConstants.PARTITIONS.TAGS;
 
 export class TagsService {
-    static async getAll() {
+    async getAll() {
         const command = new QueryCommand({
             TableName: SINGLE_TABLE_NAME,
             KeyConditionExpression: 'PK = :pk',
@@ -16,18 +16,9 @@ export class TagsService {
             },
         });
         const response = await ddbDocClient.send(command);
-        const fundSources = response.Items?.map((item) => new Tags(item).toNormalItem());
-        return fundSources || [];
-    }
-
-    async getAll() {
-        const response = await TagsService.getAll();
-        const tags = response.map((item) => new Tags(item).toNormalItem());
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Expenses retrieved successfully',
-            data: {
-                tags,
-            },
-        });
+        const tags = response.Items?.map((item) => new Tags(item).toNormalItem());
+        return tags || [];
     }
 }
+
+export default new TagsService();

@@ -1,8 +1,8 @@
 import middy from '@middy/core';
 import cors from '@middy/http-cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import FundSourcesController from 'controllers/FundSourcesController';
 import { HttpMethod, HttpStatus, createBadRequestResponse, createServerErrorResponse } from 'ft-common-layer';
-import { FundSourcesService } from 'services/FundSourcesService';
 
 /**
  *
@@ -16,17 +16,16 @@ import { FundSourcesService } from 'services/FundSourcesService';
 
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const fundSourcesService = new FundSourcesService();
         const name = event.pathParameters?.name;
         switch (event.httpMethod) {
             case HttpMethod.GET:
-                return await fundSourcesService.getAll();
+                return await FundSourcesController.get();
             case HttpMethod.POST:
-                return await fundSourcesService.create(event.body ? JSON.parse(event.body) : {});
+                return await FundSourcesController.post(event.body ? JSON.parse(event.body) : {});
             case HttpMethod.PATCH:
-                return await fundSourcesService.update(name, event.body ? JSON.parse(event.body) : {});
+                return await FundSourcesController.patch(name, event.body ? JSON.parse(event.body) : {});
             case HttpMethod.DELETE:
-                return await fundSourcesService.delete(name);
+                return await FundSourcesController.delete(name);
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
