@@ -10,4 +10,5 @@ export const CreateExpenseValidator = z.object({
         .transform((date) => date.toISOString().replace('Z', '').replace('T', ' ')),
     amount: z.number().positive(),
     fundSource: z.string(), // TODO: check against a list of allowed fund sources later
+    tags: z.array(z.string()).min(1),
 });

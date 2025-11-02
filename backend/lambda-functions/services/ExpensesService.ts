@@ -30,6 +30,9 @@ export class ExpensesService {
             );
         }
 
+        // TODO: check if valid fund source
+        // TODO: check if valid tags
+
         const expense = new Expense(validationResult.data);
         const command = new PutCommand({
             TableName: SINGLE_TABLE_NAME,
