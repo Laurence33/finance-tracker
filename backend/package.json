@@ -1,7 +1,8 @@
 {
   "scripts": {
+    "build:common-layer": "npm --prefix ./layers/ft-common-layer run build",
     "start:api": "sam local start-api --env-vars env.json",
-    "dev": "sam build && npm run start:api"
+    "dev": "npm run build:common-layer && sam build && npm run start:api"
   },
   "devDependencies": {
     "@types/node": "^24.5.2"
