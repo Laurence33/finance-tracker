@@ -1,8 +1,8 @@
-import { Stack, Box, IconButton, Button } from '@mui/material';
+import { Stack, IconButton, Typography, Box } from '@mui/material';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import { use, useEffect, useState } from 'react';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { AppContext } from '@/context/AppContext';
 
 const months = [
@@ -49,38 +49,56 @@ export default function MonthSelector() {
   };
 
   const setYearState = () => {
-    const dateString = `${months[monthIndex]} 1, ${year}`;
-    const date = parse(dateString, 'MMMM d, yyyy', new Date());
+    const date = new Date(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
     setSelectedMonth(format(date, 'yyyy-MM'));
   };
+
   return (
     <Stack
-      sx={{ mb: 2 }}
       direction="row"
       alignItems="center"
       justifyContent="center"
+      sx={{ mb: 2.5 }}
     >
-      <Box>
-        <IconButton
-          color="primary"
-          aria-label="previous month"
-          onClick={handlePrev}
-        >
-          <ArrowBackIosIcon />
-        </IconButton>
+      <IconButton
+        onClick={handlePrev}
+        size="small"
+        sx={{
+          color: 'text.secondary',
+          '&:hover': { bgcolor: 'action.hover' },
+        }}
+      >
+        <ArrowBackIosIcon sx={{ fontSize: 16 }} />
+      </IconButton>
 
-        <Button variant="outlined" sx={{ mx: 1 }}>
+      <Box
+        sx={{
+          mx: 2,
+          px: 3,
+          py: 0.75,
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          minWidth: 180,
+          textAlign: 'center',
+        }}
+      >
+        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>
           {months[monthIndex]} {year}
-        </Button>
-
-        <IconButton
-          color="primary"
-          aria-label="next month"
-          onClick={handleNext}
-        >
-          <ArrowForwardIosIcon />
-        </IconButton>
+        </Typography>
       </Box>
+
+      <IconButton
+        onClick={handleNext}
+        size="small"
+        sx={{
+          color: 'text.secondary',
+          '&:hover': { bgcolor: 'action.hover' },
+        }}
+      >
+        <ArrowForwardIosIcon sx={{ fontSize: 16 }} />
+      </IconButton>
     </Stack>
   );
 }

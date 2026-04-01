@@ -10,6 +10,7 @@ import {
   TextField,
   Button,
   Stack,
+  InputAdornment,
 } from '@mui/material';
 import { use, useState } from 'react';
 import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
@@ -46,10 +47,6 @@ export default function ExpenseForm() {
       ? selectedExpense!
       : { ...initialFormData, timestamp: currentTimestampForInput() }
   );
-
-  // TODO: it might be a good idea to refresh the fund sources list here when the form loads
-  // in case there are new fund sources added since the page load
-  // but let's handle that later
 
   const onChangeHandler = (event: any, field: string) => {
     let value = event.target.value;
@@ -100,8 +97,8 @@ export default function ExpenseForm() {
 
   return (
     <form onSubmit={submitHandler}>
-      <Box component="div" sx={{ maxWidth: 340 }}>
-        <FormControl sx={{ mb: 2, minWidth: 120, width: '100%' }}>
+      <Box sx={{ pt: 1 }}>
+        <FormControl sx={{ mb: 2.5, width: '100%' }} size="small">
           <InputLabel id="fund-source-label">Fund Source</InputLabel>
           <Select
             required
@@ -121,31 +118,38 @@ export default function ExpenseForm() {
             ))}
           </Select>
         </FormControl>
-        <Box component="div" sx={{ mb: 2 }}>
+        <Box sx={{ mb: 2.5 }}>
           <TextField
-            sx={{ width: '100%' }}
+            fullWidth
             required
-            id="outlined-basic"
+            size="small"
             label="Amount"
             variant="outlined"
             type="number"
             value={formData.amount}
             onChange={(event) => onChangeHandler(event, 'amount')}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">₱</InputAdornment>
+                ),
+              },
+            }}
           />
         </Box>
-        <Box component="div" sx={{ mb: 2 }}>
+        <Box sx={{ mb: 2.5 }}>
           <TextField
             required
-            id="outlined-basic"
+            size="small"
             label="Timestamp"
             variant="outlined"
             type="datetime-local"
-            fullWidth={true}
+            fullWidth
             value={formData.timestamp}
             onChange={(event) => onChangeHandler(event, 'timestamp')}
           />
         </Box>
-        <Box component="div" sx={{ mb: 2 }}>
+        <Box sx={{ mb: 2.5 }}>
           <ChipSelectMultiple
             label="Tags"
             required={true}
@@ -154,21 +158,27 @@ export default function ExpenseForm() {
             selectedItems={formData.tags}
           />
         </Box>
-        <Box component="div" sx={{ mb: 2 }}>
+        <Box sx={{ mb: 2.5 }}>
           <TextField
-            sx={{ width: '100%' }}
-            id="outlined-basic"
+            fullWidth
+            size="small"
             label="Notes"
             variant="outlined"
             multiline
-            minRows={3}
+            minRows={2}
             value={formData.notes || ''}
             onChange={(event) => onChangeHandler(event, 'notes')}
+            placeholder="Optional notes..."
           />
         </Box>
-        <Stack direction="row" justifyContent="end" sx={{ mt: 3 }}>
-          <Button type="submit" variant="contained">
-            Submit
+        <Stack direction="row" justifyContent="end" sx={{ mt: 1, mb: 1 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            size="medium"
+            sx={{ minWidth: 100 }}
+          >
+            {formAction === 'create' ? 'Add' : 'Save'}
           </Button>
         </Stack>
       </Box>

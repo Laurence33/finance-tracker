@@ -3,14 +3,17 @@ import { MdDelete, MdEdit } from 'react-icons/md';
 import {
   Box,
   Button,
+  Card,
+  CardContent,
+  Chip,
   DialogActions,
   DialogContent,
   DialogContentText,
-  Divider,
   IconButton,
   Stack,
   Dialog,
   DialogTitle,
+  Typography,
 } from '@mui/material';
 import { Expense } from '@/types/Expense';
 import ExpenseIconRenderer from './ExpenseIcon';
@@ -57,6 +60,9 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
     setExpenseFormOpen(true);
   };
 
+  const formattedTime = expense.timestamp.split(' ')[1]?.slice(0, 5) || '';
+  const formattedDate = expense.timestamp.split(' ')[0] || expense.timestamp;
+
   return (
     <>
       <Dialog
@@ -65,82 +71,132 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">
-          {'Delete this expense?'}
-        </DialogTitle>
+        <DialogTitle id="alert-dialog-title">Delete this expense?</DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Are you sure you want to delete this expense? This action cannot be
             undone.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={deleteExpense} autoFocus color="error">
-            Confirm
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleClose} sx={{ color: 'text.secondary' }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={deleteExpense}
+            variant="contained"
+            color="error"
+            autoFocus
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Stack
-        direction="row"
-        justifyContent={'space-between'}
-        key={expense.timestamp}
-        sx={{ border: '1px solid #ccc', borderRadius: '4px' }}
+      <Card
+        sx={{
+          transition: 'box-shadow 0.2s ease',
+          '&:hover': {
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          },
+        }}
       >
-        <Stack direction="row">
-          <Stack
-            direction="column"
-            alignItems={'center'}
-            justifyContent={'center'}
-            padding={'.5rem'}
-          >
+        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            {/* Icon */}
             <ExpenseIconRenderer fundSource={expense.fundSource} />
+
+            {/* Details */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="flex-start"
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ fontWeight: 700, color: 'text.primary' }}
+                  >
+                    ₱{expense.amount.toLocaleString()}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    {formattedDate} {formattedTime && `at ${formattedTime}`}
+                  </Typography>
+                </Box>
+
+                {/* Actions */}
+                <Stack direction="row" spacing={0} sx={{ ml: 1, flexShrink: 0 }}>
+                  <IconButton
+                    size="small"
+                    onClick={editClickHandler}
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': { color: 'primary.main' },
+                    }}
+                  >
+                    <MdEdit fontSize="1.1rem" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={deleteClickHandler}
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': { color: 'error.main' },
+                    }}
+                  >
+                    <MdDelete fontSize="1.1rem" />
+                  </IconButton>
+                </Stack>
+              </Stack>
+
+              {/* Tags */}
+              {expense.tags && expense.tags.length > 0 && (
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{ mt: 1 }}
+                  flexWrap="wrap"
+                  useFlexGap
+                >
+                  {expense.tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.7rem',
+                        borderColor: 'divider',
+                        color: 'text.secondary',
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+
+              {/* Notes */}
+              {expense.notes && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 0.75,
+                    color: 'text.secondary',
+                    fontStyle: 'italic',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {expense.notes}
+                </Typography>
+              )}
+            </Box>
           </Stack>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-            }}
-          >
-            <Box fontWeight={700}>₱{expense.amount}</Box>
-            <Box sx={{ color: '#636363ff' }}>{expense.timestamp}</Box>
-          </Box>
-        </Stack>
-        <Box
-          sx={{
-            boxShadow: '-2px 0 12px -6px rgba(0,0,0,0.8)',
-          }}
-          paddingLeft=".5rem"
-          paddingRight=".25rem"
-          borderRadius={'4px'}
-        >
-          <Stack
-            spacing={0.125}
-            direction="column"
-            alignItems={'center'}
-            justifyContent={'space-around'}
-            justifyItems={'center'}
-          >
-            <IconButton
-              color="primary"
-              aria-label="edit expense"
-              onClick={editClickHandler}
-            >
-              <MdEdit fontSize={'1.25rem'} />
-            </IconButton>
-            <Divider flexItem />
-            <IconButton
-              color="error"
-              aria-label="delete expense"
-              onClick={deleteClickHandler}
-            >
-              <MdDelete fontSize={'1.25rem'} />
-            </IconButton>
-          </Stack>
-        </Box>
-      </Stack>
+        </CardContent>
+      </Card>
     </>
   );
 }

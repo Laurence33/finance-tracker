@@ -11,32 +11,37 @@ const logoMap: Record<
   }
 > = {
   bank: {
-    bgColor: 'warning.main',
-    logo: <CiBank fontSize={'1.25rem'} color="white" />,
+    bgColor: '#f59e0b',
+    logo: <CiBank fontSize={'1.1rem'} color="white" />,
   },
   cash: {
-    bgColor: 'success.main',
-    logo: <BsCash fontSize={'1.25rem'} color="white" />,
+    bgColor: '#10b981',
+    logo: <BsCash fontSize={'1.1rem'} color="white" />,
   },
   gcash: {
-    bgColor: 'primary.main',
-    logo: <MdOutlineAccountBalanceWallet fontSize={'1.25rem'} color="white" />,
+    bgColor: '#6366f1',
+    logo: <MdOutlineAccountBalanceWallet fontSize={'1.1rem'} color="white" />,
   },
 };
 
+const defaultLogo = {
+  bgColor: '#64748b',
+  logo: <MdOutlineAccountBalanceWallet fontSize={'1.1rem'} color="white" />,
+};
+
 export default function ExpenseIcon({ fundSource }: { fundSource: string }) {
-  const matchedLogo = logoMap[fundSource];
+  const matchedLogo = logoMap[fundSource] || defaultLogo;
   return (
     <Box
       sx={{
-        p: '.25rem',
-        bgcolor: matchedLogo.bgColor || 'primary.main',
-        borderRadius: '50%',
-        width: '2rem',
-        height: '2rem',
+        width: 40,
+        height: 40,
+        borderRadius: 2,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        bgcolor: matchedLogo.bgColor,
+        flexShrink: 0,
       }}
     >
       {matchedLogo.logo}
