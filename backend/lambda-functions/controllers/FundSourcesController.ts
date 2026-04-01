@@ -8,11 +8,11 @@ import { treeifyError } from 'zod/v4';
 
 export class FundSourcesController implements Controller {
     async get() {
-        const tags = await FundSourcesService.getAll();
+        const fundSources = await FundSourcesService.getAll();
         return createSuccessResponse(HttpStatus.OK, {
-            message: 'Expenses retrieved successfully',
+            message: 'Fund sources retrieved successfully',
             data: {
-                tags,
+                fundSources,
             },
         });
     }
