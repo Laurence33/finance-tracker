@@ -5,11 +5,8 @@ import {
   CardContent,
   Container,
   Fab,
-
   Typography,
   useTheme,
-  AppBar,
-  Toolbar,
   alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -108,31 +105,8 @@ export default function Home() {
   }, [totalExpenses, expenses.length]);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <>
       <ExpenseDialog />
-
-      {/* App Bar */}
-      <AppBar
-        position="sticky"
-        elevation={0}
-        sx={{
-          bgcolor: 'background.paper',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Toolbar>
-          <AccountBalanceWalletIcon
-            sx={{ color: 'primary.main', mr: 1.5, fontSize: 28 }}
-          />
-          <Typography
-            variant="h6"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
-          >
-            Finance Tracker
-          </Typography>
-        </Toolbar>
-      </AppBar>
 
       <Container maxWidth="sm" sx={{ py: 3, pb: 12 }}>
         {/* Month Selector */}
@@ -187,12 +161,12 @@ export default function Home() {
         onClick={addExpenseClickHandler}
         sx={{
           position: 'fixed',
-          bottom: 24,
+          bottom: 88,
           right: 24,
         }}
       >
         <AddIcon />
       </Fab>
-    </Box>
+    </>
   );
 }
