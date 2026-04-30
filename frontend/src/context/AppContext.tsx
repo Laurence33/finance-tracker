@@ -27,6 +27,7 @@ interface AppContextType {
   setSelectedMonth: (month: string) => void;
   fundSources: FundSource[];
   setFundSources: (fundSources: FundSource[]) => void;
+  fetchFundSources: () => Promise<void>;
   tags: Tags[];
   setTags: (tags: Tags[]) => void;
   fetchTags: () => Promise<void>;
@@ -55,6 +56,7 @@ export const AppContext = createContext<AppContextType>({
   setSelectedMonth: () => {},
   fundSources: [],
   setFundSources: () => {},
+  fetchFundSources: async () => {},
   tags: [],
   setTags: () => {},
   fetchTags: async () => {},
@@ -160,6 +162,7 @@ export default function AppContextProvider({
     setSelectedExpense,
     fundSources,
     setFundSources,
+    fetchFundSources,
     formAction,
     setFormAction,
     expenseFormOpen,

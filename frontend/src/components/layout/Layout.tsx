@@ -23,10 +23,12 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 
 const bottomNavItems = [
   { label: 'Expenses', icon: <ReceiptLongIcon />, path: '/' },
+  { label: 'Wallet', icon: <AccountBalanceWalletIcon />, path: '/wallet' },
 ];
 
 const drawerItems = [
   { label: 'Expenses', icon: <ReceiptLongIcon />, path: '/' },
+  { label: 'Wallet', icon: <AccountBalanceWalletIcon />, path: '/wallet' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
