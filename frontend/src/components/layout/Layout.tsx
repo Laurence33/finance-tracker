@@ -21,6 +21,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { signOut } from 'aws-amplify/auth';
 
 const bottomNavItems = [
@@ -31,6 +32,7 @@ const bottomNavItems = [
 const drawerItems = [
   { label: 'Expenses', icon: <ReceiptLongIcon />, path: '/' },
   { label: 'Wallet', icon: <AccountBalanceWalletIcon />, path: '/wallet' },
+  { label: 'Manage Tags', icon: <LocalOfferIcon />, path: '/tags' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
