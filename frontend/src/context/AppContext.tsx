@@ -1,6 +1,7 @@
 import { Expense } from '@/types/Expense';
 import { FundSource } from '@/types/FundSource';
 import { Income } from '@/types/Income';
+import { Lending } from '@/types/Lending';
 import { SnackBarState } from '@/types/SnackBarState';
 import { Tags } from '@/types/Tags';
 import { HttpClient } from '@/utils/httpClient';
@@ -41,6 +42,9 @@ interface AppContextType {
   setIncomeFormOpen: (open: boolean) => void;
   incomeFormAction: 'create' | 'update';
   setIncomeFormAction: (action: 'create' | 'update') => void;
+  lendings: Lending[];
+  borrowers: string[];
+  fetchLendings: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -79,6 +83,9 @@ export const AppContext = createContext<AppContextType>({
   setIncomeFormOpen: () => {},
   incomeFormAction: 'create',
   setIncomeFormAction: () => {},
+  lendings: [],
+  borrowers: [],
+  fetchLendings: async () => {},
 });
 
 export default function AppContextProvider({
@@ -103,6 +110,8 @@ export default function AppContextProvider({
   const [incomeFormAction, setIncomeFormAction] = useState<'create' | 'update'>(
     'create'
   );
+  const [lendings, setLendings] = useState<Lending[]>([]);
+  const [borrowers, setBorrowers] = useState<string[]>([]);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -113,6 +122,7 @@ export default function AppContextProvider({
   useEffect(() => {
     fetchFundSources();
     fetchTags();
+    fetchLendings();
   }, []);
 
   useEffect(() => {
@@ -174,6 +184,19 @@ export default function AppContextProvider({
     }
   }
 
+  async function fetchLendings() {
+    try {
+      const response = await HttpClient.get<any>('/lendings');
+      if (response && response.data) {
+        setLendings(response.data.lendings || []);
+        setBorrowers(response.data.borrowers || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching lendings:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
   function showSuccessSnackBar(message: string) {
     setSnackBarState((prevState) => ({
       ...prevState,
@@ -228,6 +251,9 @@ export default function AppContextProvider({
     setIncomeFormOpen,
     incomeFormAction,
     setIncomeFormAction,
+    lendings,
+    borrowers,
+    fetchLendings,
   };
 
   return (

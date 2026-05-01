@@ -367,6 +367,95 @@ Resources:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
           - 'ft-common-layer'
+  LendingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: lendings.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        GetLendings:
+          Type: Api
+          Properties:
+            Path: /lendings
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PostLending:
+          Type: Api
+          Properties:
+            Path: /lendings
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        PatchLending:
+          Type: Api
+          Properties:
+            Path: /lendings
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
+        DeleteLending:
+          Type: Api
+          Properties:
+            Path: /lendings
+            Method: delete
+            RestApiId:
+              Ref: ApiGatewayApi
+        LendingsOptions:
+          Type: Api
+          Properties:
+            Path: /lendings
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        GetLendingPayments:
+          Type: Api
+          Properties:
+            Path: /lendings/payments
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PostLendingPayment:
+          Type: Api
+          Properties:
+            Path: /lendings/payments
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        LendingPaymentsOptions:
+          Type: Api
+          Properties:
+            Path: /lendings/payments
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - lendings.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
