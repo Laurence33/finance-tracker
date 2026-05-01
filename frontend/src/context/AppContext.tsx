@@ -2,6 +2,7 @@ import { Expense } from '@/types/Expense';
 import { FundSource } from '@/types/FundSource';
 import { Income } from '@/types/Income';
 import { Lending } from '@/types/Lending';
+import { RecurringExpense } from '@/types/RecurringExpense';
 import { SnackBarState } from '@/types/SnackBarState';
 import { Tags } from '@/types/Tags';
 import { HttpClient } from '@/utils/httpClient';
@@ -45,6 +46,8 @@ interface AppContextType {
   lendings: Lending[];
   borrowers: string[];
   fetchLendings: () => Promise<void>;
+  recurringExpenses: RecurringExpense[];
+  fetchRecurringExpenses: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -86,6 +89,8 @@ export const AppContext = createContext<AppContextType>({
   lendings: [],
   borrowers: [],
   fetchLendings: async () => {},
+  recurringExpenses: [],
+  fetchRecurringExpenses: async () => {},
 });
 
 export default function AppContextProvider({
@@ -112,6 +117,7 @@ export default function AppContextProvider({
   );
   const [lendings, setLendings] = useState<Lending[]>([]);
   const [borrowers, setBorrowers] = useState<string[]>([]);
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -123,6 +129,7 @@ export default function AppContextProvider({
     fetchFundSources();
     fetchTags();
     fetchLendings();
+    fetchRecurringExpenses();
   }, []);
 
   useEffect(() => {
@@ -197,6 +204,18 @@ export default function AppContextProvider({
     }
   }
 
+  async function fetchRecurringExpenses() {
+    try {
+      const response = await HttpClient.get<any>('/recurring-expenses');
+      if (response && response.data) {
+        setRecurringExpenses(response.data.recurringExpenses || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching recurring expenses:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
   function showSuccessSnackBar(message: string) {
     setSnackBarState((prevState) => ({
       ...prevState,
@@ -254,6 +273,8 @@ export default function AppContextProvider({
     lendings,
     borrowers,
     fetchLendings,
+    recurringExpenses,
+    fetchRecurringExpenses,
   };
 
   return (

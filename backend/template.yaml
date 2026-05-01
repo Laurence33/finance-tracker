@@ -456,6 +456,129 @@ Resources:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
           - 'ft-common-layer'
+  RecurringExpensesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: recurring-expenses.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        GetRecurring:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PostRecurring:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        RecurringOptions:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        PatchRecurring:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
+        DeleteRecurring:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}
+            Method: delete
+            RestApiId:
+              Ref: ApiGatewayApi
+        RecurringNameOptions:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        PostRecurringPay:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}/pay
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        RecurringPayOptions:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}/pay
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        GetRecurringPayments:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}/payments
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        RecurringPaymentsOptions:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}/payments
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        PatchRecurringStatus:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}/status
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
+        RecurringStatusOptions:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/{name}/status
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - recurring-expenses.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
