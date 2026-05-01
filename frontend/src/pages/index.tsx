@@ -16,6 +16,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ExpenseList from '@/components/molecules/ExpensesList';
 import { AppContext } from '@/context/AppContext';
 import ExpenseDialog from '@/components/organisms/ExpenseDialog';
+import IncomeDialog from '@/components/organisms/IncomeDialog';
 import MonthSelector from '@/components/molecules/MonthSelector';
 
 function SummaryCard({
@@ -107,6 +108,7 @@ export default function Home() {
   return (
     <>
       <ExpenseDialog />
+      <IncomeDialog />
 
       <Container maxWidth="sm" sx={{ py: 3, pb: 12 }}>
         {/* Month Selector */}

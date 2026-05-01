@@ -1,5 +1,6 @@
 import { Expense } from '@/types/Expense';
 import { FundSource } from '@/types/FundSource';
+import { Income } from '@/types/Income';
 import { SnackBarState } from '@/types/SnackBarState';
 import { Tags } from '@/types/Tags';
 import { HttpClient } from '@/utils/httpClient';
@@ -31,6 +32,15 @@ interface AppContextType {
   tags: Tags[];
   setTags: (tags: Tags[]) => void;
   fetchTags: () => Promise<void>;
+  incomes: Income[];
+  totalIncome: number;
+  selectedIncome: Income | null;
+  setSelectedIncome: (income: Income | null) => void;
+  fetchIncomes: () => Promise<void>;
+  incomeFormOpen: boolean;
+  setIncomeFormOpen: (open: boolean) => void;
+  incomeFormAction: 'create' | 'update';
+  setIncomeFormAction: (action: 'create' | 'update') => void;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -60,6 +70,15 @@ export const AppContext = createContext<AppContextType>({
   tags: [],
   setTags: () => {},
   fetchTags: async () => {},
+  incomes: [],
+  totalIncome: 0,
+  selectedIncome: null,
+  setSelectedIncome: () => {},
+  fetchIncomes: async () => {},
+  incomeFormOpen: false,
+  setIncomeFormOpen: () => {},
+  incomeFormAction: 'create',
+  setIncomeFormAction: () => {},
 });
 
 export default function AppContextProvider({
@@ -77,6 +96,13 @@ export default function AppContextProvider({
   );
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
   const [tags, setTags] = useState<Tags[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
+  const [totalIncome, setTotalIncome] = useState<number>(0);
+  const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
+  const [incomeFormOpen, setIncomeFormOpen] = useState(false);
+  const [incomeFormAction, setIncomeFormAction] = useState<'create' | 'update'>(
+    'create'
+  );
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -91,6 +117,7 @@ export default function AppContextProvider({
 
   useEffect(() => {
     fetchExpenses();
+    fetchIncomes();
   }, [selectedMonth]);
 
   async function fetchFundSources() {
@@ -128,6 +155,21 @@ export default function AppContextProvider({
       }
     } catch (error: any) {
       console.error('Error fetching tags:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
+  async function fetchIncomes() {
+    try {
+      const response = await HttpClient.get<any>(
+        '/incomes?month=' + selectedMonth
+      );
+      if (response && response.data) {
+        setIncomes(response.data.incomes || []);
+        setTotalIncome(response.data.totalIncome || 0);
+      }
+    } catch (error: any) {
+      console.error('Error fetching incomes:', error);
       showErrorSnackBar(error.message);
     }
   }
@@ -177,6 +219,15 @@ export default function AppContextProvider({
     tags,
     setTags,
     fetchTags,
+    incomes,
+    totalIncome,
+    selectedIncome,
+    setSelectedIncome,
+    fetchIncomes,
+    incomeFormOpen,
+    setIncomeFormOpen,
+    incomeFormAction,
+    setIncomeFormAction,
   };
 
   return (

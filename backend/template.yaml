@@ -295,8 +295,74 @@ Resources:
         Minify: true
         Target: "es2020"
         Sourcemap: true
-        EntryPoints: 
+        EntryPoints:
         - tags.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
+  IncomesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: incomes.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        GetIncomes:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PostIncome:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        PatchIncome:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
+        DeleteIncome:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: delete
+            RestApiId:
+              Ref: ApiGatewayApi
+        IncomesOptions:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - incomes.ts
         External:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
