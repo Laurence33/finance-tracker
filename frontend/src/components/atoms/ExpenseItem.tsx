@@ -23,6 +23,7 @@ import { AppContext } from '@/context/AppContext';
 export default function ExpenseItem({ expense }: { expense: Expense }) {
   const {
     fetchExpenses,
+    fetchFundSources,
     showSuccessSnackBar,
     showErrorSnackBar,
     setSelectedExpense,
@@ -48,6 +49,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
       await HttpClient.delete(`/expenses?timestamp=${expense.timestamp}`);
       showSuccessSnackBar('Expense deleted successfully');
       fetchExpenses();
+      fetchFundSources();
     } catch (error: any) {
       console.error('Error deleting expense:', error);
       showErrorSnackBar(error.message);

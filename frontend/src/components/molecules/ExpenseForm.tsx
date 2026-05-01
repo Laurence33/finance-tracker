@@ -36,6 +36,7 @@ export default function ExpenseForm() {
     showErrorSnackBar,
     showSuccessSnackBar,
     fetchExpenses,
+    fetchFundSources,
     selectedExpense,
     setExpenseFormOpen,
     formAction,
@@ -81,6 +82,7 @@ export default function ExpenseForm() {
         timestamp: currentTimestampForInput(),
       });
       fetchExpenses();
+      fetchFundSources();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to add expense.');
     }
