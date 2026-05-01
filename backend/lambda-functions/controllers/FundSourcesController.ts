@@ -1,5 +1,5 @@
 import { createBadRequestResponse, createSuccessResponse, generateValidationErrors, HttpStatus } from 'ft-common-layer';
-import FundSourcesService from 'services/FundSourcesService';
+import { FundSourcesService } from 'services/FundSourcesService';
 import { Controller } from 'types/Controller';
 import { NotFoundException } from 'utils/Exceptions';
 import { CreateFundSourceValidator } from 'validators/CreateFundSourceValidator';
@@ -7,8 +7,14 @@ import { UpdateFundSourceValidator } from 'validators/UpdateFundSourceValidator'
 import { treeifyError } from 'zod/v4';
 
 export class FundSourcesController implements Controller {
+    private fundSourcesService: FundSourcesService;
+
+    constructor(userId: string) {
+        this.fundSourcesService = new FundSourcesService(userId);
+    }
+
     async get() {
-        const fundSources = await FundSourcesService.getAll();
+        const fundSources = await this.fundSourcesService.getAll();
         return createSuccessResponse(HttpStatus.OK, {
             message: 'Fund sources retrieved successfully',
             data: {
@@ -25,23 +31,20 @@ export class FundSourcesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
         }
 
-        // check duplicate fund source name or displayText
-        const fundSources = await FundSourcesService.getAll();
-        if (fundSources.length) {
+        const existingFundSource = (await this.fundSourcesService.getFundSource(validationResult.data.name))?.toNormalItem();
+        if (existingFundSource) {
             let hasErrors = false;
             const errors: Record<string, string[]> = {
                 name: [],
                 displayText: [],
             };
-            for (const item of fundSources) {
-                if (item.name === validationResult.data.name) {
-                    errors.name.push('Name already in use.');
-                    hasErrors = true;
-                }
-                if (item.displayText === validationResult.data.displayText) {
-                    errors.displayText.push('Display text already in use.');
-                    hasErrors = true;
-                }
+            if (existingFundSource.name === validationResult.data.name) {
+                errors.name.push('Identifier already in use.');
+                hasErrors = true;
+            }
+            if (existingFundSource.displayText === validationResult.data.displayText) {
+                errors.displayText.push('Display text already in use.');
+                hasErrors = true;
             }
 
             if (hasErrors) {
@@ -54,7 +57,7 @@ export class FundSourcesController implements Controller {
             }
         }
 
-        const fundSource = await FundSourcesService.create(validationResult.data);
+        const fundSource = await this.fundSourcesService.create(validationResult.data);
 
         return createSuccessResponse(HttpStatus.OK, {
             message: 'Fund Source recorded successfully',
@@ -74,7 +77,7 @@ export class FundSourcesController implements Controller {
         }
 
         try {
-            const updatedFundSource = await FundSourcesService.update(name, body);
+            const updatedFundSource = await this.fundSourcesService.update(name, body);
 
             return createSuccessResponse(HttpStatus.OK, {
                 message: 'Fund Source updated successfully',
@@ -93,7 +96,7 @@ export class FundSourcesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Fund source name is required for deletion.');
         }
 
-        const fundSourcesInUse = await FundSourcesService.checkInUse(name);
+        const fundSourcesInUse = await this.fundSourcesService.checkInUse(name);
         if (fundSourcesInUse) {
             return createBadRequestResponse(
                 HttpStatus.BAD_REQUEST,
@@ -101,10 +104,8 @@ export class FundSourcesController implements Controller {
             );
         }
 
-        await FundSourcesService.delete(name);
+        await this.fundSourcesService.delete(name);
 
         return createSuccessResponse(HttpStatus.NO_CONTENT);
     }
 }
-
-export default new FundSourcesController();

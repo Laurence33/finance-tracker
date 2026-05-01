@@ -9,4 +9,5 @@ export const CreateFundSourceValidator = z.object({
     ),
     balance: z.number().nonnegative(),
     displayText: z.string(),
+    icon: z.string().optional().default('wallet'),
 });

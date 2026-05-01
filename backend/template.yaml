@@ -11,6 +11,35 @@ Globals:
     Timeout: 3
 
 Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: FinanceTrackerUserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: false
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: FinanceTrackerWebClient
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
   CommonLayer:
       Type: AWS::Serverless::LayerVersion
       Properties:
@@ -50,6 +79,12 @@ Resources:
       StageName: Prod
       EndpointConfiguration:
         Type: REGIONAL
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+        AddDefaultAuthorizerToCorsPreflight: false
   ExpensesFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -102,6 +137,8 @@ Resources:
             Method: options
             RestApiId:
               Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -166,13 +203,24 @@ Resources:
             Method: options
             RestApiId:
               Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        FundSourcesPathOptions:
+          Type: Api
+          Properties:
+            Path: /fund-sources/{name}
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
         Target: "es2020"
         Sourcemap: true
-        EntryPoints: 
+        EntryPoints:
         - fund-sources.ts
         External:
           - '@aws-sdk/lib-dynamodb'
@@ -202,6 +250,27 @@ Resources:
             Method: get
             RestApiId:
               Ref: ApiGatewayApi
+        PostTag:
+          Type: Api
+          Properties:
+            Path: /tags
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        PatchTag:
+          Type: Api
+          Properties:
+            Path: /tags/{name}
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
+        DeleteTag:
+          Type: Api
+          Properties:
+            Path: /tags/{name}
+            Method: delete
+            RestApiId:
+              Ref: ApiGatewayApi
         TagsOptions:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
@@ -209,6 +278,17 @@ Resources:
             Method: options
             RestApiId:
               Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+        TagsPathOptions:
+          Type: Api
+          Properties:
+            Path: /tags/{name}
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -237,3 +317,9 @@ Outputs:
   DDBSingleTableArn:
     Description: DynamoDB table ARN
     Value: !GetAtt DDBSingleTable.Arn
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient

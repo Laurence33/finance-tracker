@@ -1,15 +1,31 @@
-import { createBadRequestResponse, createSuccessResponse, HttpStatus, isValidDate } from 'ft-common-layer';
-import ExpensesService from 'services/ExpensesService';
-import FundSourcesService from 'services/FundSourcesService';
-import TagsService from 'services/TagsService';
+import {
+    createBadRequestResponse,
+    createSuccessResponse,
+    generateValidationErrors,
+    HttpStatus,
+    isValidDate,
+} from 'ft-common-layer';
+import { ExpensesService } from 'services/ExpensesService';
+import { FundSourcesService } from 'services/FundSourcesService';
+import { TagsService } from 'services/TagsService';
 import { Controller } from 'types/Controller';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
 import { CreateExpenseValidator } from 'validators/CreateExpenseValidator';
 import { treeifyError } from 'zod/v4';
 
 export class ExpensesController implements Controller {
+    private expensesService: ExpensesService;
+    private fundSourcesService: FundSourcesService;
+    private tagsService: TagsService;
+
+    constructor(userId: string) {
+        this.expensesService = new ExpensesService(userId);
+        this.fundSourcesService = new FundSourcesService(userId);
+        this.tagsService = new TagsService(userId);
+    }
+
     async get(month: string) {
-        const expenses = await ExpensesService.getAll(month);
+        const expenses = await this.expensesService.getAll(month);
         const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0;
         return createSuccessResponse(HttpStatus.OK, {
             message: 'Expenses retrieved successfully',
@@ -27,7 +43,7 @@ export class ExpensesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
         }
 
-        const checkExpense = await ExpensesService.getExpense(validationResult.data.timestamp);
+        const checkExpense = await this.expensesService.getExpense(validationResult.data.timestamp);
         if (checkExpense) {
             return createBadRequestResponse(
                 HttpStatus.BAD_REQUEST,
@@ -35,16 +51,16 @@ export class ExpensesController implements Controller {
             );
         }
 
-        const fundSources = await FundSourcesService.getAll();
-        const foundFundSource = fundSources.find((fs) => fs.name === validationResult.data.fundSource);
-        if (!foundFundSource) {
+        const fundSource = await this.fundSourcesService.getFundSource(validationResult.data.fundSource);
+        if (!fundSource) {
             return createBadRequestResponse(
                 HttpStatus.BAD_REQUEST,
-                `Fund source '${validationResult.data.fundSource}' does not exist.`,
+                'Validation failed',
+                generateValidationErrors({ fundSource: ['Fund source not found.'] }),
             );
         }
 
-        const tags = await TagsService.getAll();
+        const tags = await this.tagsService.getAll();
         for (const tag of validationResult.data.tags) {
             const found = tags.find((dbTag) => dbTag.name === tag);
             if (!found) {
@@ -52,12 +68,22 @@ export class ExpensesController implements Controller {
             }
         }
 
-        const expense = await ExpensesService.create(body);
+        try {
+            const expense = await this.expensesService.create(validationResult.data);
 
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Expense recorded successfully',
-            data: expense,
-        });
+            return createSuccessResponse(HttpStatus.OK, {
+                message: 'Expense recorded successfully',
+                data: expense,
+            });
+        } catch (error: any) {
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Transaction failed. Fund source may have insufficient balance.',
+                );
+            }
+            throw error;
+        }
     }
 
     async patch(timestamp: string, body: any) {
@@ -71,8 +97,7 @@ export class ExpensesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
         }
 
-        const tags = await TagsService.getAll();
-        // validationResult.data always have 1+ tag when defined because of zod validation
+        const tags = await this.tagsService.getAll();
         for (const tag of validationResult.data.tags || []) {
             const found = tags.find((dbTag) => dbTag.name === tag);
             if (!found) {
@@ -80,7 +105,7 @@ export class ExpensesController implements Controller {
             }
         }
         try {
-            const updatedExpense = await ExpensesService.updateExpense(timestamp, validationResult.data);
+            const updatedExpense = await this.expensesService.updateExpense(timestamp, validationResult.data);
 
             return createSuccessResponse(HttpStatus.OK, {
                 message: 'Expense updated successfully',
@@ -89,6 +114,12 @@ export class ExpensesController implements Controller {
         } catch (error: any) {
             if (error instanceof NotFoundException || error instanceof BadRequestException) {
                 return createBadRequestResponse(error.statusCode, error.message);
+            }
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Transaction failed. Fund source may have insufficient balance.',
+                );
             }
             throw error;
         }
@@ -99,9 +130,17 @@ export class ExpensesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Timestamp is required for deletion.');
         }
 
-        await ExpensesService.delete(name);
-        return createSuccessResponse(HttpStatus.NO_CONTENT);
+        try {
+            await this.expensesService.delete(name);
+            return createSuccessResponse(HttpStatus.NO_CONTENT);
+        } catch (error: any) {
+            if (error instanceof NotFoundException) {
+                return createBadRequestResponse(HttpStatus.NOT_FOUND, error.message);
+            }
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Failed to delete expense.');
+            }
+            throw error;
+        }
     }
 }
-
-export default new ExpensesController();

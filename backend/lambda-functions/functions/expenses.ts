@@ -9,37 +9,35 @@ import {
     createServerErrorResponse,
 } from 'ft-common-layer';
 import { CreateExpenseRequestBody } from '../types/Expense';
-import { ExpensesService } from '../services/ExpensesService';
-import ExpensesController from 'controllers/ExpensesController';
-
-/**
- *
- * Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
- * @param {Object} event - API Gateway Lambda Proxy Input Format
- *
- * Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
- * @returns {Object} object - API Gateway Lambda Proxy Output Format
- *
- */
+import { ExpensesController } from 'controllers/ExpensesController';
+import { getUserIdFromEvent } from 'utils/getUserId';
+import { requestIdMiddleware } from 'utils/requestIdMiddleware';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const expensesService = new ExpensesService();
+        if (event.httpMethod === HttpMethod.OPTIONS) {
+            return createSuccessResponse(HttpStatus.NO_CONTENT);
+        }
+
+        const userId = getUserIdFromEvent(event);
+        if (!userId) {
+            return createBadRequestResponse(HttpStatus.UNAUTHORIZED, 'Unauthorized');
+        }
+
+        const controller = new ExpensesController(userId);
         const timestamp = event.queryStringParameters?.timestamp;
         switch (event.httpMethod) {
             case HttpMethod.GET:
                 const month = event.queryStringParameters?.month || new Date().toISOString().slice(0, 7);
-                return await ExpensesController.get(month);
+                return await controller.get(month);
             case HttpMethod.POST:
                 const body = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
-                return await ExpensesController.post(body);
+                return await controller.post(body);
             case HttpMethod.PATCH:
                 const putBody = JSON.parse(event.body || '{}') as CreateExpenseRequestBody;
-                return await ExpensesController.patch(timestamp || '', putBody);
+                return await controller.patch(timestamp || '', putBody);
             case HttpMethod.DELETE:
-                return await ExpensesController.delete(timestamp);
-            case HttpMethod.OPTIONS:
-                return createSuccessResponse(HttpStatus.NO_CONTENT);
+                return await controller.delete(timestamp);
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
@@ -49,10 +47,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 };
 
-export const lambdaHandler = middy(handler).use(
-    cors({
-        headers: 'Content-Type',
-        methods: 'POST, OPTIONS, DELETE, PATCH',
-        origins: ['http://localhost:8001'], // TODO: maybe put this to the env variables
-    }),
-);
+export const lambdaHandler = middy(handler)
+    .use(
+        cors({
+            headers: 'Content-Type, Authorization',
+            methods: 'POST, OPTIONS, DELETE, PATCH, GET',
+            origins: ['http://localhost:8001'],
+        }),
+    )
+    .use(requestIdMiddleware());

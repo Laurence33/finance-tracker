@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import {
     createBadRequestResponse,
     createSuccessResponse,
@@ -12,14 +12,19 @@ import { ddbDocClient } from './ddb-client';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
-const EXPENSE_PK = DDBConstants.PARTITIONS.EXPENSE;
+
 export class ExpensesService {
+    constructor(private userId: string) {}
+
+    private get expensePk() { return DDBConstants.PARTITIONS.EXPENSE(this.userId); }
+    private get fundSourcePk() { return DDBConstants.PARTITIONS.FUND_SOURCE(this.userId); }
+
     async getExpense(timestamp: string): Promise<Expense | null> {
         const command = new QueryCommand({
             TableName: SINGLE_TABLE_NAME,
             KeyConditionExpression: 'PK = :pk AND SK = :sk',
             ExpressionAttributeValues: {
-                ':pk': EXPENSE_PK,
+                ':pk': this.expensePk,
                 ':sk': timestamp,
             },
         });
@@ -27,18 +32,38 @@ export class ExpensesService {
         if (!response.Items || response.Items.length === 0) {
             return null;
         }
-        return new Expense(response.Items[0]);
+        return new Expense(response.Items[0], this.userId);
     }
 
     async create(body: CreateExpenseRequestBody) {
-        const expense = new Expense(body);
-        const command = new PutCommand({
-            TableName: SINGLE_TABLE_NAME,
-            Item: expense.toDdbItem(),
+        const expense = new Expense(body, this.userId);
+
+        const transactCmd = new TransactWriteCommand({
+            TransactItems: [
+                {
+                    Put: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Item: expense.toDdbItem(),
+                    },
+                },
+                {
+                    Update: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Key: {
+                            PK: this.fundSourcePk,
+                            SK: body.fundSource,
+                        },
+                        UpdateExpression: 'SET balance = balance - :amt',
+                        ConditionExpression: 'attribute_exists(PK)',
+                        ExpressionAttributeValues: {
+                            ':amt': body.amount,
+                        },
+                    },
+                },
+            ],
         });
 
-        await ddbDocClient.send(command);
-
+        await ddbDocClient.send(transactCmd);
         return expense.toNormalItem();
     }
 
@@ -47,13 +72,13 @@ export class ExpensesService {
             TableName: SINGLE_TABLE_NAME,
             KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk_prefix)',
             ExpressionAttributeValues: {
-                ':pk': EXPENSE_PK,
+                ':pk': this.expensePk,
                 ':sk_prefix': month,
             },
-            ScanIndexForward: false, // order by SK descending (latest first)
+            ScanIndexForward: false,
         });
         const response = await ddbDocClient.send(command);
-        const expenses = response.Items?.map((item) => new Expense(item).toNormalItem());
+        const expenses = response.Items?.map((item) => new Expense(item, this.userId).toNormalItem());
         return expenses || [];
     }
 
@@ -67,7 +92,6 @@ export class ExpensesService {
     }
 
     async updateExpense(timestamp: string, body: Partial<CreateExpenseRequestBody>) {
-        // Fetch existing expense
         const checkExpense = await this.getExpense(timestamp);
         if (!checkExpense) {
             throw new NotFoundException('Expense not found');
@@ -75,36 +99,124 @@ export class ExpensesService {
 
         const existingExpense = checkExpense.toNormalItem();
 
-        // If the timestamp is changed in the update, we need to delete the old item
         if (body.timestamp && body.timestamp !== existingExpense.timestamp) {
-            // need to check if the new timestamp already exists
             const checkNewExpense = await this.getExpense(body.timestamp);
             if (checkNewExpense) {
                 throw new BadRequestException('An expense with the new timestamp already exists.');
             }
-
-            await this.delete(existingExpense.timestamp);
         }
+
         const updatedData = { ...existingExpense, ...body };
-        const updatedExpense = new Expense(updatedData);
-        const putCmd = new PutCommand({
-            TableName: SINGLE_TABLE_NAME,
-            Item: updatedExpense.toDdbItem(),
+        const updatedExpense = new Expense(updatedData, this.userId);
+
+        const transactItems: any[] = [];
+
+        if (body.timestamp && body.timestamp !== existingExpense.timestamp) {
+            transactItems.push({
+                Delete: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: { PK: this.expensePk, SK: existingExpense.timestamp },
+                },
+            });
+        }
+
+        transactItems.push({
+            Put: {
+                TableName: SINGLE_TABLE_NAME,
+                Item: updatedExpense.toDdbItem(),
+            },
         });
-        await ddbDocClient.send(putCmd);
+
+        const oldAmount = existingExpense.amount;
+        const newAmount = updatedData.amount;
+        const oldFundSource = existingExpense.fundSource;
+        const newFundSource = updatedData.fundSource;
+
+        if (oldFundSource === newFundSource) {
+            const diff = newAmount - oldAmount;
+            if (diff !== 0) {
+                if (diff > 0) {
+                    transactItems.push({
+                        Update: {
+                            TableName: SINGLE_TABLE_NAME,
+                            Key: { PK: this.fundSourcePk, SK: oldFundSource },
+                            UpdateExpression: 'SET balance = balance - :diff',
+                            ConditionExpression: 'balance >= :diff',
+                            ExpressionAttributeValues: { ':diff': diff },
+                        },
+                    });
+                } else {
+                    transactItems.push({
+                        Update: {
+                            TableName: SINGLE_TABLE_NAME,
+                            Key: { PK: this.fundSourcePk, SK: oldFundSource },
+                            UpdateExpression: 'SET balance = balance + :diff',
+                            ExpressionAttributeValues: { ':diff': Math.abs(diff) },
+                        },
+                    });
+                }
+            }
+        } else {
+            transactItems.push({
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: { PK: this.fundSourcePk, SK: oldFundSource },
+                    UpdateExpression: 'SET balance = balance + :amt',
+                    ExpressionAttributeValues: { ':amt': oldAmount },
+                },
+            });
+            transactItems.push({
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: { PK: this.fundSourcePk, SK: newFundSource },
+                    UpdateExpression: 'SET balance = balance - :amt',
+                    ConditionExpression: 'attribute_exists(PK) AND balance >= :amt',
+                    ExpressionAttributeValues: { ':amt': newAmount },
+                },
+            });
+        }
+
+        const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
+        await ddbDocClient.send(transactCmd);
 
         return updatedExpense;
     }
+
     async delete(timestamp: string) {
-        const deleteCmd = new DeleteCommand({
-            TableName: SINGLE_TABLE_NAME,
-            Key: {
-                PK: EXPENSE_PK,
-                SK: timestamp,
-            },
+        const expense = await this.getExpense(timestamp);
+        if (!expense) {
+            throw new NotFoundException('Expense not found');
+        }
+
+        const expenseItem = expense.toNormalItem();
+
+        const transactCmd = new TransactWriteCommand({
+            TransactItems: [
+                {
+                    Delete: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Key: {
+                            PK: this.expensePk,
+                            SK: timestamp,
+                        },
+                    },
+                },
+                {
+                    Update: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Key: {
+                            PK: this.fundSourcePk,
+                            SK: expenseItem.fundSource,
+                        },
+                        UpdateExpression: 'SET balance = balance + :amt',
+                        ExpressionAttributeValues: {
+                            ':amt': expenseItem.amount,
+                        },
+                    },
+                },
+            ],
         });
-        await ddbDocClient.send(deleteCmd);
+
+        await ddbDocClient.send(transactCmd);
     }
 }
-
-export default new ExpensesService();

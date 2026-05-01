@@ -1,14 +1,15 @@
 import { DDBConstants } from 'ft-common-layer';
 import { CreateExpenseRequestBody } from '../types/Expense';
 export class Expense {
-    private PK = DDBConstants.PARTITIONS.EXPENSE;
+    private userId: string;
     private timestamp: string;
     private fundSource: string;
     private amount: number;
     private tags: string[];
     private notes: string;
 
-    constructor(data: CreateExpenseRequestBody | Record<string, any>) {
+    constructor(data: CreateExpenseRequestBody | Record<string, any>, userId: string) {
+        this.userId = userId;
         if (data.SK) this.timestamp = data.SK; // from DynamoDB
         else this.timestamp = data.timestamp.replace('T', ' ');
 
@@ -22,7 +23,7 @@ export class Expense {
 
     toDdbItem() {
         return {
-            PK: this.PK,
+            PK: DDBConstants.PARTITIONS.EXPENSE(this.userId),
             SK: this.timestamp,
             LSI1SK: this.fundSource,
             amount: this.amount,
