@@ -18,8 +18,10 @@ import {
   Typography,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import LogoutIcon from '@mui/icons-material/Logout';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import { signOut } from 'aws-amplify/auth';
 
 const bottomNavItems = [
   { label: 'Expenses', icon: <ReceiptLongIcon />, path: '/' },
@@ -63,10 +65,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           />
           <Typography
             variant="h6"
-            sx={{ color: 'text.primary', fontWeight: 700 }}
+            sx={{ color: 'text.primary', fontWeight: 700, flexGrow: 1 }}
           >
             Finance Tracker
           </Typography>
+          <IconButton
+            onClick={() => signOut()}
+            sx={{ color: 'text.primary' }}
+            aria-label="Sign out"
+          >
+            <LogoutIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
 

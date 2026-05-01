@@ -1,9 +1,47 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+
+const MAX_RETRIES = 3;
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
 const httpClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+httpClient.interceptors.request.use(async (config) => {
+  try {
+    const session = await fetchAuthSession();
+    const token = session.tokens?.idToken?.toString();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {
+    // Not signed in — request will fail at API Gateway
+  }
+  return config;
+});
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+httpClient.interceptors.response.use(undefined, async (error: AxiosError) => {
+  const config = error.config as (AxiosRequestConfig & { __retryCount?: number }) | undefined;
+  if (!config) return Promise.reject(error);
+  const status = error.response?.status;
+  const isNetworkOrCorsFailure = !error.response;
+  const isRetryableStatus = status !== undefined && RETRYABLE_STATUSES.has(status);
+  if (!isNetworkOrCorsFailure && !isRetryableStatus) {
+    return Promise.reject(error);
+  }
+  config.__retryCount = (config.__retryCount || 0) + 1;
+  if (config.__retryCount > MAX_RETRIES) {
+    return Promise.reject(error);
+  }
+  const delay = 300 * 2 ** (config.__retryCount - 1) + Math.random() * 200;
+  await sleep(delay);
+  return httpClient.request(config);
 });
 
 export class HttpError extends Error {
@@ -30,12 +68,19 @@ function parseFieldErrors(
 
 function handleHttpException(error: any): void {
   if (error.response) {
-    // The request was made and the server responded with a status code
-    // that falls out of the range of 2xx
+    const requestId = error.response.headers?.['x-request-id'];
+    if (requestId) {
+      console.error(`Request failed. x-request-id: ${requestId}`, error.response);
+    }
+    if (error.response.status === 401) {
+      signOut().catch(() => {});
+      throw new HttpError('Session expired. Please sign in again.');
+    }
     const data = error.response.data;
     const fieldErrors = parseFieldErrors(data.errors);
+    const suffix = requestId ? ` (request id: ${requestId})` : '';
     throw new HttpError(
-      data.message || 'Unknown error occurred.',
+      (data.message || 'Unknown error occurred.') + suffix,
       fieldErrors,
     );
   } else if (error.request) {
