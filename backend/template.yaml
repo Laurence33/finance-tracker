@@ -579,6 +579,58 @@ Resources:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
           - 'ft-common-layer'
+  TransfersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: transfers.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        GetTransfers:
+          Type: Api
+          Properties:
+            Path: /transfers
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PostTransfer:
+          Type: Api
+          Properties:
+            Path: /transfers
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        TransfersOptions:
+          Type: Api
+          Properties:
+            Path: /transfers
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - transfers.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
