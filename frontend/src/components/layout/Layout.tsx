@@ -24,6 +24,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import RepeatIcon from '@mui/icons-material/Repeat';
+import TimelineIcon from '@mui/icons-material/Timeline';
 import { signOut } from 'aws-amplify/auth';
 
 const bottomNavItems = [
@@ -34,6 +35,7 @@ const bottomNavItems = [
 const drawerItems = [
   { label: 'Expenses', icon: <ReceiptLongIcon />, path: '/' },
   { label: 'Wallet', icon: <AccountBalanceWalletIcon />, path: '/wallet' },
+  { label: 'Forecast', icon: <TimelineIcon />, path: '/forecast' },
   { label: 'Lendings', icon: <HandshakeIcon />, path: '/lendings' },
   { label: 'Recurring', icon: <RepeatIcon />, path: '/recurring' },
   { label: 'Manage Tags', icon: <LocalOfferIcon />, path: '/tags' },
