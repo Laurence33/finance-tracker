@@ -301,6 +301,40 @@ Resources:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
           - 'ft-common-layer'
+  UserSignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: user-signup.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        PostConfirm:
+          Type: Cognito
+          Properties:
+            UserPool: !Ref UserPool
+            Trigger: PostConfirmation
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - user-signup.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
   IncomesFunction:
     Type: AWS::Serverless::Function
     Properties:
