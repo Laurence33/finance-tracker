@@ -11,6 +11,7 @@ export class Lending {
     private promisedDate: string;
     private status: 'active' | 'partially_paid' | 'paid';
     private notes: string;
+    private deductedFromBalance: boolean;
 
     constructor(data: CreateLendingRequestBody | Record<string, any>, userId: string) {
         this.userId = userId;
@@ -28,6 +29,7 @@ export class Lending {
         this.promisedDate = data.promisedDate;
         this.status = data.status ?? 'active';
         this.notes = data.notes || '';
+        this.deductedFromBalance = data.deductedFromBalance ?? true;
     }
 
     toDdbItem() {
@@ -41,6 +43,7 @@ export class Lending {
             promisedDate: this.promisedDate,
             status: this.status,
             notes: this.notes,
+            deductedFromBalance: this.deductedFromBalance,
         };
     }
 
@@ -54,6 +57,7 @@ export class Lending {
             promisedDate: this.promisedDate,
             status: this.status,
             notes: this.notes,
+            deductedFromBalance: this.deductedFromBalance,
         };
     }
 }

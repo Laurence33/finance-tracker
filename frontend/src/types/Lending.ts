@@ -7,6 +7,7 @@ export type Lending = {
   status: 'active' | 'partially_paid' | 'paid';
   notes: string;
   timestamp: string;
+  deductedFromBalance: boolean;
 };
 
 export type LendingPayment = {

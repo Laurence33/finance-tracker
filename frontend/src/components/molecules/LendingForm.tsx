@@ -8,6 +8,8 @@ import {
   Stack,
   InputAdornment,
   MenuItem,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import { use, useState } from 'react';
 import { Lending } from '@/types/Lending';
@@ -18,6 +20,7 @@ type LendingFormData = {
   fundSource: string;
   promisedDate: string;
   notes: string;
+  deductedFromBalance: boolean;
 };
 
 const initialFormData: LendingFormData = {
@@ -26,6 +29,7 @@ const initialFormData: LendingFormData = {
   fundSource: '',
   promisedDate: '',
   notes: '',
+  deductedFromBalance: true,
 };
 
 type FieldErrors = Record<string, string[]>;
@@ -55,6 +59,7 @@ export default function LendingForm({
           fundSource: lending.fundSource,
           promisedDate: lending.promisedDate,
           notes: lending.notes,
+          deductedFromBalance: lending.deductedFromBalance,
         }
       : initialFormData,
   );
@@ -160,7 +165,12 @@ export default function LendingForm({
             value={formData.fundSource}
             onChange={(e) => onChangeHandler(e.target.value, 'fundSource')}
             error={!!fieldErrors.fundSource}
-            helperText={getError('fundSource') || 'Balance will be deducted from this source'}
+            helperText={
+              getError('fundSource') ||
+              (formData.deductedFromBalance
+                ? 'Balance will be deducted from this source'
+                : 'Recorded for reference only — balance unchanged')
+            }
             disabled={isEdit}
           >
             {fundSources.map((fs) => (
@@ -169,6 +179,21 @@ export default function LendingForm({
               </MenuItem>
             ))}
           </TextField>
+          {!isEdit && (
+            <FormControlLabel
+              sx={{ mt: 0.5, ml: 0 }}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={formData.deductedFromBalance}
+                  onChange={(e) =>
+                    onChangeHandler(e.target.checked, 'deductedFromBalance')
+                  }
+                />
+              }
+              label="Deduct from fund source balance"
+            />
+          )}
         </Box>
         <Box sx={{ mb: 2.5 }}>
           <TextField

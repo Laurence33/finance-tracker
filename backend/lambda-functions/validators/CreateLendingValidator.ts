@@ -6,6 +6,7 @@ export const CreateLendingValidator = z.object({
     fundSource: z.string().min(1, 'Fund source is required.'),
     promisedDate: z.string().min(1, 'Promised payment date is required.'),
     notes: z.string().optional().default(''),
+    deductedFromBalance: z.boolean().optional().default(true),
 });
 
 export const UpdateLendingValidator = z.object({

@@ -43,13 +43,15 @@ export class LendingsController implements Controller {
             );
         }
 
-        const fsItem = fundSource.toNormalItem();
-        if (Number(fsItem.balance) < validationResult.data.amount) {
-            return createBadRequestResponse(
-                HttpStatus.BAD_REQUEST,
-                'Validation failed',
-                generateValidationErrors({ amount: ['Insufficient fund source balance.'] }),
-            );
+        if (validationResult.data.deductedFromBalance) {
+            const fsItem = fundSource.toNormalItem();
+            if (Number(fsItem.balance) < validationResult.data.amount) {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Validation failed',
+                    generateValidationErrors({ amount: ['Insufficient fund source balance.'] }),
+                );
+            }
         }
 
         try {

@@ -60,30 +60,36 @@ export class LendingsService {
     async create(data: any) {
         const lending = new Lending(data, this.userId);
         const ddbItem = lending.toDdbItem();
+        const deductedFromBalance = data.deductedFromBalance ?? true;
+
+        const transactItems: any[] = [
+            {
+                Put: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Item: ddbItem,
+                },
+            },
+        ];
+
+        if (deductedFromBalance) {
+            transactItems.push({
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: data.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance - :amt',
+                    ConditionExpression: 'attribute_exists(PK) AND balance >= :amt',
+                    ExpressionAttributeValues: {
+                        ':amt': data.amount,
+                    },
+                },
+            });
+        }
 
         const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Put: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Item: ddbItem,
-                    },
-                },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: data.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance - :amt',
-                        ConditionExpression: 'attribute_exists(PK) AND balance >= :amt',
-                        ExpressionAttributeValues: {
-                            ':amt': data.amount,
-                        },
-                    },
-                },
-            ],
+            TransactItems: transactItems,
         });
 
         await ddbDocClient.send(transactCmd);
@@ -192,31 +198,36 @@ export class LendingsService {
         const lendingItem = lending.toNormalItem();
         const remainingAmount = lendingItem.amount - lendingItem.totalPaid;
 
+        const transactItems: any[] = [
+            {
+                Delete: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.lendingPk,
+                        SK: timestamp,
+                    },
+                },
+            },
+        ];
+
+        if (lendingItem.deductedFromBalance) {
+            transactItems.push({
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: lendingItem.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance + :amt',
+                    ExpressionAttributeValues: {
+                        ':amt': remainingAmount,
+                    },
+                },
+            });
+        }
+
         const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Delete: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.lendingPk,
-                            SK: timestamp,
-                        },
-                    },
-                },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: lendingItem.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance + :amt',
-                        ExpressionAttributeValues: {
-                            ':amt': remainingAmount,
-                        },
-                    },
-                },
-            ],
+            TransactItems: transactItems,
         });
 
         await ddbDocClient.send(transactCmd);

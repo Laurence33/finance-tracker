@@ -4,6 +4,7 @@ export type CreateLendingRequestBody = {
     fundSource: string;
     promisedDate: string;
     notes: string;
+    deductedFromBalance?: boolean;
     SK?: string;
     LSI1SK?: string;
     totalPaid?: number;
