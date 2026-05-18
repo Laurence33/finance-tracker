@@ -10,6 +10,7 @@ import {
   DialogContentText,
   DialogTitle,
   IconButton,
+  LinearProgress,
   Stack,
   Typography,
 } from '@mui/material';
@@ -18,16 +19,27 @@ import { MdEdit, MdDelete } from 'react-icons/md';
 import { Tags } from '@/types/Tags';
 import { HttpClient } from '@/utils/httpClient';
 import { AppContext } from '@/context/AppContext';
+import { computeBudgetStatus } from '@/utils/budget-helpers';
 
 export default function TagItem({
   tag,
+  spent = 0,
   onEdit,
 }: {
   tag: Tags;
+  spent?: number;
   onEdit: (tag: Tags) => void;
 }) {
   const { fetchTags, showSuccessSnackBar, showErrorSnackBar } = use(AppContext);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const status = computeBudgetStatus(spent, tag.budget ?? 0);
+  const hasBudget = status.budget > 0;
+  const progressColor = status.isOver
+    ? 'error'
+    : status.percentUsed >= 80
+      ? 'warning'
+      : 'primary';
 
   const handleDelete = async () => {
     try {
@@ -87,12 +99,32 @@ export default function TagItem({
             >
               <LocalOfferIcon sx={{ fontSize: 20, color: 'primary.main' }} />
             </Box>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 600, color: 'text.primary', flex: 1 }}
-            >
-              {tag.name}
-            </Typography>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="body1"
+                sx={{ fontWeight: 600, color: 'text.primary' }}
+              >
+                {tag.name}
+              </Typography>
+              {hasBudget ? (
+                <Typography
+                  variant="caption"
+                  sx={{ color: status.isOver ? 'error.main' : 'text.secondary' }}
+                >
+                  ₱{spent.toLocaleString()} / ₱{status.budget.toLocaleString()}
+                  {status.isOver && ' — over budget'}
+                </Typography>
+              ) : (
+                spent > 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    ₱{spent.toLocaleString()} spent this month
+                  </Typography>
+                )
+              )}
+            </Box>
             <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
               <IconButton
                 size="small"
@@ -116,6 +148,14 @@ export default function TagItem({
               </IconButton>
             </Stack>
           </Stack>
+          {hasBudget && (
+            <LinearProgress
+              variant="determinate"
+              value={Math.min(100, status.percentUsed)}
+              color={progressColor}
+              sx={{ mt: 1.5, height: 6, borderRadius: 1 }}
+            />
+          )}
         </CardContent>
       </Card>
     </>

@@ -5,9 +5,11 @@ import TagItem from '../atoms/TagItem';
 
 export default function TagsList({
   tags,
+  spentByTag,
   onEdit,
 }: {
   tags: Tags[];
+  spentByTag?: Map<string, number>;
   onEdit: (tag: Tags) => void;
 }) {
   if (tags.length === 0) {
@@ -29,7 +31,12 @@ export default function TagsList({
   return (
     <Stack spacing={1}>
       {tags.map((tag) => (
-        <TagItem key={tag.name} tag={tag} onEdit={onEdit} />
+        <TagItem
+          key={tag.name}
+          tag={tag}
+          spent={spentByTag?.get(tag.name) ?? 0}
+          onEdit={onEdit}
+        />
       ))}
     </Stack>
   );

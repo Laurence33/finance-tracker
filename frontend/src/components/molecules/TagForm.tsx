@@ -1,7 +1,7 @@
 import { AppContext } from '@/context/AppContext';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import { Tags } from '@/types/Tags';
-import { Box, TextField, Button, Stack } from '@mui/material';
+import { Box, Button, InputAdornment, Stack, TextField } from '@mui/material';
 import { use, useRef, useState } from 'react';
 
 export default function TagForm({
@@ -14,7 +14,8 @@ export default function TagForm({
   const isEdit = !!tag;
   const { showErrorSnackBar, showSuccessSnackBar, fetchTags } = use(AppContext);
   const [tagName, setTagName] = useState(isEdit ? tag.name : '');
-  const [fieldError, setFieldError] = useState('');
+  const [budget, setBudget] = useState<number>(isEdit ? tag.budget ?? 0 : 0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,7 +25,11 @@ export default function TagForm({
     const sanitized = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
     const charsRemoved = raw.length - sanitized.length;
     setTagName(sanitized);
-    setFieldError('');
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.name;
+      return next;
+    });
     requestAnimationFrame(() => {
       const newPos = Math.max(0, pos - charsRemoved);
       inputRef.current?.setSelectionRange(newPos, newPos);
@@ -33,10 +38,14 @@ export default function TagForm({
 
   const submitHandler = async (event: React.FormEvent) => {
     event.preventDefault();
-    setFieldError('');
+    setFieldErrors({});
 
     if (!tagName.trim()) {
-      setFieldError('Tag name is required.');
+      setFieldErrors({ name: 'Tag name is required.' });
+      return;
+    }
+    if (budget < 0) {
+      setFieldErrors({ budget: 'Budget must be 0 or greater.' });
       return;
     }
 
@@ -44,10 +53,11 @@ export default function TagForm({
       if (isEdit) {
         await HttpClient.patch(`/tags/${tag.name}`, {
           name: tagName.trim(),
+          budget,
         });
         showSuccessSnackBar('Tag updated successfully!');
       } else {
-        await HttpClient.post('/tags', { name: tagName.trim() });
+        await HttpClient.post('/tags', { name: tagName.trim(), budget });
         showSuccessSnackBar('Tag created successfully!');
       }
       fetchTags();
@@ -57,7 +67,11 @@ export default function TagForm({
         error instanceof HttpError &&
         Object.keys(error.fieldErrors).length > 0
       ) {
-        setFieldError(Object.values(error.fieldErrors).flat().join(', '));
+        const flattened: Record<string, string> = {};
+        for (const [k, v] of Object.entries(error.fieldErrors)) {
+          flattened[k] = Array.isArray(v) ? v.join(', ') : String(v);
+        }
+        setFieldErrors(flattened);
       } else {
         showErrorSnackBar(error.message || 'Failed to save tag.');
       }
@@ -78,9 +92,40 @@ export default function TagForm({
             value={tagName}
             inputRef={inputRef}
             onChange={handleChange}
-            error={!!fieldError}
-            helperText={fieldError || 'Lowercase letters, numbers, and dashes only'}
+            error={!!fieldErrors.name}
+            helperText={
+              fieldErrors.name || 'Lowercase letters, numbers, and dashes only'
+            }
             placeholder="e.g. groceries"
+          />
+        </Box>
+        <Box sx={{ mb: 2.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Monthly Budget (optional)"
+            variant="outlined"
+            type="number"
+            value={budget}
+            onChange={(e) => {
+              setBudget(parseFloat(e.target.value) || 0);
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.budget;
+                return next;
+              });
+            }}
+            error={!!fieldErrors.budget}
+            helperText={
+              fieldErrors.budget || 'Set 0 to track without a target.'
+            }
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">₱</InputAdornment>
+                ),
+              },
+            }}
           />
         </Box>
         <Stack direction="row" justifyContent="end" sx={{ mt: 1, mb: 1 }}>

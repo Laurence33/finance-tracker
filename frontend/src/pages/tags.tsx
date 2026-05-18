@@ -1,16 +1,19 @@
-import { use, useState } from 'react';
+import { use, useMemo, useState } from 'react';
 import { Container, Fab, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { AppContext } from '@/context/AppContext';
 import { Tags } from '@/types/Tags';
+import { getSpentByTag } from '@/utils/budget-helpers';
 import TagsList from '@/components/molecules/TagsList';
 import TagDialog from '@/components/organisms/TagDialog';
 
 export default function TagsPage() {
-  const { tags } = use(AppContext);
+  const { tags, expenses } = use(AppContext);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tags | undefined>();
+
+  const spentByTag = useMemo(() => getSpentByTag(expenses), [expenses]);
 
   const handleCreate = () => {
     setEditingTag(undefined);
@@ -43,7 +46,7 @@ export default function TagsPage() {
           Tags ({tags.length})
         </Typography>
 
-        <TagsList tags={tags} onEdit={handleEdit} />
+        <TagsList tags={tags} spentByTag={spentByTag} onEdit={handleEdit} />
       </Container>
 
       <Fab
