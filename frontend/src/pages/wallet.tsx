@@ -10,21 +10,25 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Fab,
   IconButton,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
   Stack,
   Typography,
   alpha,
   useTheme,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import AddIcon from '@mui/icons-material/Add';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { MdEdit, MdDelete } from 'react-icons/md';
 import { AppContext } from '@/context/AppContext';
 import { FundSource } from '@/types/FundSource';
 import { HttpClient } from '@/utils/httpClient';
 import ExpenseIcon from '@/components/atoms/ExpenseIcon';
 import FundSourceDialog from '@/components/organisms/FundSourceDialog';
+import TransferDialog from '@/components/organisms/TransferDialog';
 
 export default function WalletPage() {
   const theme = useTheme();
@@ -34,6 +38,7 @@ export default function WalletPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingFundSource, setEditingFundSource] = useState<FundSource | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<FundSource | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const totalBalance = fundSources.reduce((sum, fs) => sum + fs.balance, 0);
 
@@ -70,6 +75,11 @@ export default function WalletPage() {
         open={dialogOpen}
         onClose={handleDialogClose}
         fundSource={editingFundSource}
+      />
+
+      <TransferDialog
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
       />
 
       <Dialog
@@ -217,18 +227,29 @@ export default function WalletPage() {
         )}
       </Container>
 
-      <Fab
-        color="primary"
-        aria-label="add fund source"
-        onClick={handleCreate}
+      <SpeedDial
+        ariaLabel="Wallet actions"
         sx={{
           position: 'fixed',
           bottom: 88,
           right: 24,
         }}
+        icon={<SpeedDialIcon />}
       >
-        <AddIcon />
-      </Fab>
+        <SpeedDialAction
+          icon={<AddIcon />}
+          slotProps={{ tooltip: { title: 'Add Fund Source' } }}
+          onClick={handleCreate}
+        />
+        <SpeedDialAction
+          icon={<SwapHorizIcon />}
+          slotProps={{
+            tooltip: { title: 'Transfer Between Accounts' },
+            fab: { disabled: fundSources.length < 2 },
+          }}
+          onClick={() => setTransferOpen(true)}
+        />
+      </SpeedDial>
     </>
   );
 }
