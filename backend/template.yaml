@@ -9,6 +9,9 @@ Description: >
 Globals:
   Function:
     Timeout: 3
+    Environment:
+      Variables:
+        ALLOWED_ORIGINS: http://localhost:8001,https://finance-tracker-qtuz1tdt3-laurence33s-projects.vercel.app
 
 Resources:
   UserPool:

@@ -52,7 +52,7 @@ export const lambdaHandler = middy(handler)
         cors({
             headers: 'Content-Type, Authorization',
             methods: 'POST, OPTIONS, DELETE, PATCH, GET',
-            origins: ['http://localhost:8001'],
+            origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
         }),
     )
     .use(requestIdMiddleware());
