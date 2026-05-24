@@ -2,7 +2,6 @@ import { RecurringExpense } from '@/types/RecurringExpense';
 
 export function getCurrentPeriodKey(
   frequency: 'weekly' | 'monthly' | 'yearly' | 'as_needed',
-  startDate: string,
 ): string {
   const now = new Date();
 
@@ -84,10 +83,9 @@ export function getFrequencyLabel(frequency: string): string {
 
 export function isCurrentPeriodOverdue(
   frequency: 'weekly' | 'monthly' | 'yearly' | 'as_needed',
-  startDate: string,
   paidPeriodKeys: Set<string>,
 ): boolean {
   if (frequency === 'as_needed') return false;
-  const currentKey = getCurrentPeriodKey(frequency, startDate);
+  const currentKey = getCurrentPeriodKey(frequency);
   return !paidPeriodKeys.has(currentKey);
 }

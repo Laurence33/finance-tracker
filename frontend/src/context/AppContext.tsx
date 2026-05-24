@@ -130,11 +130,13 @@ export default function AppContextProvider({
     fetchTags();
     fetchLendings();
     fetchRecurringExpenses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     fetchExpenses();
     fetchIncomes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth]);
 
   async function fetchFundSources() {

@@ -27,8 +27,9 @@ export default function MonthSelector() {
   const [year, setYear] = useState(today.getFullYear());
 
   useEffect(() => {
-    setYearState();
-  }, [monthIndex, year]);
+    const date = new Date(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
+    setSelectedMonth(format(date, 'yyyy-MM'));
+  }, [monthIndex, year, setSelectedMonth]);
 
   const handlePrev = () => {
     if (monthIndex === 0) {
@@ -46,11 +47,6 @@ export default function MonthSelector() {
     } else {
       setMonthIndex(monthIndex + 1);
     }
-  };
-
-  const setYearState = () => {
-    const date = new Date(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
-    setSelectedMonth(format(date, 'yyyy-MM'));
   };
 
   return (

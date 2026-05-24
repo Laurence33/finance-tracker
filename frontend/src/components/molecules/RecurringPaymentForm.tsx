@@ -38,7 +38,7 @@ export default function RecurringPaymentForm({
     fundSources,
   } = use(AppContext);
 
-  const currentPeriodKey = getCurrentPeriodKey(recurringExpense.frequency, recurringExpense.startDate);
+  const currentPeriodKey = getCurrentPeriodKey(recurringExpense.frequency);
   const isAsNeeded = recurringExpense.frequency === 'as_needed';
 
   const [formData, setFormData] = useState<PaymentFormData>({
@@ -68,7 +68,7 @@ export default function RecurringPaymentForm({
     try {
       // Always regenerate periodKey for as_needed so each payment is unique
       const periodKey = isAsNeeded
-        ? getCurrentPeriodKey(recurringExpense.frequency, recurringExpense.startDate)
+        ? getCurrentPeriodKey(recurringExpense.frequency)
         : formData.periodKey;
       await HttpClient.post(
         `/recurring-expenses/${encodeURIComponent(recurringExpense.name)}/pay`,

@@ -67,7 +67,7 @@ export default function RecurringExpenseDetailDialog({
   if (!recurringExpense) return null;
 
   const isAsNeeded = recurringExpense.frequency === 'as_needed';
-  const currentPeriodKey = getCurrentPeriodKey(recurringExpense.frequency, recurringExpense.startDate);
+  const currentPeriodKey = getCurrentPeriodKey(recurringExpense.frequency);
   const currentPeriodPaid = !isAsNeeded && payments.some((p) => p.periodKey === currentPeriodKey);
 
   return (
