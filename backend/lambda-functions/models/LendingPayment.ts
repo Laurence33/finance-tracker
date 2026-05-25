@@ -8,6 +8,7 @@ export class LendingPayment {
     private amount: number;
     private fundSource: string;
     private notes: string;
+    private addedToBalance: boolean;
 
     constructor(data: CreateLendingPaymentRequestBody | Record<string, any>, userId: string) {
         this.userId = userId;
@@ -23,6 +24,7 @@ export class LendingPayment {
         this.amount = data.amount;
         this.fundSource = data.fundSource;
         this.notes = data.notes || '';
+        this.addedToBalance = data.addedToBalance ?? true;
     }
 
     toDdbItem() {
@@ -32,6 +34,7 @@ export class LendingPayment {
             amount: this.amount,
             fundSource: this.fundSource,
             notes: this.notes,
+            addedToBalance: this.addedToBalance,
         };
     }
 
@@ -42,6 +45,7 @@ export class LendingPayment {
             amount: this.amount,
             fundSource: this.fundSource,
             notes: this.notes,
+            addedToBalance: this.addedToBalance,
         };
     }
 }

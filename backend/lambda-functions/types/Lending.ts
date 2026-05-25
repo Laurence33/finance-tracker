@@ -16,5 +16,6 @@ export type CreateLendingPaymentRequestBody = {
     amount: number;
     fundSource: string;
     notes: string;
+    addedToBalance?: boolean;
     SK?: string;
 };

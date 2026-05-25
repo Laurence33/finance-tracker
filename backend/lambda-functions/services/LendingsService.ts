@@ -105,6 +105,7 @@ export class LendingsService {
         const lendingItem = lending.toNormalItem();
         const newTotalPaid = lendingItem.totalPaid + data.amount;
         const newStatus = newTotalPaid >= lendingItem.amount ? 'paid' : 'partially_paid';
+        const addedToBalance = data.addedToBalance ?? true;
 
         const payment = new LendingPayment(
             {
@@ -114,46 +115,51 @@ export class LendingsService {
             this.userId,
         );
 
+        const transactItems: any[] = [
+            {
+                Put: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Item: payment.toDdbItem(),
+                },
+            },
+            {
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.lendingPk,
+                        SK: lendingTimestamp,
+                    },
+                    UpdateExpression: 'SET totalPaid = :tp, #st = :st',
+                    ExpressionAttributeNames: {
+                        '#st': 'status',
+                    },
+                    ExpressionAttributeValues: {
+                        ':tp': newTotalPaid,
+                        ':st': newStatus,
+                    },
+                },
+            },
+        ];
+
+        if (addedToBalance) {
+            transactItems.push({
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: data.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance + :amt',
+                    ConditionExpression: 'attribute_exists(PK)',
+                    ExpressionAttributeValues: {
+                        ':amt': data.amount,
+                    },
+                },
+            });
+        }
+
         const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Put: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Item: payment.toDdbItem(),
-                    },
-                },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.lendingPk,
-                            SK: lendingTimestamp,
-                        },
-                        UpdateExpression: 'SET totalPaid = :tp, #st = :st',
-                        ExpressionAttributeNames: {
-                            '#st': 'status',
-                        },
-                        ExpressionAttributeValues: {
-                            ':tp': newTotalPaid,
-                            ':st': newStatus,
-                        },
-                    },
-                },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: data.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance + :amt',
-                        ConditionExpression: 'attribute_exists(PK)',
-                        ExpressionAttributeValues: {
-                            ':amt': data.amount,
-                        },
-                    },
-                },
-            ],
+            TransactItems: transactItems,
         });
 
         await ddbDocClient.send(transactCmd);

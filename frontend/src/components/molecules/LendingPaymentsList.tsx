@@ -31,7 +31,10 @@ export default function LendingPaymentsList({
                 ₱{payment.amount.toLocaleString()}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {new Date(payment.timestamp.replace(' ', 'T')).toLocaleDateString()} · to {payment.fundSource}
+                {new Date(payment.timestamp.replace(' ', 'T')).toLocaleDateString()} ·{' '}
+                {payment.addedToBalance === false
+                  ? `${payment.fundSource} (not added to balance)`
+                  : `to ${payment.fundSource}`}
               </Typography>
             </Box>
           </Stack>

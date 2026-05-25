@@ -16,4 +16,5 @@ export type LendingPayment = {
   fundSource: string;
   timestamp: string;
   notes: string;
+  addedToBalance: boolean;
 };

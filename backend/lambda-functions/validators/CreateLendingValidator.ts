@@ -21,4 +21,5 @@ export const CreateLendingPaymentValidator = z.object({
     amount: z.number().positive('Amount must be greater than 0.'),
     fundSource: z.string().min(1, 'Fund source is required.'),
     notes: z.string().optional().default(''),
+    addedToBalance: z.boolean().optional().default(true),
 });
