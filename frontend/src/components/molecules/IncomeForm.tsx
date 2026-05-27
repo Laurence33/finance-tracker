@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { use, useState } from 'react';
 import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type IncomeFormDataType = {
   amount: number;
@@ -70,8 +71,7 @@ export default function IncomeForm() {
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
     try {
       if (incomeFormAction === 'update') {
@@ -98,7 +98,7 @@ export default function IncomeForm() {
         showErrorSnackBar(error.message || 'Failed to save income.');
       }
     }
-  };
+  });
 
   const setSelectedTags = (tags: string[]) => {
     setFormData((prev) => ({ ...prev, tags }));
@@ -107,7 +107,7 @@ export default function IncomeForm() {
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <FormControl sx={{ mb: 2.5, width: '100%' }} size="small">
           <InputLabel id="income-fund-source-label">Fund Source</InputLabel>
@@ -208,6 +208,7 @@ export default function IncomeForm() {
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             {incomeFormAction === 'create' ? 'Add' : 'Save'}

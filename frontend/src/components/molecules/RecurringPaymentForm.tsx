@@ -12,6 +12,7 @@ import {
 import { use, useState } from 'react';
 import { RecurringExpense } from '@/types/RecurringExpense';
 import { getAmountDisplay, getCurrentPeriodKey, getPeriodLabel } from '@/utils/recurring-helpers';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type PaymentFormData = {
   periodKey: string;
@@ -62,8 +63,7 @@ export default function RecurringPaymentForm({
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
     try {
       // Always regenerate periodKey for as_needed so each payment is unique
@@ -86,12 +86,12 @@ export default function RecurringPaymentForm({
         showErrorSnackBar(error.message || 'Failed to record payment.');
       }
     }
-  };
+  });
 
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -171,6 +171,7 @@ export default function RecurringPaymentForm({
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             Pay

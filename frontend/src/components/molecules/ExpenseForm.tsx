@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { use, useState } from 'react';
 import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type ExpenseFormDataType = {
   amount: number;
@@ -63,8 +64,7 @@ export default function ExpenseForm() {
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     try {
       if (formAction === 'update') {
         await HttpClient.patch(
@@ -86,7 +86,7 @@ export default function ExpenseForm() {
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to add expense.');
     }
-  };
+  });
 
   const setSelectedTags = (tags: string[]) => {
     setFormData((prevFormData) => {
@@ -98,7 +98,7 @@ export default function ExpenseForm() {
   };
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <FormControl sx={{ mb: 2.5, width: '100%' }} size="small">
           <InputLabel id="fund-source-label">Fund Source</InputLabel>
@@ -178,6 +178,7 @@ export default function ExpenseForm() {
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             {formAction === 'create' ? 'Add' : 'Save'}

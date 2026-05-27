@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { use, useState } from 'react';
 import { Lending } from '@/types/Lending';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type LendingFormData = {
   borrower: string;
@@ -78,8 +79,7 @@ export default function LendingForm({
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
     try {
       if (isEdit) {
@@ -105,12 +105,12 @@ export default function LendingForm({
         showErrorSnackBar(error.message || 'Failed to save lending.');
       }
     }
-  };
+  });
 
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2.5 }}>
           <Autocomplete
@@ -230,6 +230,7 @@ export default function LendingForm({
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             {isEdit ? 'Save' : 'Create'}

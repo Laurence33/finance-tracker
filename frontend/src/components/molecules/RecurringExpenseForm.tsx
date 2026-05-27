@@ -14,6 +14,7 @@ import {
 import { use, useState } from 'react';
 import { RecurringExpense } from '@/types/RecurringExpense';
 import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type RecurringExpenseFormData = {
   name: string;
@@ -94,8 +95,7 @@ export default function RecurringExpenseForm({
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
     try {
       if (isEdit) {
@@ -120,7 +120,7 @@ export default function RecurringExpenseForm({
         showErrorSnackBar(error.message || 'Failed to save recurring expense.');
       }
     }
-  };
+  });
 
   const setSelectedTags = (selectedTags: string[]) => {
     setFormData((prev) => ({ ...prev, tags: selectedTags }));
@@ -129,7 +129,7 @@ export default function RecurringExpenseForm({
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2.5 }}>
           <TextField
@@ -310,6 +310,7 @@ export default function RecurringExpenseForm({
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             {isEdit ? 'Save' : 'Create'}

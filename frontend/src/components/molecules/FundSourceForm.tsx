@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { use, useState } from 'react';
 import { FundSource } from '@/types/FundSource';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type FundSourceFormData = {
   name: string;
@@ -56,8 +57,7 @@ export default function FundSourceForm({
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
     try {
       if (isEdit) {
@@ -80,12 +80,12 @@ export default function FundSourceForm({
         showErrorSnackBar(error.message || 'Failed to save fund source.');
       }
     }
-  };
+  });
 
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2.5 }}>
           <TextField
@@ -143,6 +143,7 @@ export default function FundSourceForm({
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             {isEdit ? 'Save' : 'Create'}

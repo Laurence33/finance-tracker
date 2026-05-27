@@ -3,6 +3,7 @@ import { HttpClient, HttpError } from '@/utils/httpClient';
 import { Tags } from '@/types/Tags';
 import { Box, Button, InputAdornment, Stack, TextField } from '@mui/material';
 import { use, useRef, useState } from 'react';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function TagForm({
   onClose,
@@ -36,8 +37,7 @@ export default function TagForm({
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
 
     if (!tagName.trim()) {
@@ -76,10 +76,10 @@ export default function TagForm({
         showErrorSnackBar(error.message || 'Failed to save tag.');
       }
     }
-  };
+  });
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2.5 }}>
           <TextField
@@ -133,6 +133,7 @@ export default function TagForm({
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             {isEdit ? 'Save' : 'Create'}

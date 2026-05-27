@@ -14,6 +14,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { AppContext } from '@/context/AppContext';
 import FundBalancesChart from '@/components/molecules/FundBalancesChart';
+import ExpensesByTagChart from '@/components/molecules/ExpensesByTagChart';
 import DashboardForecastWidget from '@/components/molecules/DashboardForecastWidget';
 import DashboardRecurringStatus from '@/components/molecules/DashboardRecurringStatus';
 import DashboardLendingSummary from '@/components/molecules/DashboardLendingSummary';
@@ -24,6 +25,7 @@ export default function DashboardPage() {
     fundSources,
     totalIncome,
     totalExpenses,
+    expenses,
     recurringExpenses,
     lendings,
   } = use(AppContext);
@@ -103,6 +105,7 @@ export default function DashboardPage() {
 
       <Stack spacing={2}>
         <FundBalancesChart fundSources={fundSources} />
+        <ExpensesByTagChart expenses={expenses} />
         <DashboardForecastWidget
           fundSources={fundSources}
           recurringExpenses={recurringExpenses}

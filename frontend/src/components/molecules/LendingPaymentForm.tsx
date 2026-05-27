@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { use, useState } from 'react';
 import { Lending } from '@/types/Lending';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type PaymentFormData = {
   amount: number;
@@ -61,8 +62,7 @@ export default function LendingPaymentForm({
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
     try {
       await HttpClient.post('/lendings/payments', {
@@ -83,12 +83,12 @@ export default function LendingPaymentForm({
         showErrorSnackBar(error.message || 'Failed to record payment.');
       }
     }
-  };
+  });
 
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -173,6 +173,7 @@ export default function LendingPaymentForm({
             type="submit"
             variant="contained"
             size="medium"
+            disabled={submitting}
             sx={{ minWidth: 100 }}
           >
             Record Payment

@@ -15,6 +15,7 @@ import {
 import { AppContext } from '@/context/AppContext';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import { currentTimestampForInput } from '@/utils/date-functions';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type TransferFormData = {
   sourceFundSource: string;
@@ -49,7 +50,6 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
     timestamp: currentTimestampForInput(),
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
 
   const sourceFund = fundSources.find((fs) => fs.name === formData.sourceFundSource);
   const sourceBalance = sourceFund?.balance ?? 0;
@@ -73,10 +73,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
     });
   };
 
-  const submitHandler = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (submitting) return;
-
+  const { submitting, handleSubmit } = useFormSubmit(async () => {
     if (formData.sourceFundSource === formData.destinationFundSource) {
       setFieldErrors({
         destinationFundSource: 'Source and destination must differ.',
@@ -88,7 +85,6 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    setSubmitting(true);
     try {
       await HttpClient.post('/transfers', formData);
       showSuccessSnackBar('Transfer completed successfully!');
@@ -109,13 +105,11 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
       } else {
         showErrorSnackBar(error.message || 'Failed to complete transfer.');
       }
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
 
   return (
-    <form onSubmit={submitHandler}>
+    <form onSubmit={handleSubmit}>
       <Box sx={{ pt: 1 }}>
         <FormControl
           sx={{ mb: 2.5, width: '100%' }}
