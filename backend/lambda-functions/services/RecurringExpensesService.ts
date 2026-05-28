@@ -189,7 +189,7 @@ export class RecurringExpensesService {
                             SK: data.fundSource,
                         },
                         UpdateExpression: 'SET balance = balance - :amt',
-                        ConditionExpression: 'attribute_exists(PK) AND balance >= :amt',
+                        ConditionExpression: 'attribute_exists(PK)',
                         ExpressionAttributeValues: {
                             ':amt': data.amount,
                         },
