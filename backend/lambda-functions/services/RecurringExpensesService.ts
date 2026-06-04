@@ -1,5 +1,5 @@
 import { DeleteCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { DDBConstants } from 'ft-common-layer';
+import { DDBConstants, nowInAppTimezone } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { RecurringExpense } from 'models/RecurringExpense';
 import { RecurringExpensePayment } from 'models/RecurringExpensePayment';
@@ -141,7 +141,7 @@ export class RecurringExpensesService {
     }
 
     async pay(recurringName: string, data: any, recurringExpense: any) {
-        const expenseTimestamp = new Date().toISOString().replace('Z', '').replace('T', ' ');
+        const expenseTimestamp = nowInAppTimezone().replace('T', ' ');
 
         const expense = new Expense(
             {
