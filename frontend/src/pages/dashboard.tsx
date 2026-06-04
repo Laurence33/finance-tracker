@@ -1,4 +1,4 @@
-import { use, useMemo } from 'react';
+import { use, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -18,23 +18,75 @@ import ExpensesByTagChart from '@/components/molecules/ExpensesByTagChart';
 import DashboardForecastWidget from '@/components/molecules/DashboardForecastWidget';
 import DashboardRecurringStatus from '@/components/molecules/DashboardRecurringStatus';
 import DashboardLendingSummary from '@/components/molecules/DashboardLendingSummary';
+import DashboardTimeRangeSelector from '@/components/molecules/DashboardTimeRangeSelector';
+import RecentActivityFeed from '@/components/molecules/RecentActivityFeed';
+import SpendOverTimeChart from '@/components/molecules/SpendOverTimeChart';
+import DashboardRunwayWidget from '@/components/molecules/DashboardRunwayWidget';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { DashboardRange } from '@/utils/dashboard-helpers';
+
+const sumAmount = (items: { amount: number }[]) =>
+  items.reduce((sum, i) => sum + Number(i.amount), 0);
+
+function formatDelta(current: number, previous: number): {
+  text: string;
+  positive: boolean;
+} | null {
+  if (previous === 0) return null;
+  const pct = ((current - previous) / Math.abs(previous)) * 100;
+  if (!isFinite(pct)) return null;
+  const sign = pct >= 0 ? '+' : '';
+  return { text: `${sign}${pct.toFixed(0)}%`, positive: pct >= 0 };
+}
 
 export default function DashboardPage() {
   const theme = useTheme();
+  const { fundSources, recurringExpenses, lendings } = use(AppContext);
+
+  const [range, setRange] = useState<DashboardRange>('1M');
   const {
-    fundSources,
-    totalIncome,
-    totalExpenses,
-    expenses,
-    recurringExpenses,
-    lendings,
-  } = use(AppContext);
+    loading,
+    currentExpenses,
+    currentIncomes,
+    previousExpenses,
+    previousIncomes,
+    currentMonths,
+  } = useDashboardData(range);
 
   const totalBalance = useMemo(
     () => fundSources.reduce((sum, fs) => sum + Number(fs.balance), 0),
     [fundSources],
   );
-  const net = totalIncome - totalExpenses;
+
+  const currentTotalExpenses = useMemo(
+    () => sumAmount(currentExpenses),
+    [currentExpenses],
+  );
+  const currentTotalIncome = useMemo(
+    () => sumAmount(currentIncomes),
+    [currentIncomes],
+  );
+  const previousTotalExpenses = useMemo(
+    () => sumAmount(previousExpenses),
+    [previousExpenses],
+  );
+  const previousTotalIncome = useMemo(
+    () => sumAmount(previousIncomes),
+    [previousIncomes],
+  );
+  const net = currentTotalIncome - currentTotalExpenses;
+  const previousNet = previousTotalIncome - previousTotalExpenses;
+
+  const netDelta = formatDelta(net, previousNet);
+  const incomeDelta = formatDelta(currentTotalIncome, previousTotalIncome);
+  // For expenses, "good" is going down — flip the positive sign
+  const expenseDeltaRaw = formatDelta(
+    currentTotalExpenses,
+    previousTotalExpenses,
+  );
+  const expenseDelta = expenseDeltaRaw
+    ? { text: expenseDeltaRaw.text, positive: !expenseDeltaRaw.positive }
+    : null;
 
   return (
     <Container maxWidth="sm" sx={{ py: 3 }}>
@@ -73,6 +125,8 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      <DashboardTimeRangeSelector range={range} onChange={setRange} />
+
       <Box
         sx={{
           display: 'grid',
@@ -82,35 +136,55 @@ export default function DashboardPage() {
         }}
       >
         <SummaryStat
-          title="Net (month)"
+          title="Net"
           value={`${net >= 0 ? '+' : ''}₱${net.toLocaleString()}`}
           color={
             net >= 0 ? theme.palette.success.main : theme.palette.error.main
           }
           icon={net >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+          delta={netDelta}
+          loading={loading}
         />
         <SummaryStat
           title="Income"
-          value={`₱${totalIncome.toLocaleString()}`}
+          value={`₱${currentTotalIncome.toLocaleString()}`}
           color={theme.palette.success.main}
           icon={<TrendingUpIcon />}
+          delta={incomeDelta}
+          loading={loading}
         />
         <SummaryStat
           title="Expenses"
-          value={`₱${totalExpenses.toLocaleString()}`}
+          value={`₱${currentTotalExpenses.toLocaleString()}`}
           color={theme.palette.error.main}
           icon={<TrendingDownIcon />}
+          delta={expenseDelta}
+          loading={loading}
         />
       </Box>
 
       <Stack spacing={2}>
         <FundBalancesChart fundSources={fundSources} />
-        <ExpensesByTagChart expenses={expenses} />
+        <DashboardRunwayWidget
+          totalBalance={totalBalance}
+          totalExpenses={currentTotalExpenses}
+          monthCount={currentMonths.length}
+        />
+        <SpendOverTimeChart
+          expenses={currentExpenses}
+          incomes={currentIncomes}
+          range={range}
+        />
+        <ExpensesByTagChart expenses={currentExpenses} />
+        <RecentActivityFeed
+          expenses={currentExpenses}
+          incomes={currentIncomes}
+        />
         <DashboardForecastWidget
           fundSources={fundSources}
           recurringExpenses={recurringExpenses}
           lendings={lendings}
-          totalIncome={totalIncome}
+          totalIncome={currentTotalIncome}
         />
         <DashboardRecurringStatus recurringExpenses={recurringExpenses} />
         <DashboardLendingSummary lendings={lendings} />
@@ -124,12 +198,17 @@ function SummaryStat({
   value,
   color,
   icon,
+  delta,
+  loading,
 }: {
   title: string;
   value: string;
   color: string;
   icon: React.ReactNode;
+  delta: { text: string; positive: boolean } | null;
+  loading: boolean;
 }) {
+  const theme = useTheme();
   return (
     <Card sx={{ minWidth: 0 }}>
       <CardContent
@@ -141,6 +220,7 @@ function SummaryStat({
           alignItems: 'center',
           textAlign: 'center',
           gap: 0.5,
+          opacity: loading ? 0.5 : 1,
         }}
       >
         <Box
@@ -169,6 +249,21 @@ function SummaryStat({
         >
           {value}
         </Typography>
+        {delta && (
+          <Typography
+            variant="caption"
+            sx={{
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              color: delta.positive
+                ? theme.palette.success.main
+                : theme.palette.error.main,
+              lineHeight: 1,
+            }}
+          >
+            {delta.text}
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );
