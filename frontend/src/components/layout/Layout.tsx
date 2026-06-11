@@ -29,6 +29,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import { signOut } from 'aws-amplify/auth';
 
 const bottomNavItems = [
+  { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { label: 'Expenses', icon: <ReceiptLongIcon />, path: '/' },
   { label: 'Wallet', icon: <AccountBalanceWalletIcon />, path: '/wallet' },
 ];
