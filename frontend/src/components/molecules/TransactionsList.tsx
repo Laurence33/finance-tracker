@@ -97,7 +97,10 @@ export default function TransactionsList({
     );
   }
 
-  const total = visible.reduce((sum, tx) => sum + tx.data.amount, 0);
+  const net = visible.reduce(
+    (sum, tx) => sum + (tx.type === 'income' ? tx.data.amount : -tx.data.amount),
+    0,
+  );
 
   return (
     <Stack spacing={1.5}>
@@ -122,10 +125,16 @@ export default function TransactionsList({
           }}
         >
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {visible.length} {visible.length === 1 ? 'result' : 'results'}
+            {visible.length} {visible.length === 1 ? 'result' : 'results'} · Net
           </Typography>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            ₱{total.toLocaleString()}
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+              color: net >= 0 ? 'success.main' : 'error.main',
+            }}
+          >
+            {net < 0 ? '-' : ''}₱{Math.abs(net).toLocaleString()}
           </Typography>
         </Box>
       )}
