@@ -280,7 +280,7 @@ export default function ExpensesPage() {
             <IconButton
               onClick={toggleSearch}
               color={searchOpen ? 'primary' : 'default'}
-              aria-label={searchOpen ? 'Close search' : 'Search notes'}
+              aria-label={searchOpen ? 'Close search' : 'Search transactions'}
             >
               {searchOpen ? <CloseIcon /> : <SearchIcon />}
             </IconButton>
@@ -291,7 +291,7 @@ export default function ExpensesPage() {
               fullWidth
               size="small"
               autoFocus
-              placeholder="Search notes…"
+              placeholder="Search notes, tags, source…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ mt: 1.5 }}

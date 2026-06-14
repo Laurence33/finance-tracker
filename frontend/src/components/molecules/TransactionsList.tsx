@@ -49,10 +49,13 @@ export default function TransactionsList({
 
   const query = searchQuery.trim().toLowerCase();
   const isSearching = query.length > 0;
+  const matchesQuery = (tx: Transaction) => {
+    const fields = [tx.data.notes, ...(tx.data.tags ?? [])];
+    if (tx.type === 'income') fields.push(tx.data.source);
+    return fields.some((field) => (field ?? '').toLowerCase().includes(query));
+  };
   const visible = isSearching
-    ? transactions.filter((tx) =>
-        (tx.data.notes ?? '').toLowerCase().includes(query),
-      )
+    ? transactions.filter(matchesQuery)
     : transactions;
 
   if (visible.length === 0) {
@@ -63,7 +66,7 @@ export default function TransactionsList({
             sx={{ fontSize: 56, color: 'action.disabled', mb: 2 }}
           />
           <Typography variant="h6" sx={{ color: 'text.secondary', mb: 0.5 }}>
-            No matching notes
+            No matching transactions
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.disabled' }}>
             Try a different search term
