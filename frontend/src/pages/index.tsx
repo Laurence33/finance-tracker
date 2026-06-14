@@ -4,11 +4,15 @@ import {
   Card,
   CardContent,
   Chip,
+  Collapse,
   Container,
+  IconButton,
+  InputAdornment,
   SpeedDial,
   SpeedDialAction,
   SpeedDialIcon,
   Stack,
+  TextField,
   Typography,
   useTheme,
   alpha,
@@ -18,6 +22,8 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import SavingsIcon from '@mui/icons-material/Savings';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import { AppContext } from '@/context/AppContext';
 import ExpenseDialog from '@/components/organisms/ExpenseDialog';
 import IncomeDialog from '@/components/organisms/IncomeDialog';
@@ -103,6 +109,16 @@ export default function ExpensesPage() {
   } = use(AppContext);
 
   const [filter, setFilter] = useState<TransactionFilter>('all');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const toggleSearch = () => {
+    setSearchOpen((prev) => {
+      const next = !prev;
+      if (!next) setSearchQuery('');
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchExpenses();
@@ -246,22 +262,68 @@ export default function ExpensesPage() {
         </Stack>
 
         <Box sx={{ mb: 2 }}>
-          <Typography
-            variant="subtitle1"
-            sx={{ fontWeight: 600, color: 'text.secondary', mb: 1.5 }}
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
           >
-            {filter === 'all'
-              ? 'Recent Transactions'
-              : filter === 'expenses'
-                ? 'Recent Expenses'
-                : 'Recent Income'}
-          </Typography>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: 'text.secondary' }}
+            >
+              {filter === 'all'
+                ? 'Recent Transactions'
+                : filter === 'expenses'
+                  ? 'Recent Expenses'
+                  : 'Recent Income'}
+            </Typography>
+            <IconButton
+              onClick={toggleSearch}
+              color={searchOpen ? 'primary' : 'default'}
+              aria-label={searchOpen ? 'Close search' : 'Search notes'}
+            >
+              {searchOpen ? <CloseIcon /> : <SearchIcon />}
+            </IconButton>
+          </Stack>
+
+          <Collapse in={searchOpen} timeout="auto" unmountOnExit>
+            <TextField
+              fullWidth
+              size="small"
+              autoFocus
+              placeholder="Search notes…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ mt: 1.5 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setSearchQuery('')}
+                        aria-label="Clear search"
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                },
+              }}
+            />
+          </Collapse>
         </Box>
 
         <TransactionsList
           expenses={expenses}
           incomes={incomes}
           filter={filter}
+          searchQuery={searchQuery}
         />
       </Container>
 
