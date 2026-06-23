@@ -97,6 +97,17 @@ export class ExpensesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
         }
 
+        if (validationResult.data.fundSource) {
+            const fundSource = await this.fundSourcesService.getFundSource(validationResult.data.fundSource);
+            if (!fundSource) {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Validation failed',
+                    generateValidationErrors({ fundSource: ['Fund source not found.'] }),
+                );
+            }
+        }
+
         const tags = await this.tagsService.getAll();
         for (const tag of validationResult.data.tags || []) {
             const found = tags.find((dbTag) => dbTag.name === tag);

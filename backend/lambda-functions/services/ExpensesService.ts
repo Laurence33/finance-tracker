@@ -133,30 +133,23 @@ export class ExpensesService {
         const newFundSource = updatedData.fundSource;
 
         if (oldFundSource === newFundSource) {
-            const diff = newAmount - oldAmount;
-            if (diff !== 0) {
-                if (diff > 0) {
-                    transactItems.push({
-                        Update: {
-                            TableName: SINGLE_TABLE_NAME,
-                            Key: { PK: this.fundSourcePk, SK: oldFundSource },
-                            UpdateExpression: 'SET balance = balance - :diff',
-                            ConditionExpression: 'balance >= :diff',
-                            ExpressionAttributeValues: { ':diff': diff },
-                        },
-                    });
-                } else {
-                    transactItems.push({
-                        Update: {
-                            TableName: SINGLE_TABLE_NAME,
-                            Key: { PK: this.fundSourcePk, SK: oldFundSource },
-                            UpdateExpression: 'SET balance = balance + :diff',
-                            ExpressionAttributeValues: { ':diff': Math.abs(diff) },
-                        },
-                    });
-                }
+            // Net change to the single fund source. Allowed to go negative so
+            // credit-card style sources can be overdrawn (mirrors create()).
+            const delta = oldAmount - newAmount;
+            if (delta !== 0) {
+                transactItems.push({
+                    Update: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Key: { PK: this.fundSourcePk, SK: oldFundSource },
+                        UpdateExpression: 'SET balance = balance + :delta',
+                        ExpressionAttributeValues: { ':delta': delta },
+                    },
+                });
             }
         } else {
+            // Refund the old fund source in full, then charge the new one.
+            // The new source may go negative (credit-card support); we only
+            // require that it exists.
             transactItems.push({
                 Update: {
                     TableName: SINGLE_TABLE_NAME,
@@ -170,7 +163,7 @@ export class ExpensesService {
                     TableName: SINGLE_TABLE_NAME,
                     Key: { PK: this.fundSourcePk, SK: newFundSource },
                     UpdateExpression: 'SET balance = balance - :amt',
-                    ConditionExpression: 'attribute_exists(PK) AND balance >= :amt',
+                    ConditionExpression: 'attribute_exists(PK)',
                     ExpressionAttributeValues: { ':amt': newAmount },
                 },
             });
