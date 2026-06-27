@@ -52,9 +52,10 @@ export class TransfersService {
                         SK: body.sourceFundSource,
                     },
                     UpdateExpression: 'SET balance = balance - :amt',
-                    ConditionExpression: 'attribute_exists(PK) AND balance >= :amt',
+                    ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
                     ExpressionAttributeValues: {
                         ':amt': totalDeducted,
+                        ':true': true,
                     },
                 },
             },

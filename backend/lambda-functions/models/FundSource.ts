@@ -6,6 +6,7 @@ export class FundSource {
     private balance: string;
     private displayText: string;
     private icon: string;
+    private isCreditCard: boolean;
 
     constructor(data: Record<string, any>, userId: string) {
         this.userId = userId;
@@ -15,6 +16,7 @@ export class FundSource {
         this.balance = data.balance;
         this.displayText = data.displayText;
         this.icon = data.icon || 'wallet';
+        this.isCreditCard = data.isCreditCard ?? false;
     }
 
     toDdbItem() {
@@ -24,6 +26,7 @@ export class FundSource {
             balance: this.balance,
             displayText: this.displayText,
             icon: this.icon,
+            isCreditCard: this.isCreditCard,
         };
     }
 
@@ -33,6 +36,7 @@ export class FundSource {
             balance: this.balance,
             displayText: this.displayText,
             icon: this.icon,
+            isCreditCard: this.isCreditCard,
         };
     }
 }

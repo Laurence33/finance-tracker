@@ -76,6 +76,23 @@ export class FundSourcesController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
         }
 
+        const existingFundSource = (await this.fundSourcesService.getFundSource(name))?.toNormalItem();
+        if (!existingFundSource) {
+            return createBadRequestResponse(HttpStatus.NOT_FOUND, 'Fund source not found.');
+        }
+
+        const nextIsCreditCard = validationResult.data.isCreditCard ?? existingFundSource.isCreditCard;
+        const nextBalance = Number(validationResult.data.balance ?? existingFundSource.balance);
+        if (!nextIsCreditCard && nextBalance < 0) {
+            return createBadRequestResponse(
+                HttpStatus.BAD_REQUEST,
+                'Validation failed',
+                generateValidationErrors({
+                    balance: ['Only credit cards can have a negative balance.'],
+                }),
+            );
+        }
+
         try {
             const updatedFundSource = await this.fundSourcesService.update(name, body);
 

@@ -6,6 +6,8 @@ import {
   Button,
   Stack,
   InputAdornment,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { use, useState } from 'react';
 import { FundSource } from '@/types/FundSource';
@@ -15,12 +17,14 @@ type FundSourceFormData = {
   name: string;
   balance: number;
   displayText: string;
+  isCreditCard: boolean;
 };
 
 const initialFormData: FundSourceFormData = {
   name: '',
   balance: 0,
   displayText: '',
+  isCreditCard: false,
 };
 
 type FieldErrors = Record<string, string[]>;
@@ -64,6 +68,7 @@ export default function FundSourceForm({
         await HttpClient.patch(`/fund-sources/${fundSource.name}`, {
           balance: formData.balance,
           displayText: formData.displayText,
+          isCreditCard: formData.isCreditCard,
         });
         showSuccessSnackBar('Fund source updated successfully!');
       } else {
@@ -134,8 +139,24 @@ export default function FundSourceForm({
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
-              htmlInput: { min: 0 },
+              htmlInput: formData.isCreditCard ? {} : { min: 0 },
             }}
+          />
+        </Box>
+        <Box sx={{ mb: 2.5 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.isCreditCard}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isCreditCard: e.target.checked,
+                  }))
+                }
+              />
+            }
+            label="Credit card (balance can go negative)"
           />
         </Box>
         <Stack direction="row" justifyContent="end" sx={{ mt: 1, mb: 1 }}>

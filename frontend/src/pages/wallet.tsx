@@ -191,7 +191,8 @@ export default function WalletPage() {
                       variant="body1"
                       sx={{
                         fontWeight: 700,
-                        color: 'text.primary',
+                        color:
+                          fundSource.balance < 0 ? 'error.main' : 'text.primary',
                         flexShrink: 0,
                       }}
                     >

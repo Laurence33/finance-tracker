@@ -54,9 +54,10 @@ export class ExpensesService {
                             SK: body.fundSource,
                         },
                         UpdateExpression: 'SET balance = balance - :amt',
-                        ConditionExpression: 'attribute_exists(PK)',
+                        ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
                         ExpressionAttributeValues: {
                             ':amt': body.amount,
+                            ':true': true,
                         },
                     },
                 },
@@ -133,23 +134,27 @@ export class ExpensesService {
         const newFundSource = updatedData.fundSource;
 
         if (oldFundSource === newFundSource) {
-            // Net change to the single fund source. Allowed to go negative so
-            // credit-card style sources can be overdrawn (mirrors create()).
+            // Net change to the single fund source. delta = oldAmount - newAmount,
+            // so balance += delta. A negative delta lowers the balance; in that
+            // case the source must have the funds unless it is a credit card.
             const delta = oldAmount - newAmount;
             if (delta !== 0) {
-                transactItems.push({
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: { PK: this.fundSourcePk, SK: oldFundSource },
-                        UpdateExpression: 'SET balance = balance + :delta',
-                        ExpressionAttributeValues: { ':delta': delta },
-                    },
-                });
+                const update: any = {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: { PK: this.fundSourcePk, SK: oldFundSource },
+                    UpdateExpression: 'SET balance = balance + :delta',
+                    ExpressionAttributeValues: { ':delta': delta },
+                };
+                if (delta < 0) {
+                    update.ConditionExpression = 'isCreditCard = :true OR balance >= :needed';
+                    update.ExpressionAttributeValues[':needed'] = -delta;
+                    update.ExpressionAttributeValues[':true'] = true;
+                }
+                transactItems.push({ Update: update });
             }
         } else {
             // Refund the old fund source in full, then charge the new one.
-            // The new source may go negative (credit-card support); we only
-            // require that it exists.
+            // The new source may go negative only if it is a credit card.
             transactItems.push({
                 Update: {
                     TableName: SINGLE_TABLE_NAME,
@@ -163,8 +168,8 @@ export class ExpensesService {
                     TableName: SINGLE_TABLE_NAME,
                     Key: { PK: this.fundSourcePk, SK: newFundSource },
                     UpdateExpression: 'SET balance = balance - :amt',
-                    ConditionExpression: 'attribute_exists(PK)',
-                    ExpressionAttributeValues: { ':amt': newAmount },
+                    ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
+                    ExpressionAttributeValues: { ':amt': newAmount, ':true': true },
                 },
             });
         }

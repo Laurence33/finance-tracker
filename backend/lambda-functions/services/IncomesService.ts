@@ -135,8 +135,8 @@ export class IncomesService {
                             TableName: SINGLE_TABLE_NAME,
                             Key: { PK: this.fundSourcePk, SK: oldFundSource },
                             UpdateExpression: 'SET balance = balance - :diff',
-                            ConditionExpression: 'balance >= :diff',
-                            ExpressionAttributeValues: { ':diff': Math.abs(diff) },
+                            ConditionExpression: 'isCreditCard = :true OR balance >= :diff',
+                            ExpressionAttributeValues: { ':diff': Math.abs(diff), ':true': true },
                         },
                     });
                 }
@@ -147,8 +147,8 @@ export class IncomesService {
                     TableName: SINGLE_TABLE_NAME,
                     Key: { PK: this.fundSourcePk, SK: oldFundSource },
                     UpdateExpression: 'SET balance = balance - :amt',
-                    ConditionExpression: 'balance >= :amt',
-                    ExpressionAttributeValues: { ':amt': oldAmount },
+                    ConditionExpression: 'isCreditCard = :true OR balance >= :amt',
+                    ExpressionAttributeValues: { ':amt': oldAmount, ':true': true },
                 },
             });
             transactItems.push({
@@ -195,9 +195,10 @@ export class IncomesService {
                             SK: incomeItem.fundSource,
                         },
                         UpdateExpression: 'SET balance = balance - :amt',
-                        ConditionExpression: 'balance >= :amt',
+                        ConditionExpression: 'isCreditCard = :true OR balance >= :amt',
                         ExpressionAttributeValues: {
                             ':amt': incomeItem.amount,
+                            ':true': true,
                         },
                     },
                 },

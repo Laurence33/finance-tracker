@@ -139,11 +139,21 @@ export class RecurringExpensesController implements Controller {
             );
         }
 
-        const payment = await this.recurringExpensesService.pay(name, validationResult.data, recurringItem);
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Payment recorded successfully',
-            data: payment,
-        });
+        try {
+            const payment = await this.recurringExpensesService.pay(name, validationResult.data, recurringItem);
+            return createSuccessResponse(HttpStatus.OK, {
+                message: 'Payment recorded successfully',
+                data: payment,
+            });
+        } catch (error: any) {
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Transaction failed. Fund source may have insufficient balance.',
+                );
+            }
+            throw error;
+        }
     }
 
     async updateStatus(name: string | undefined, body: any) {
