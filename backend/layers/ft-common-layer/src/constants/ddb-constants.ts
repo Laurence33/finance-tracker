@@ -13,5 +13,6 @@ export const DDBConstants = {
     TRANSFER: (userId: string) => `USER#${userId}#Transfer`,
     BUDGET_CONFIG: (userId: string) => `USER#${userId}#BudgetConfig`,
     BUCKET: (userId: string) => `USER#${userId}#Bucket`,
+    ASSET: (userId: string) => `USER#${userId}#Asset`,
   },
 };

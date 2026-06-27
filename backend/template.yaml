@@ -552,6 +552,72 @@ Resources:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
           - 'ft-common-layer'
+  AssetsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: assets.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        GetAssets:
+          Type: Api
+          Properties:
+            Path: /assets
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PostAsset:
+          Type: Api
+          Properties:
+            Path: /assets
+            Method: post
+            RestApiId:
+              Ref: ApiGatewayApi
+        PatchAsset:
+          Type: Api
+          Properties:
+            Path: /assets
+            Method: patch
+            RestApiId:
+              Ref: ApiGatewayApi
+        DeleteAsset:
+          Type: Api
+          Properties:
+            Path: /assets
+            Method: delete
+            RestApiId:
+              Ref: ApiGatewayApi
+        AssetsOptions:
+          Type: Api
+          Properties:
+            Path: /assets
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - assets.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
   RecurringExpensesFunction:
     Type: AWS::Serverless::Function
     Properties:

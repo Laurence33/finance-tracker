@@ -1,4 +1,5 @@
 import { Expense } from '@/types/Expense';
+import { Asset } from '@/types/Asset';
 import { Bucket, FrameworkMeta } from '@/types/Budget';
 import { FundSource } from '@/types/FundSource';
 import { Income } from '@/types/Income';
@@ -49,6 +50,8 @@ interface AppContextType {
   fetchLendings: () => Promise<void>;
   recurringExpenses: RecurringExpense[];
   fetchRecurringExpenses: () => Promise<void>;
+  assets: Asset[];
+  fetchAssets: () => Promise<void>;
   budgetEnabled: boolean;
   budgetFramework: FrameworkMeta | null;
   buckets: Bucket[];
@@ -96,6 +99,8 @@ export const AppContext = createContext<AppContextType>({
   fetchLendings: async () => {},
   recurringExpenses: [],
   fetchRecurringExpenses: async () => {},
+  assets: [],
+  fetchAssets: async () => {},
   budgetEnabled: false,
   budgetFramework: null,
   buckets: [],
@@ -127,6 +132,7 @@ export default function AppContextProvider({
   const [lendings, setLendings] = useState<Lending[]>([]);
   const [borrowers, setBorrowers] = useState<string[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [budgetEnabled, setBudgetEnabled] = useState<boolean>(false);
   const [budgetFramework, setBudgetFramework] = useState<FrameworkMeta | null>(null);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
@@ -142,6 +148,7 @@ export default function AppContextProvider({
     fetchTags();
     fetchLendings();
     fetchRecurringExpenses();
+    fetchAssets();
     fetchBudget();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -231,6 +238,18 @@ export default function AppContextProvider({
     }
   }
 
+  async function fetchAssets() {
+    try {
+      const response = await HttpClient.get<any>('/assets');
+      if (response && response.data) {
+        setAssets(response.data.assets || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching assets:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
   async function fetchBudget() {
     try {
       const response = await HttpClient.get<any>('/budget');
@@ -304,6 +323,8 @@ export default function AppContextProvider({
     fetchLendings,
     recurringExpenses,
     fetchRecurringExpenses,
+    assets,
+    fetchAssets,
     budgetEnabled,
     budgetFramework,
     buckets,
