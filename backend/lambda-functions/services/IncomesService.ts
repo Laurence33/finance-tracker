@@ -4,6 +4,7 @@ import { Income } from '../models/Income';
 import { CreateIncomeRequestBody } from '../types/Income';
 import { ddbDocClient } from './ddb-client';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
+import { allocationDiffItems } from 'utils/bucketTransact';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 
@@ -32,30 +33,32 @@ export class IncomesService {
     async create(body: CreateIncomeRequestBody) {
         const income = new Income(body, this.userId);
 
-        const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Put: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Item: income.toDdbItem(),
+        const transactItems: any[] = [
+            {
+                Put: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Item: income.toDdbItem(),
+                },
+            },
+            {
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: body.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance + :amt',
+                    ConditionExpression: 'attribute_exists(PK)',
+                    ExpressionAttributeValues: {
+                        ':amt': body.amount,
                     },
                 },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: body.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance + :amt',
-                        ConditionExpression: 'attribute_exists(PK)',
-                        ExpressionAttributeValues: {
-                            ':amt': body.amount,
-                        },
-                    },
-                },
-            ],
-        });
+            },
+            // Distribute the income across budget buckets (no-op when not provided).
+            ...allocationDiffItems(this.userId, {}, body.allocations),
+        ];
+
+        const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
 
         await ddbDocClient.send(transactCmd);
         return income.toNormalItem();
@@ -162,6 +165,11 @@ export class IncomesService {
             });
         }
 
+        // Reconcile budget bucket balances for any change to the allocation split.
+        transactItems.push(
+            ...allocationDiffItems(this.userId, existingIncome.allocations, updatedData.allocations),
+        );
+
         const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
         await ddbDocClient.send(transactCmd);
 
@@ -176,34 +184,36 @@ export class IncomesService {
 
         const incomeItem = income.toNormalItem();
 
-        const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Delete: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.incomePk,
-                            SK: timestamp,
-                        },
+        const transactItems: any[] = [
+            {
+                Delete: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.incomePk,
+                        SK: timestamp,
                     },
                 },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: incomeItem.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance - :amt',
-                        ConditionExpression: 'isCreditCard = :true OR balance >= :amt',
-                        ExpressionAttributeValues: {
-                            ':amt': incomeItem.amount,
-                            ':true': true,
-                        },
+            },
+            {
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: incomeItem.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance - :amt',
+                    ConditionExpression: 'isCreditCard = :true OR balance >= :amt',
+                    ExpressionAttributeValues: {
+                        ':amt': incomeItem.amount,
+                        ':true': true,
                     },
                 },
-            ],
-        });
+            },
+            // Remove this income's allocations from the buckets.
+            ...allocationDiffItems(this.userId, incomeItem.allocations, {}),
+        ];
+
+        const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
 
         await ddbDocClient.send(transactCmd);
     }

@@ -22,6 +22,7 @@ type ExpenseFormDataType = {
   fundSource: string;
   tags: string[];
   notes: string;
+  bucket?: string;
 };
 
 const initialFormData: ExpenseFormDataType = {
@@ -30,6 +31,7 @@ const initialFormData: ExpenseFormDataType = {
   fundSource: '',
   tags: [],
   notes: '',
+  bucket: '',
 };
 
 export default function ExpenseForm() {
@@ -43,10 +45,14 @@ export default function ExpenseForm() {
     formAction,
     fundSources,
     tags,
+    budgetEnabled,
+    budgetFramework,
+    buckets,
+    fetchBudget,
   } = use(AppContext);
   const [formData, setFormData] = useState<ExpenseFormDataType>(
     formAction == 'update'
-      ? selectedExpense!
+      ? { ...selectedExpense!, bucket: selectedExpense!.bucket ?? '' }
       : { ...initialFormData, timestamp: currentTimestampForInput() }
   );
 
@@ -65,15 +71,23 @@ export default function ExpenseForm() {
   };
 
   const { submitting, handleSubmit } = useFormSubmit(async () => {
+    if (budgetEnabled && !formData.bucket) {
+      showErrorSnackBar(
+        `Select a ${(budgetFramework?.bucketLabel ?? 'bucket').toLowerCase()} for this expense.`
+      );
+      return;
+    }
+    // Only send a bucket while a framework is active.
+    const payload = budgetEnabled ? formData : { ...formData, bucket: undefined };
     try {
       if (formAction === 'update') {
         await HttpClient.patch(
           '/expenses?timestamp=' + selectedExpense?.timestamp,
-          formData
+          payload
         );
         showSuccessSnackBar('Expense updated successfully!');
       } else if (formAction === 'create') {
-        await HttpClient.post('/expenses', formData);
+        await HttpClient.post('/expenses', payload);
         showSuccessSnackBar('Expense added successfully!');
       }
       setExpenseFormOpen(false);
@@ -83,6 +97,7 @@ export default function ExpenseForm() {
       });
       fetchExpenses();
       fetchFundSources();
+      if (budgetEnabled) fetchBudget();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to add expense.');
     }
@@ -139,6 +154,29 @@ export default function ExpenseForm() {
             }}
           />
         </Box>
+        {budgetEnabled && buckets.length > 0 && (
+          <FormControl sx={{ mb: 2.5, width: '100%' }} size="small">
+            <InputLabel id="expense-bucket-label">
+              {budgetFramework?.bucketLabel ?? 'Bucket'}
+            </InputLabel>
+            <Select
+              required
+              labelId="expense-bucket-label"
+              value={formData.bucket ?? ''}
+              label={budgetFramework?.bucketLabel ?? 'Bucket'}
+              onChange={(event) => onChangeHandler(event, 'bucket')}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {buckets.map((bucket) => (
+                <MenuItem key={bucket.key} value={bucket.key}>
+                  {bucket.displayLabel} ({`₱${bucket.balance.toLocaleString()}`} left)
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
         <Box sx={{ mb: 2.5 }}>
           <TextField
             required
@@ -178,7 +216,7 @@ export default function ExpenseForm() {
             type="submit"
             variant="contained"
             size="medium"
-            disabled={submitting}
+            disabled={submitting || (budgetEnabled && !formData.bucket)}
             sx={{ minWidth: 100 }}
           >
             {formAction === 'create' ? 'Add' : 'Save'}

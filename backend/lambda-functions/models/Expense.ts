@@ -7,6 +7,7 @@ export class Expense {
     private amount: number;
     private tags: string[];
     private notes: string;
+    private bucket: string;
 
     constructor(data: CreateExpenseRequestBody | Record<string, any>, userId: string) {
         this.userId = userId;
@@ -19,6 +20,7 @@ export class Expense {
         this.amount = data.amount;
         this.tags = data.tags || [];
         this.notes = data.notes || '';
+        this.bucket = data.bucket || '';
     }
 
     toDdbItem() {
@@ -29,6 +31,8 @@ export class Expense {
             amount: this.amount,
             tags: this.tags,
             notes: this.notes,
+            // Only persist a bucket when one is assigned (keeps legacy items clean).
+            ...(this.bucket ? { bucket: this.bucket } : {}),
         };
     }
 
@@ -39,6 +43,7 @@ export class Expense {
             amount: this.amount,
             tags: this.tags,
             notes: this.notes,
+            bucket: this.bucket,
         };
     }
 }

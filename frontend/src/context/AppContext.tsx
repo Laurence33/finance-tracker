@@ -1,4 +1,5 @@
 import { Expense } from '@/types/Expense';
+import { Bucket, FrameworkMeta } from '@/types/Budget';
 import { FundSource } from '@/types/FundSource';
 import { Income } from '@/types/Income';
 import { Lending } from '@/types/Lending';
@@ -48,6 +49,10 @@ interface AppContextType {
   fetchLendings: () => Promise<void>;
   recurringExpenses: RecurringExpense[];
   fetchRecurringExpenses: () => Promise<void>;
+  budgetEnabled: boolean;
+  budgetFramework: FrameworkMeta | null;
+  buckets: Bucket[];
+  fetchBudget: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -91,6 +96,10 @@ export const AppContext = createContext<AppContextType>({
   fetchLendings: async () => {},
   recurringExpenses: [],
   fetchRecurringExpenses: async () => {},
+  budgetEnabled: false,
+  budgetFramework: null,
+  buckets: [],
+  fetchBudget: async () => {},
 });
 
 export default function AppContextProvider({
@@ -118,6 +127,9 @@ export default function AppContextProvider({
   const [lendings, setLendings] = useState<Lending[]>([]);
   const [borrowers, setBorrowers] = useState<string[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const [budgetEnabled, setBudgetEnabled] = useState<boolean>(false);
+  const [budgetFramework, setBudgetFramework] = useState<FrameworkMeta | null>(null);
+  const [buckets, setBuckets] = useState<Bucket[]>([]);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -130,6 +142,7 @@ export default function AppContextProvider({
     fetchTags();
     fetchLendings();
     fetchRecurringExpenses();
+    fetchBudget();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -218,6 +231,20 @@ export default function AppContextProvider({
     }
   }
 
+  async function fetchBudget() {
+    try {
+      const response = await HttpClient.get<any>('/budget');
+      if (response && response.data) {
+        setBudgetEnabled(response.data.config?.enabled ?? false);
+        setBudgetFramework(response.data.framework ?? null);
+        setBuckets(response.data.buckets ?? []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching budget:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
   function showSuccessSnackBar(message: string) {
     setSnackBarState((prevState) => ({
       ...prevState,
@@ -277,6 +304,10 @@ export default function AppContextProvider({
     fetchLendings,
     recurringExpenses,
     fetchRecurringExpenses,
+    budgetEnabled,
+    budgetFramework,
+    buckets,
+    fetchBudget,
   };
 
   return (

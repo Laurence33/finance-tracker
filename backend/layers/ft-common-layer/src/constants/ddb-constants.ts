@@ -11,5 +11,7 @@ export const DDBConstants = {
     RECURRING_EXPENSE_PAYMENT: (userId: string) =>
       `USER#${userId}#RecurringExpensePayment`,
     TRANSFER: (userId: string) => `USER#${userId}#Transfer`,
+    BUDGET_CONFIG: (userId: string) => `USER#${userId}#BudgetConfig`,
+    BUCKET: (userId: string) => `USER#${userId}#Bucket`,
   },
 };

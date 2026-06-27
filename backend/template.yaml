@@ -404,6 +404,58 @@ Resources:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
           - 'ft-common-layer'
+  BudgetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: budget.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+      Events:
+        GetBudget:
+          Type: Api
+          Properties:
+            Path: /budget
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        PutBudget:
+          Type: Api
+          Properties:
+            Path: /budget
+            Method: put
+            RestApiId:
+              Ref: ApiGatewayApi
+        BudgetOptions:
+          Type: Api
+          Properties:
+            Path: /budget
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - budget.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
   LendingsFunction:
     Type: AWS::Serverless::Function
     Properties:

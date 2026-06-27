@@ -4,4 +4,5 @@ export type Expense = {
   fundSource: string;
   tags: string[];
   notes: string;
+  bucket?: string;
 };

@@ -10,6 +10,7 @@ import { Expense } from '../models/Expense';
 import { CreateExpenseRequestBody } from '../types/Expense';
 import { ddbDocClient } from './ddb-client';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
+import { bucketIncrementItem, expenseBucketDiffItems } from 'utils/bucketTransact';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 
@@ -38,31 +39,36 @@ export class ExpensesService {
     async create(body: CreateExpenseRequestBody) {
         const expense = new Expense(body, this.userId);
 
-        const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Put: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Item: expense.toDdbItem(),
+        const transactItems: any[] = [
+            {
+                Put: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Item: expense.toDdbItem(),
+                },
+            },
+            {
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: body.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance - :amt',
+                    ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
+                    ExpressionAttributeValues: {
+                        ':amt': body.amount,
+                        ':true': true,
                     },
                 },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: body.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance - :amt',
-                        ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
-                        ExpressionAttributeValues: {
-                            ':amt': body.amount,
-                            ':true': true,
-                        },
-                    },
-                },
-            ],
-        });
+            },
+        ];
+
+        // Deduct from the assigned budget bucket (immediately, even for credit cards).
+        if (body.bucket) {
+            transactItems.push(bucketIncrementItem(this.userId, body.bucket, -body.amount));
+        }
+
+        const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
 
         await ddbDocClient.send(transactCmd);
         return expense.toNormalItem();
@@ -174,6 +180,17 @@ export class ExpensesService {
             });
         }
 
+        // Reconcile budget bucket balances for any change to the bucket/amount.
+        transactItems.push(
+            ...expenseBucketDiffItems(
+                this.userId,
+                existingExpense.bucket,
+                oldAmount,
+                updatedData.bucket,
+                newAmount,
+            ),
+        );
+
         const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
         await ddbDocClient.send(transactCmd);
 
@@ -188,32 +205,37 @@ export class ExpensesService {
 
         const expenseItem = expense.toNormalItem();
 
-        const transactCmd = new TransactWriteCommand({
-            TransactItems: [
-                {
-                    Delete: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.expensePk,
-                            SK: timestamp,
-                        },
+        const transactItems: any[] = [
+            {
+                Delete: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.expensePk,
+                        SK: timestamp,
                     },
                 },
-                {
-                    Update: {
-                        TableName: SINGLE_TABLE_NAME,
-                        Key: {
-                            PK: this.fundSourcePk,
-                            SK: expenseItem.fundSource,
-                        },
-                        UpdateExpression: 'SET balance = balance + :amt',
-                        ExpressionAttributeValues: {
-                            ':amt': expenseItem.amount,
-                        },
+            },
+            {
+                Update: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Key: {
+                        PK: this.fundSourcePk,
+                        SK: expenseItem.fundSource,
+                    },
+                    UpdateExpression: 'SET balance = balance + :amt',
+                    ExpressionAttributeValues: {
+                        ':amt': expenseItem.amount,
                     },
                 },
-            ],
-        });
+            },
+        ];
+
+        // Refund the assigned bucket, if any.
+        if (expenseItem.bucket) {
+            transactItems.push(bucketIncrementItem(this.userId, expenseItem.bucket, expenseItem.amount));
+        }
+
+        const transactCmd = new TransactWriteCommand({ TransactItems: transactItems });
 
         await ddbDocClient.send(transactCmd);
     }

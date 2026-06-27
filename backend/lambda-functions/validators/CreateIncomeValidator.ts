@@ -13,4 +13,5 @@ export const CreateIncomeValidator = z.object({
     source: z.string().min(1, 'Source is required.'),
     tags: z.array(z.string()).min(1),
     notes: z.string().optional().default(''),
+    allocations: z.record(z.string(), z.number().nonnegative()).optional(),
 });

@@ -9,6 +9,7 @@ export class Income {
     private source: string;
     private tags: string[];
     private notes: string;
+    private allocations: Record<string, number>;
 
     constructor(data: CreateIncomeRequestBody | Record<string, any>, userId: string) {
         this.userId = userId;
@@ -22,6 +23,7 @@ export class Income {
         this.source = data.source || '';
         this.tags = data.tags || [];
         this.notes = data.notes || '';
+        this.allocations = data.allocations || {};
     }
 
     toDdbItem() {
@@ -33,6 +35,7 @@ export class Income {
             source: this.source,
             tags: this.tags,
             notes: this.notes,
+            allocations: this.allocations,
         };
     }
 
@@ -44,6 +47,7 @@ export class Income {
             source: this.source,
             tags: this.tags,
             notes: this.notes,
+            allocations: this.allocations,
         };
     }
 }

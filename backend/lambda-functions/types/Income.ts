@@ -5,6 +5,7 @@ export type CreateIncomeRequestBody = {
     source: string;
     tags: string[];
     notes: string;
+    allocations?: Record<string, number>;
     SK?: string;
     LSI1SK?: string;
 };

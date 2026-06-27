@@ -2,20 +2,25 @@ import { createBadRequestResponse, createSuccessResponse, generateValidationErro
 import { IncomesService } from 'services/IncomesService';
 import { FundSourcesService } from 'services/FundSourcesService';
 import { TagsService } from 'services/TagsService';
+import { BudgetService } from 'services/BudgetService';
 import { Controller } from 'types/Controller';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
 import { CreateIncomeValidator } from 'validators/CreateIncomeValidator';
+import { validateAllocations } from 'utils/validateAllocations';
+import { getFramework } from 'models/frameworkDefinitions';
 import { treeifyError } from 'zod/v4';
 
 export class IncomesController implements Controller {
     private incomesService: IncomesService;
     private fundSourcesService: FundSourcesService;
     private tagsService: TagsService;
+    private budgetService: BudgetService;
 
     constructor(userId: string) {
         this.incomesService = new IncomesService(userId);
         this.fundSourcesService = new FundSourcesService(userId);
         this.tagsService = new TagsService(userId);
+        this.budgetService = new BudgetService(userId);
     }
 
     async get(month: string) {
@@ -62,6 +67,24 @@ export class IncomesController implements Controller {
             }
         }
 
+        const config = await this.budgetService.getConfig();
+        if (config.enabled) {
+            const framework = getFramework(config.framework);
+            if (framework) {
+                const result = validateAllocations(
+                    validationResult.data.allocations,
+                    validationResult.data.amount,
+                    framework,
+                );
+                if (!result.ok) {
+                    return createBadRequestResponse(HttpStatus.BAD_REQUEST, result.message);
+                }
+            }
+        } else {
+            // No framework active — never persist stray allocations.
+            validationResult.data.allocations = undefined;
+        }
+
         try {
             const income = await this.incomesService.create(validationResult.data);
 
@@ -93,6 +116,23 @@ export class IncomesController implements Controller {
             const found = tags.find((dbTag) => dbTag.name === tag);
             if (!found) {
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, `Tag '${tag}' does not exist.`);
+            }
+        }
+
+        // Validate a re-allocation only when one is supplied and a framework is active.
+        if (validationResult.data.allocations !== undefined) {
+            const config = await this.budgetService.getConfig();
+            const framework = config.enabled ? getFramework(config.framework) : null;
+            if (framework) {
+                let amount = validationResult.data.amount;
+                if (amount === undefined) {
+                    const existing = await this.incomesService.getIncome(timestamp);
+                    amount = existing ? existing.toNormalItem().amount : 0;
+                }
+                const result = validateAllocations(validationResult.data.allocations, amount, framework);
+                if (!result.ok) {
+                    return createBadRequestResponse(HttpStatus.BAD_REQUEST, result.message);
+                }
             }
         }
 

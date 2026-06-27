@@ -3,6 +3,7 @@ import { currentTimestampForInput } from '@/utils/date-functions';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
   Box,
+  Divider,
   FormControl,
   InputLabel,
   Select,
@@ -16,6 +17,11 @@ import {
 import { use, useState } from 'react';
 import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import {
+  computeAllocations,
+  sumAllocations,
+  allocationsMatchAmount,
+} from '@/utils/budget-helpers';
 
 type IncomeFormDataType = {
   amount: number;
@@ -24,6 +30,7 @@ type IncomeFormDataType = {
   source: string;
   tags: string[];
   notes: string;
+  allocations?: Record<string, number>;
 };
 
 const initialFormData: IncomeFormDataType = {
@@ -33,6 +40,7 @@ const initialFormData: IncomeFormDataType = {
   source: '',
   tags: [],
   notes: '',
+  allocations: {},
 };
 
 type FieldErrors = Record<string, string[]>;
@@ -48,14 +56,31 @@ export default function IncomeForm() {
     incomeFormAction,
     fundSources,
     tags,
+    budgetEnabled,
+    budgetFramework,
+    buckets,
+    fetchBudget,
   } = use(AppContext);
 
-  const [formData, setFormData] = useState<IncomeFormDataType>(
-    incomeFormAction === 'update'
-      ? selectedIncome!
-      : { ...initialFormData, timestamp: currentTimestampForInput() }
-  );
+  const [formData, setFormData] = useState<IncomeFormDataType>(() => {
+    if (incomeFormAction === 'update') {
+      const existing = selectedIncome!;
+      // Seed allocations: keep the income's saved split, else derive from amount.
+      const allocations =
+        existing.allocations && Object.keys(existing.allocations).length > 0
+          ? existing.allocations
+          : budgetEnabled
+            ? computeAllocations(existing.amount, buckets)
+            : {};
+      return { ...existing, allocations };
+    }
+    return { ...initialFormData, timestamp: currentTimestampForInput(), allocations: {} };
+  });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const allocations = formData.allocations ?? {};
+  const allocationTotal = sumAllocations(allocations);
+  const allocationsValid = allocationsMatchAmount(allocations, Number(formData.amount) || 0);
 
   const onChangeHandler = (event: any, field: string) => {
     let value = event.target.value;
@@ -63,7 +88,14 @@ export default function IncomeForm() {
       value = parseFloat(event.target.value);
       if (isNaN(value)) value = '';
     }
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      // Re-derive the bucket split whenever the amount changes (still editable after).
+      if (field === 'amount' && budgetEnabled) {
+        next.allocations = computeAllocations(Number(value) || 0, buckets);
+      }
+      return next;
+    });
     setFieldErrors((prev) => {
       const next = { ...prev };
       delete next[field];
@@ -71,17 +103,31 @@ export default function IncomeForm() {
     });
   };
 
+  const onAllocationChange = (key: string, raw: string) => {
+    const num = parseFloat(raw);
+    setFormData((prev) => ({
+      ...prev,
+      allocations: { ...(prev.allocations ?? {}), [key]: isNaN(num) ? 0 : num },
+    }));
+  };
+
   const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
+    if (budgetEnabled && !allocationsValid) {
+      showErrorSnackBar('Allocations must add up to the income amount.');
+      return;
+    }
+    // Only send allocations while a framework is active.
+    const payload = budgetEnabled ? formData : { ...formData, allocations: undefined };
     try {
       if (incomeFormAction === 'update') {
         await HttpClient.patch(
           '/incomes?timestamp=' + selectedIncome?.timestamp,
-          formData
+          payload
         );
         showSuccessSnackBar('Income updated successfully!');
       } else {
-        await HttpClient.post('/incomes', formData);
+        await HttpClient.post('/incomes', payload);
         showSuccessSnackBar('Income added successfully!');
       }
       setIncomeFormOpen(false);
@@ -91,6 +137,7 @@ export default function IncomeForm() {
       });
       fetchIncomes();
       fetchFundSources();
+      if (budgetEnabled) fetchBudget();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {
         setFieldErrors(error.fieldErrors);
@@ -155,6 +202,54 @@ export default function IncomeForm() {
             }}
           />
         </Box>
+
+        {budgetEnabled && buckets.length > 0 && (
+          <Box sx={{ mb: 2.5 }}>
+            <Divider sx={{ mb: 1.5 }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+              Allocate to {budgetFramework?.bucketLabelPlural ?? 'Buckets'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Pre-filled by target %, adjust as needed.
+            </Typography>
+            <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+              {buckets.map((bucket) => (
+                <TextField
+                  key={bucket.key}
+                  size="small"
+                  type="number"
+                  label={`${bucket.displayLabel} (${bucket.percentage}%)`}
+                  value={allocations[bucket.key] ?? 0}
+                  onChange={(event) => onAllocationChange(bucket.key, event.target.value)}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">₱</InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              ))}
+            </Stack>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              sx={{ mt: 1.5 }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                Allocated
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: 600 }}
+                color={allocationsValid ? 'text.primary' : 'error'}
+              >
+                ₱{allocationTotal.toLocaleString()} / ₱
+                {(Number(formData.amount) || 0).toLocaleString()}
+              </Typography>
+            </Stack>
+          </Box>
+        )}
         <Box sx={{ mb: 2.5 }}>
           <TextField
             fullWidth
@@ -208,7 +303,7 @@ export default function IncomeForm() {
             type="submit"
             variant="contained"
             size="medium"
-            disabled={submitting}
+            disabled={submitting || (budgetEnabled && !allocationsValid)}
             sx={{ minWidth: 100 }}
           >
             {incomeFormAction === 'create' ? 'Add' : 'Save'}

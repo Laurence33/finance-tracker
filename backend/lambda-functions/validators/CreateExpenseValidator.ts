@@ -12,4 +12,5 @@ export const CreateExpenseValidator = z.object({
     fundSource: z.string(), // TODO: check against a list of allowed fund sources later
     tags: z.array(z.string()).min(1),
     notes: z.string().optional().default(''),
+    bucket: z.string().optional(),
 });

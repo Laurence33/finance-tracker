@@ -5,4 +5,5 @@ export type Income = {
   source: string;
   tags: string[];
   notes: string;
+  allocations?: Record<string, number>;
 };
