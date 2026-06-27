@@ -67,4 +67,23 @@ export class BudgetController implements Controller {
             throw error;
         }
     }
+
+    async delete() {
+        const config = await this.budgetService.getConfig();
+        if (config.enabled) {
+            return createBadRequestResponse(
+                HttpStatus.BAD_REQUEST,
+                'Disable the framework before deleting it.',
+            );
+        }
+        try {
+            await this.budgetService.deleteBudget();
+            return createSuccessResponse(HttpStatus.NO_CONTENT);
+        } catch (error: any) {
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Transaction failed.');
+            }
+            throw error;
+        }
+    }
 }

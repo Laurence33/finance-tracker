@@ -25,6 +25,7 @@ import {
   useTheme,
 } from '@mui/material';
 import SavingsIcon from '@mui/icons-material/Savings';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { AppContext } from '@/context/AppContext';
 import { HttpClient } from '@/utils/httpClient';
 import {
@@ -63,6 +64,7 @@ export default function BudgetPage() {
   const [seedAllocations, setSeedAllocations] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [disableConfirm, setDisableConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // Cash you actually hold (exclude credit cards) — the basis for seeding.
   const availableBalance = useMemo(
@@ -132,6 +134,20 @@ export default function BudgetPage() {
       await fetchBudget();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to disable framework.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setSubmitting(true);
+    try {
+      await HttpClient.delete('/budget');
+      showSuccessSnackBar('Budgeting framework deleted.');
+      setDeleteConfirm(false);
+      await fetchBudget();
+    } catch (error: any) {
+      showErrorSnackBar(error.message || 'Failed to delete framework.');
     } finally {
       setSubmitting(false);
     }
@@ -399,9 +415,48 @@ export default function BudgetPage() {
             >
               Enable {template?.bucketLabelPlural ?? 'framework'}
             </Button>
+
+            {hasExistingBuckets && (
+              <Button
+                fullWidth
+                variant="text"
+                color="error"
+                sx={{ mt: 1 }}
+                onClick={() => setDeleteConfirm(true)}
+              >
+                Delete framework &amp; all balances
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={deleteConfirm} onClose={() => setDeleteConfirm(false)}>
+        <DialogTitle sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningAmberIcon color="error" /> Delete framework permanently?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText component="div">
+            This <strong>permanently deletes</strong> all your{' '}
+            {(budgetFramework?.bucketLabelPlural ?? template?.bucketLabelPlural ?? 'buckets').toLowerCase()}{' '}
+            and their accumulated balances
+            {totalAllocated !== 0 ? ` (currently ${peso(totalAllocated)})` : ''}.
+            <Box component="ul" sx={{ mt: 1.5, mb: 0, pl: 2.5 }}>
+              <li>This cannot be undone.</li>
+              <li>Your income and expense records are kept, but their saved allocations stop tracking against any {(budgetFramework?.bucketLabel ?? 'bucket').toLowerCase()}.</li>
+              <li>If you only want to pause, use Disable instead — that keeps your balances.</li>
+            </Box>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteConfirm(false)} sx={{ color: 'text.secondary' }}>
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} variant="contained" color="error" disabled={submitting}>
+            Delete permanently
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

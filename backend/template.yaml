@@ -435,6 +435,13 @@ Resources:
             Method: put
             RestApiId:
               Ref: ApiGatewayApi
+        DeleteBudget:
+          Type: Api
+          Properties:
+            Path: /budget
+            Method: delete
+            RestApiId:
+              Ref: ApiGatewayApi
         BudgetOptions:
           Type: Api
           Properties:

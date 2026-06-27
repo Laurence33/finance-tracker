@@ -125,4 +125,20 @@ export class BudgetService {
         await ddbDocClient.send(new TransactWriteCommand({ TransactItems: transactItems }));
         return this.getBudget();
     }
+
+    /**
+     * Permanently removes the framework: deletes every bucket item and the config
+     * item. Irreversible — bucket balances are lost. (Past income `allocations` and
+     * expense `bucket` fields are left as-is; they become inert references.)
+     */
+    async deleteBudget() {
+        const buckets = await this.getBuckets();
+        const transactItems: any[] = buckets.map((b) => ({
+            Delete: { TableName: SINGLE_TABLE_NAME, Key: { PK: this.bucketPk, SK: b.key } },
+        }));
+        transactItems.push({
+            Delete: { TableName: SINGLE_TABLE_NAME, Key: { PK: this.configPk, SK: 'CONFIG' } },
+        });
+        await ddbDocClient.send(new TransactWriteCommand({ TransactItems: transactItems }));
+    }
 }

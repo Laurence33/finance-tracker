@@ -30,6 +30,8 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
                 return await controller.get();
             case HttpMethod.PUT:
                 return await controller.put(event.body ? JSON.parse(event.body) : {});
+            case HttpMethod.DELETE:
+                return await controller.delete();
             default:
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
@@ -43,7 +45,7 @@ export const lambdaHandler = middy(handler)
     .use(
         cors({
             headers: 'Content-Type, Authorization',
-            methods: 'GET, OPTIONS, PUT',
+            methods: 'GET, OPTIONS, PUT, DELETE',
             origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
         }),
     )
