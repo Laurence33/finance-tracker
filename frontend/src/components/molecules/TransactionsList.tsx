@@ -50,7 +50,11 @@ export default function TransactionsList({
   const query = searchQuery.trim().toLowerCase();
   const isSearching = query.length > 0;
   const matchesQuery = (tx: Transaction) => {
-    const fields = [tx.data.notes, ...(tx.data.tags ?? [])];
+    const fields = [
+      tx.data.notes,
+      String(tx.data.amount),
+      ...(tx.data.tags ?? []),
+    ];
     if (tx.type === 'income') fields.push(tx.data.source);
     return fields.some((field) => (field ?? '').toLowerCase().includes(query));
   };
