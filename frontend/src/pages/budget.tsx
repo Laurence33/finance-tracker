@@ -1,4 +1,4 @@
-import { use, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -29,10 +29,6 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { AppContext } from '@/context/AppContext';
 import { HttpClient } from '@/utils/httpClient';
 import {
-  AVAILABLE_FRAMEWORKS,
-  FRAMEWORK_TEMPLATES,
-} from '@/types/Budget';
-import {
   computeAllocations,
   sumAllocations,
 } from '@/utils/budget-helpers';
@@ -47,6 +43,7 @@ export default function BudgetPage() {
     budgetFramework,
     buckets,
     fetchBudget,
+    frameworks,
     fundSources,
     showSuccessSnackBar,
     showErrorSnackBar,
@@ -56,9 +53,20 @@ export default function BudgetPage() {
   // Buckets persist after a disable, so a non-empty list means we're *re-enabling*
   // an existing framework rather than setting one up for the first time.
   const hasExistingBuckets = buckets.length > 0;
-  const [selectedFramework, setSelectedFramework] = useState<string>(
-    budgetFramework?.id ?? 'JARS'
-  );
+  const [selectedFramework, setSelectedFramework] = useState<string>('');
+
+  // The framework list arrives async from the backend: follow the configured
+  // framework when one exists (the selector is locked to it on re-enable),
+  // otherwise default to the first available one.
+  useEffect(() => {
+    if (budgetFramework?.id) {
+      setSelectedFramework(budgetFramework.id);
+    } else if (frameworks.length) {
+      setSelectedFramework((prev) =>
+        prev && frameworks.some((f) => f.id === prev) ? prev : frameworks[0].id
+      );
+    }
+  }, [frameworks, budgetFramework]);
   const [seedFromBalance, setSeedFromBalance] = useState<boolean>(false);
   const [resetBalances, setResetBalances] = useState<boolean>(false);
   const [seedAllocations, setSeedAllocations] = useState<Record<string, number>>({});
@@ -72,7 +80,7 @@ export default function BudgetPage() {
     [fundSources]
   );
 
-  const template = FRAMEWORK_TEMPLATES[selectedFramework];
+  const template = frameworks.find((fw) => fw.id === selectedFramework);
   // For seeding math, prefer the live buckets (they carry the real percentages) on
   // re-enable, otherwise fall back to the framework template.
   const seedBasis = hasExistingBuckets ? buckets : template?.buckets ?? [];
@@ -305,13 +313,23 @@ export default function BudgetPage() {
                   setSeedAllocations({});
                 }}
               >
-                {AVAILABLE_FRAMEWORKS.map((fw) => (
+                {frameworks.map((fw) => (
                   <MenuItem key={fw.id} value={fw.id}>
                     {fw.label}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+
+            {template?.description && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mt: -1.5, mb: 2 }}
+              >
+                {template.description}
+              </Typography>
+            )}
 
             {hasExistingBuckets && (
               <Box

@@ -1,14 +1,16 @@
 import { createBadRequestResponse, createSuccessResponse, HttpStatus } from 'ft-common-layer';
 import { BudgetService } from 'services/BudgetService';
+import { FrameworkService } from 'services/FrameworkService';
 import { Controller } from 'types/Controller';
 import { BadRequestException } from 'utils/Exceptions';
-import { getFramework } from 'models/frameworkDefinitions';
 
 export class BudgetController implements Controller {
     private budgetService: BudgetService;
+    private frameworkService: FrameworkService;
 
     constructor(userId: string) {
         this.budgetService = new BudgetService(userId);
+        this.frameworkService = new FrameworkService();
     }
 
     async get() {
@@ -19,11 +21,19 @@ export class BudgetController implements Controller {
         });
     }
 
+    async getFrameworks() {
+        const frameworks = await this.frameworkService.listFrameworks();
+        return createSuccessResponse(HttpStatus.OK, {
+            message: 'Frameworks retrieved successfully',
+            data: { frameworks },
+        });
+    }
+
     async put(body: any) {
         const enabled = body?.enabled === true;
 
         if (enabled) {
-            const framework = getFramework(body?.framework);
+            const framework = await this.frameworkService.getFramework(body?.framework);
             if (!framework) {
                 return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Unknown budgeting framework.');
             }

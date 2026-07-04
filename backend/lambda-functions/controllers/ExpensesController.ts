@@ -12,7 +12,6 @@ import { BudgetService } from 'services/BudgetService';
 import { Controller } from 'types/Controller';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
 import { CreateExpenseValidator } from 'validators/CreateExpenseValidator';
-import { getFramework } from 'models/frameworkDefinitions';
 import { treeifyError } from 'zod/v4';
 
 export class ExpensesController implements Controller {
@@ -47,8 +46,9 @@ export class ExpensesController implements Controller {
                 ? { error: 'A bucket is required when a budgeting framework is enabled.' }
                 : { bucket: undefined };
         }
-        const framework = getFramework(config.framework);
-        if (framework && !framework.buckets.some((b) => b.key === bucket)) {
+        // Validate against the user's seeded buckets — the runtime truth for keys.
+        const buckets = await this.budgetService.getBuckets();
+        if (buckets.length > 0 && !buckets.some((b) => b.key === bucket)) {
             return { error: `Unknown bucket '${bucket}'.` };
         }
         return { bucket };

@@ -1,6 +1,6 @@
 import { Expense } from '@/types/Expense';
 import { Asset } from '@/types/Asset';
-import { Bucket, FrameworkMeta } from '@/types/Budget';
+import { Bucket, FrameworkDefinition, FrameworkMeta } from '@/types/Budget';
 import { FundSource } from '@/types/FundSource';
 import { Income } from '@/types/Income';
 import { Lending } from '@/types/Lending';
@@ -56,6 +56,7 @@ interface AppContextType {
   budgetFramework: FrameworkMeta | null;
   buckets: Bucket[];
   fetchBudget: () => Promise<void>;
+  frameworks: FrameworkDefinition[];
 }
 
 export const AppContext = createContext<AppContextType>({
@@ -105,6 +106,7 @@ export const AppContext = createContext<AppContextType>({
   budgetFramework: null,
   buckets: [],
   fetchBudget: async () => {},
+  frameworks: [],
 });
 
 export default function AppContextProvider({
@@ -136,6 +138,7 @@ export default function AppContextProvider({
   const [budgetEnabled, setBudgetEnabled] = useState<boolean>(false);
   const [budgetFramework, setBudgetFramework] = useState<FrameworkMeta | null>(null);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
+  const [frameworks, setFrameworks] = useState<FrameworkDefinition[]>([]);
 
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
@@ -150,6 +153,7 @@ export default function AppContextProvider({
     fetchRecurringExpenses();
     fetchAssets();
     fetchBudget();
+    fetchFrameworks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,6 +268,18 @@ export default function AppContextProvider({
     }
   }
 
+  async function fetchFrameworks() {
+    try {
+      const response = await HttpClient.get<any>('/budget/frameworks');
+      if (response && response.data) {
+        setFrameworks(response.data.frameworks || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching frameworks:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
   function showSuccessSnackBar(message: string) {
     setSnackBarState((prevState) => ({
       ...prevState,
@@ -329,6 +345,7 @@ export default function AppContextProvider({
     budgetFramework,
     buckets,
     fetchBudget,
+    frameworks,
   };
 
   return (

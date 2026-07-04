@@ -1,7 +1,9 @@
 import { Expense } from '@/types/Expense';
-import { Bucket } from '@/types/Budget';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Works with live buckets and framework-definition buckets alike. */
+type AllocatableBucket = { key: string; percentage: number; order: number };
 
 /**
  * Splits `amount` across buckets by their percentages, rounded to cents. Any
@@ -10,7 +12,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  */
 export function computeAllocations(
   amount: number,
-  buckets: Bucket[]
+  buckets: AllocatableBucket[]
 ): Record<string, number> {
   const result: Record<string, number> = {};
   if (!buckets.length) return result;

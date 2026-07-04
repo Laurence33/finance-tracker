@@ -2,9 +2,9 @@ import { PutCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dyn
 import { DDBConstants } from 'ft-common-layer';
 import { BudgetConfig } from 'models/BudgetConfig';
 import { Bucket } from 'models/Bucket';
-import { getFramework } from 'models/frameworkDefinitions';
 import { BadRequestException } from 'utils/Exceptions';
 import { ddbDocClient } from './ddb-client';
+import { FrameworkService } from './FrameworkService';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 
@@ -19,6 +19,8 @@ type SetConfigBody = {
 };
 
 export class BudgetService {
+    private frameworkService = new FrameworkService();
+
     constructor(private userId: string) {}
 
     private get configPk() { return DDBConstants.PARTITIONS.BUDGET_CONFIG(this.userId); }
@@ -53,13 +55,16 @@ export class BudgetService {
     async getBudget() {
         const config = await this.getConfig();
         const buckets = await this.getBuckets();
-        const framework = config.framework ? getFramework(config.framework) : null;
+        const framework = config.framework
+            ? await this.frameworkService.getFramework(config.framework)
+            : null;
         return {
             config,
             framework: framework
                 ? {
                       id: framework.id,
                       label: framework.label,
+                      description: framework.description,
                       bucketLabel: framework.bucketLabel,
                       bucketLabelPlural: framework.bucketLabelPlural,
                   }
@@ -85,7 +90,9 @@ export class BudgetService {
             return this.getBudget();
         }
 
-        const framework = body.framework ? getFramework(body.framework) : null;
+        const framework = body.framework
+            ? await this.frameworkService.getFramework(body.framework)
+            : null;
         if (!framework) {
             throw new BadRequestException('Unknown budgeting framework.');
         }

@@ -25,6 +25,13 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 
         const controller = new BudgetController(userId);
 
+        if (event.resource === '/budget/frameworks') {
+            if (event.httpMethod === HttpMethod.GET) {
+                return await controller.getFrameworks();
+            }
+            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
+        }
+
         switch (event.httpMethod) {
             case HttpMethod.GET:
                 return await controller.get();

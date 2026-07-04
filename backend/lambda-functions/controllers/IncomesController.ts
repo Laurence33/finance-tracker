@@ -7,7 +7,6 @@ import { Controller } from 'types/Controller';
 import { BadRequestException, NotFoundException } from 'utils/Exceptions';
 import { CreateIncomeValidator } from 'validators/CreateIncomeValidator';
 import { validateAllocations } from 'utils/validateAllocations';
-import { getFramework } from 'models/frameworkDefinitions';
 import { treeifyError } from 'zod/v4';
 
 export class IncomesController implements Controller {
@@ -69,12 +68,13 @@ export class IncomesController implements Controller {
 
         const config = await this.budgetService.getConfig();
         if (config.enabled) {
-            const framework = getFramework(config.framework);
-            if (framework) {
+            // Validate against the user's seeded buckets — the runtime truth for keys.
+            const buckets = await this.budgetService.getBuckets();
+            if (buckets.length > 0) {
                 const result = validateAllocations(
                     validationResult.data.allocations,
                     validationResult.data.amount,
-                    framework,
+                    buckets.map((b) => b.key),
                 );
                 if (!result.ok) {
                     return createBadRequestResponse(HttpStatus.BAD_REQUEST, result.message);
@@ -122,14 +122,18 @@ export class IncomesController implements Controller {
         // Validate a re-allocation only when one is supplied and a framework is active.
         if (validationResult.data.allocations !== undefined) {
             const config = await this.budgetService.getConfig();
-            const framework = config.enabled ? getFramework(config.framework) : null;
-            if (framework) {
+            const buckets = config.enabled ? await this.budgetService.getBuckets() : [];
+            if (buckets.length > 0) {
                 let amount = validationResult.data.amount;
                 if (amount === undefined) {
                     const existing = await this.incomesService.getIncome(timestamp);
                     amount = existing ? existing.toNormalItem().amount : 0;
                 }
-                const result = validateAllocations(validationResult.data.allocations, amount, framework);
+                const result = validateAllocations(
+                    validationResult.data.allocations,
+                    amount,
+                    buckets.map((b) => b.key),
+                );
                 if (!result.ok) {
                     return createBadRequestResponse(HttpStatus.BAD_REQUEST, result.message);
                 }

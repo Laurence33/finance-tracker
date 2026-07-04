@@ -451,6 +451,22 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+        GetBudgetFrameworks:
+          Type: Api
+          Properties:
+            Path: /budget/frameworks
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        BudgetFrameworksOptions:
+          Type: Api
+          Properties:
+            Path: /budget/frameworks
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

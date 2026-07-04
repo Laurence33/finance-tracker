@@ -15,4 +15,8 @@ export const DDBConstants = {
     BUCKET: (userId: string) => `USER#${userId}#Bucket`,
     ASSET: (userId: string) => `USER#${userId}#Asset`,
   },
+  // App-wide data shared by every user (no USER# prefix).
+  GLOBAL_PARTITIONS: {
+    FRAMEWORK: 'FRAMEWORK',
+  },
 };
