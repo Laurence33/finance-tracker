@@ -8,7 +8,9 @@ import {
   Typography,
 } from '@mui/material';
 import { MdEdit, MdDelete } from 'react-icons/md';
+import { use } from 'react';
 import { Asset } from '@/types/Asset';
+import { AppContext } from '@/context/AppContext';
 
 export default function AssetItem({
   asset,
@@ -19,6 +21,12 @@ export default function AssetItem({
   onEdit: (asset: Asset) => void;
   onDelete: (asset: Asset) => void;
 }) {
+  const { fundSources } = use(AppContext);
+  const fundSourceLabel = asset.fundSource
+    ? fundSources.find((fs) => fs.name === asset.fundSource)?.displayText ??
+      asset.fundSource
+    : '';
+
   return (
     <Card
       sx={{
@@ -50,6 +58,15 @@ export default function AssetItem({
             {asset.notes && (
               <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
                 {asset.notes}
+              </Typography>
+            )}
+            {fundSourceLabel && (
+              <Typography
+                variant="caption"
+                sx={{ color: 'text.disabled', display: 'block' }}
+                noWrap
+              >
+                Funded from {fundSourceLabel}
               </Typography>
             )}
           </Box>

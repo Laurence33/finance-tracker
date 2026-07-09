@@ -8,6 +8,9 @@ export class Asset {
     private value: number;
     private category: string;
     private notes: string;
+    // The fund source this asset was funded from, if any. Recorded for
+    // traceability; the balance deduction happens once at creation time.
+    private fundSource: string;
 
     constructor(data: CreateAssetRequestBody | Record<string, any>, userId: string) {
         this.userId = userId;
@@ -21,6 +24,7 @@ export class Asset {
         this.value = data.value;
         this.category = data.category || '';
         this.notes = data.notes || '';
+        this.fundSource = data.fundSource || '';
     }
 
     toDdbItem() {
@@ -31,6 +35,7 @@ export class Asset {
             value: this.value,
             category: this.category,
             notes: this.notes,
+            fundSource: this.fundSource,
         };
     }
 
@@ -41,6 +46,7 @@ export class Asset {
             value: this.value,
             category: this.category,
             notes: this.notes,
+            fundSource: this.fundSource,
         };
     }
 }

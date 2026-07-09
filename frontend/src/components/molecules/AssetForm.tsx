@@ -6,6 +6,11 @@ import {
   Button,
   Stack,
   InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
 } from '@mui/material';
 import { use, useState } from 'react';
 import { Asset } from '@/types/Asset';
@@ -16,6 +21,7 @@ type AssetFormData = {
   value: number;
   category: string;
   notes: string;
+  fundSource: string;
 };
 
 const initialFormData: AssetFormData = {
@@ -23,6 +29,7 @@ const initialFormData: AssetFormData = {
   value: 0,
   category: '',
   notes: '',
+  fundSource: '',
 };
 
 type FieldErrors = Record<string, string[]>;
@@ -35,7 +42,8 @@ export default function AssetForm({
   asset?: Asset;
 }) {
   const isEdit = !!asset;
-  const { showErrorSnackBar, showSuccessSnackBar, fetchAssets } = use(AppContext);
+  const { showErrorSnackBar, showSuccessSnackBar, fetchAssets, fundSources, fetchFundSources } =
+    use(AppContext);
 
   const [formData, setFormData] = useState<AssetFormData>(
     isEdit
@@ -44,6 +52,7 @@ export default function AssetForm({
           value: asset.value,
           category: asset.category,
           notes: asset.notes,
+          fundSource: asset.fundSource ?? '',
         }
       : initialFormData,
   );
@@ -66,9 +75,11 @@ export default function AssetForm({
     setFieldErrors({});
     try {
       if (isEdit) {
+        // Fund source is only chosen at creation; never re-deduct on edit.
+        const { fundSource, ...editPayload } = formData;
         await HttpClient.patch(
           `/assets?timestamp=${encodeURIComponent(asset.timestamp)}`,
-          formData,
+          editPayload,
         );
         showSuccessSnackBar('Asset updated successfully!');
       } else {
@@ -77,6 +88,8 @@ export default function AssetForm({
       }
       setFormData(initialFormData);
       fetchAssets();
+      // A fund source deduction changes a balance — refresh so the UI reflects it.
+      if (!isEdit && formData.fundSource) fetchFundSources();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {
@@ -128,6 +141,32 @@ export default function AssetForm({
             }}
           />
         </Box>
+        {!isEdit && (
+          <FormControl sx={{ mb: 2.5, width: '100%' }} size="small">
+            <InputLabel id="asset-fund-source-label">
+              Fund Source (optional)
+            </InputLabel>
+            <Select
+              labelId="asset-fund-source-label"
+              value={formData.fundSource}
+              label="Fund Source (optional)"
+              onChange={(e) => onChangeHandler(e.target.value, 'fundSource')}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {fundSources.map((fundSource) => (
+                <MenuItem key={fundSource.name} value={fundSource.name}>
+                  {fundSource.displayText}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>
+              Deducts this asset&apos;s value from the selected fund source. No
+              expense is recorded.
+            </FormHelperText>
+          </FormControl>
+        )}
         <Box sx={{ mb: 2.5 }}>
           <TextField
             fullWidth

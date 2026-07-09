@@ -3,5 +3,6 @@ export type CreateAssetRequestBody = {
     value: number;
     category: string;
     notes: string;
+    fundSource?: string;
     SK?: string;
 };

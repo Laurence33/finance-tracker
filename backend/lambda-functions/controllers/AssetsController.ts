@@ -29,11 +29,21 @@ export class AssetsController implements Controller {
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Validation failed', errors);
         }
 
-        const asset = await this.assetsService.create(validationResult.data);
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Asset created successfully',
-            data: asset,
-        });
+        try {
+            const asset = await this.assetsService.create(validationResult.data);
+            return createSuccessResponse(HttpStatus.OK, {
+                message: 'Asset created successfully',
+                data: asset,
+            });
+        } catch (error: any) {
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Transaction failed. Fund source may not exist or has insufficient balance.',
+                );
+            }
+            throw error;
+        }
     }
 
     async patch(timestamp: string | undefined, body: any) {

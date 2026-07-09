@@ -1,4 +1,4 @@
-import { DeleteCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, PutCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { Asset } from 'models/Asset';
@@ -9,6 +9,7 @@ export class AssetsService {
     constructor(private userId: string) {}
 
     private get assetPk() { return DDBConstants.PARTITIONS.ASSET(this.userId); }
+    private get fundSourcePk() { return DDBConstants.PARTITIONS.FUND_SOURCE(this.userId); }
 
     async getAll() {
         const command = new QueryCommand({
@@ -42,11 +43,48 @@ export class AssetsService {
 
     async create(data: any) {
         const asset = new Asset(data, this.userId);
-        const putCmd = new PutCommand({
-            TableName: SINGLE_TABLE_NAME,
-            Item: asset.toDdbItem(),
+
+        // No fund source selected: plain write, no balance movement.
+        if (!data.fundSource) {
+            const putCmd = new PutCommand({
+                TableName: SINGLE_TABLE_NAME,
+                Item: asset.toDdbItem(),
+            });
+            await ddbDocClient.send(putCmd);
+            return asset.toNormalItem();
+        }
+
+        // Deduct the asset's value from the chosen fund source in one atomic
+        // transaction. No expense record is written — this is a one-time
+        // cash-to-asset transfer. The condition rejects a missing fund source
+        // and blocks an overdraw unless it is a credit card (mirrors the
+        // expense-create deduction in ExpensesService).
+        const transactCmd = new TransactWriteCommand({
+            TransactItems: [
+                {
+                    Put: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Item: asset.toDdbItem(),
+                    },
+                },
+                {
+                    Update: {
+                        TableName: SINGLE_TABLE_NAME,
+                        Key: {
+                            PK: this.fundSourcePk,
+                            SK: data.fundSource,
+                        },
+                        UpdateExpression: 'SET balance = balance - :amt',
+                        ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
+                        ExpressionAttributeValues: {
+                            ':amt': data.value,
+                            ':true': true,
+                        },
+                    },
+                },
+            ],
         });
-        await ddbDocClient.send(putCmd);
+        await ddbDocClient.send(transactCmd);
         return asset.toNormalItem();
     }
 
