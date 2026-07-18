@@ -11,6 +11,38 @@ const httpClient = axios.create({
   },
 });
 
+// Per-request flag so the api-key bootstrap call skips x-api-key injection (avoids recursion).
+type RequestConfig = Parameters<typeof httpClient.request>[0] & { skipApiKey?: boolean };
+
+// The user's throttling key, fetched once from GET /me/api-key and memoized for the session.
+let apiKeyPromise: Promise<string | undefined> | null = null;
+
+// Usage plans/keys aren't enforced by `sam local`, and fetching one would hit real
+// AWS from a dev machine — so skip the bootstrap entirely against a local API.
+const isLocalApi = /^https?:\/\/(localhost|127\.0\.0\.1)/.test(
+  process.env.NEXT_PUBLIC_API_URL ?? '',
+);
+
+function getApiKey(): Promise<string | undefined> {
+  if (isLocalApi) return Promise.resolve(undefined);
+  if (!apiKeyPromise) {
+    apiKeyPromise = httpClient
+      .get<{ apiKey: string }>('/me/api-key', { skipApiKey: true } as RequestConfig)
+      .then((res) => res.data?.apiKey)
+      .catch((err) => {
+        // Reset so a later request can retry the bootstrap instead of caching the failure.
+        apiKeyPromise = null;
+        throw err;
+      });
+  }
+  return apiKeyPromise;
+}
+
+// Clears the memoized key so the next signed-in user re-fetches their own.
+export function resetApiKey(): void {
+  apiKeyPromise = null;
+}
+
 httpClient.interceptors.request.use(async (config) => {
   try {
     const session = await fetchAuthSession();
@@ -20,6 +52,18 @@ httpClient.interceptors.request.use(async (config) => {
     }
   } catch {
     // Not signed in — request will fail at API Gateway
+  }
+
+  // Attach the per-user throttling key — but not on the bootstrap call that fetches it.
+  if (!(config as RequestConfig).skipApiKey) {
+    try {
+      const apiKey = await getApiKey();
+      if (apiKey) {
+        config.headers['x-api-key'] = apiKey;
+      }
+    } catch {
+      // Key unavailable — request proceeds and is rejected/throttled at the gateway
+    }
   }
   return config;
 });
@@ -73,6 +117,7 @@ function handleHttpException(error: any): void {
       console.error(`Request failed. x-request-id: ${requestId}`, error.response);
     }
     if (error.response.status === 401) {
+      resetApiKey();
       signOut().catch(() => {});
       throw new HttpError('Session expired. Please sign in again.');
     }

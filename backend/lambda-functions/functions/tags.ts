@@ -46,7 +46,7 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 export const lambdaHandler = middy(handler)
     .use(
         cors({
-            headers: 'Content-Type, Authorization',
+            headers: 'Content-Type, Authorization, x-api-key',
             methods: 'GET, OPTIONS, POST, PATCH, DELETE',
             origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
         }),

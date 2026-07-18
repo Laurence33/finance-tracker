@@ -8,9 +8,9 @@ import {
     createSuccessResponse,
     createServerErrorResponse,
 } from 'ft-common-layer';
-import { TransfersController } from 'controllers/TransfersController';
 import { getUserIdFromEvent } from 'utils/getUserId';
 import { requestIdMiddleware } from 'utils/requestIdMiddleware';
+import { ensureUserApiKey } from '../services/api-key';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -23,19 +23,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             return createBadRequestResponse(HttpStatus.UNAUTHORIZED, 'Unauthorized');
         }
 
-        const controller = new TransfersController(userId);
-        switch (event.httpMethod) {
-            case HttpMethod.GET:
-                return await controller.get();
-            case HttpMethod.POST:
-                const body = JSON.parse(event.body || '{}');
-                return await controller.post(body);
-            default:
-                return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
-        }
-    } catch (err) {
-        console.log(err);
-        return createServerErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Unexpected error occurred.');
+        // Lazily provisions the key if it doesn't exist yet (self-heals existing users).
+        const { apiKey } = await ensureUserApiKey(userId);
+        return createSuccessResponse(HttpStatus.OK, { apiKey });
+    } catch (error) {
+        console.error('Failed to resolve user API key:', error);
+        return createServerErrorResponse();
     }
 };
 
@@ -43,7 +36,7 @@ export const lambdaHandler = middy(handler)
     .use(
         cors({
             headers: 'Content-Type, Authorization, x-api-key',
-            methods: 'GET, POST, OPTIONS',
+            methods: 'GET, OPTIONS',
             origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
         }),
     )

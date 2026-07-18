@@ -84,10 +84,30 @@ Resources:
         Type: REGIONAL
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
+        # Every method requires a per-user API key (for usage-plan throttling).
+        # OPTIONS/CORS-preflight methods opt out via ApiKeyRequired: false on each event.
+        ApiKeyRequired: true
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
         AddDefaultAuthorizerToCorsPreflight: false
+  # Per-user throttling: throttle (rate/burst) and quota apply INDEPENDENTLY per
+  # associated API key, so one plan + one key per user = per-user isolation.
+  # Keys are created at runtime (signup trigger + lazy GET /me/api-key), not here.
+  ApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiGatewayApiProdStage # SAM-generated stage logical id (<ApiId><StageName>Stage)
+    Properties:
+      UsagePlanName: FinanceTrackerPerUserPlan
+      ApiStages:
+        - ApiId: !Ref ApiGatewayApi
+          Stage: Prod
+      Throttle:
+        RateLimit: 5
+        BurstLimit: 10
+      Quota:
+        Limit: 5000
+        Period: DAY
   ExpensesFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -142,6 +162,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -208,6 +229,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         FundSourcesPathOptions:
           Type: Api
           Properties:
@@ -217,6 +239,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -283,6 +306,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         TagsPathOptions:
           Type: Api
           Properties:
@@ -292,6 +316,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -317,9 +342,24 @@ Resources:
       Environment:
         Variables:
           DDB_TABLE_NAME: !Ref DDBSingleTable
+          # Name (not !Ref) to avoid a circular dependency via the Cognito trigger.
+          USAGE_PLAN_NAME: FinanceTrackerPerUserPlan
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DDBSingleTable
+        # Best-effort API key provisioning at signup (lazy GET /me/api-key is the reliable path).
+        - Statement:
+            - Effect: Allow
+              Action:
+                - apigateway:POST # CreateApiKey, CreateUsagePlanKey
+              Resource:
+                - !Sub arn:aws:apigateway:${AWS::Region}::/apikeys
+                - !Sub arn:aws:apigateway:${AWS::Region}::/usageplans/*/keys
+            - Effect: Allow
+              Action:
+                - apigateway:GET # GetUsagePlans (resolve plan id by name)
+              Resource:
+                - !Sub arn:aws:apigateway:${AWS::Region}::/usageplans
       Events:
         PostConfirm:
           Type: Cognito
@@ -337,6 +377,7 @@ Resources:
         External:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
+          - '@aws-sdk/client-api-gateway'
           - 'ft-common-layer'
   IncomesFunction:
     Type: AWS::Serverless::Function
@@ -392,6 +433,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -451,6 +493,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         GetBudgetFrameworks:
           Type: Api
           Properties:
@@ -467,6 +510,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -533,6 +577,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         GetLendingPayments:
           Type: Api
           Properties:
@@ -556,6 +601,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -622,6 +668,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -674,6 +721,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         PatchRecurring:
           Type: Api
           Properties:
@@ -697,6 +745,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         PostRecurringPay:
           Type: Api
           Properties:
@@ -713,6 +762,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         GetRecurringPayments:
           Type: Api
           Properties:
@@ -729,6 +779,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
         PatchRecurringStatus:
           Type: Api
           Properties:
@@ -745,6 +796,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -797,6 +849,7 @@ Resources:
               Ref: ApiGatewayApi
             Auth:
               Authorizer: NONE
+              ApiKeyRequired: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -808,6 +861,72 @@ Resources:
         External:
           - '@aws-sdk/lib-dynamodb'
           - '@aws-sdk/client-dynamodb'
+          - 'ft-common-layer'
+  GetApiKeyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda-functions/functions
+      Handler: get-api-key.lambdaHandler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          DDB_TABLE_NAME: !Ref DDBSingleTable
+          # Name (not !Ref) — a !Ref on ApiUsagePlan would create a circular
+          # dependency (Api -> Function -> UsagePlan -> Api). Resolved to an id at runtime.
+          USAGE_PLAN_NAME: FinanceTrackerPerUserPlan
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DDBSingleTable
+        # DynamoDBCrudPolicy does NOT cover API Gateway; grant key creation explicitly.
+        - Statement:
+            - Effect: Allow
+              Action:
+                - apigateway:POST # CreateApiKey, CreateUsagePlanKey
+              Resource:
+                - !Sub arn:aws:apigateway:${AWS::Region}::/apikeys
+                - !Sub arn:aws:apigateway:${AWS::Region}::/usageplans/*/keys
+            - Effect: Allow
+              Action:
+                - apigateway:GET # GetUsagePlans (resolve plan id by name)
+              Resource:
+                - !Sub arn:aws:apigateway:${AWS::Region}::/usageplans
+      Events:
+        GetApiKey:
+          Type: Api
+          Properties:
+            Path: /me/api-key
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+            # Cognito-authed but NOT key-required — this is how the client bootstraps its key.
+            Auth:
+              ApiKeyRequired: false
+        ApiKeyOptions:
+          Type: Api
+          Properties:
+            Path: /me/api-key
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: false
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - get-api-key.ts
+        External:
+          - '@aws-sdk/lib-dynamodb'
+          - '@aws-sdk/client-dynamodb'
+          - '@aws-sdk/client-api-gateway'
           - 'ft-common-layer'
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

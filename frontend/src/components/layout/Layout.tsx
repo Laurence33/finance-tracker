@@ -29,6 +29,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import SavingsIcon from '@mui/icons-material/Savings';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { signOut } from 'aws-amplify/auth';
+import { resetApiKey } from '@/utils/httpClient';
 
 const bottomNavItems = [
   { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
@@ -85,7 +86,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             Finance Tracker
           </Typography>
           <IconButton
-            onClick={() => signOut()}
+            onClick={() => {
+              resetApiKey();
+              signOut();
+            }}
             sx={{ color: 'text.primary' }}
             aria-label="Sign out"
           >

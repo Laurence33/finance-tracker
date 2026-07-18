@@ -14,6 +14,7 @@ export const DDBConstants = {
     BUDGET_CONFIG: (userId: string) => `USER#${userId}#BudgetConfig`,
     BUCKET: (userId: string) => `USER#${userId}#Bucket`,
     ASSET: (userId: string) => `USER#${userId}#Asset`,
+    PROFILE: (userId: string) => `USER#${userId}#Profile`,
   },
   // App-wide data shared by every user (no USER# prefix).
   GLOBAL_PARTITIONS: {

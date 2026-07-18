@@ -2,6 +2,7 @@ import { PostConfirmationTriggerEvent } from 'aws-lambda';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from '../services/ddb-client';
+import { ensureUserApiKey } from '../services/api-key';
 
 const DEFAULT_TAGS = [
     'Food',
@@ -52,6 +53,13 @@ export const lambdaHandler = async (
             }
         }
     });
+
+    // Best-effort per-user throttling key. If this fails, GET /me/api-key creates it lazily.
+    try {
+        await ensureUserApiKey(userId);
+    } catch (err) {
+        console.error(`Failed to provision API key for ${userId}:`, err);
+    }
 
     // Never throw — a failure here must not block the user's sign-up confirmation.
     return event;
