@@ -29,6 +29,7 @@ import { HttpClient } from '@/utils/httpClient';
 import ExpenseIcon from '@/components/atoms/ExpenseIcon';
 import FundSourceDialog from '@/components/organisms/FundSourceDialog';
 import TransferDialog from '@/components/organisms/TransferDialog';
+import TransferHistory from '@/components/organisms/TransferHistory';
 
 export default function WalletPage() {
   const theme = useTheme();
@@ -226,6 +227,8 @@ export default function WalletPage() {
             ))}
           </Stack>
         )}
+
+        <TransferHistory />
       </Container>
 
       <SpeedDial

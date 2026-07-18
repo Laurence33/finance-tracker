@@ -7,6 +7,7 @@ import { Lending } from '@/types/Lending';
 import { RecurringExpense } from '@/types/RecurringExpense';
 import { SnackBarState } from '@/types/SnackBarState';
 import { Tags } from '@/types/Tags';
+import { Transfer } from '@/types/Transfer';
 import { HttpClient } from '@/utils/httpClient';
 import { TZDate } from '@date-fns/tz';
 import { Alert, Snackbar } from '@mui/material';
@@ -33,6 +34,8 @@ interface AppContextType {
   fundSources: FundSource[];
   setFundSources: (fundSources: FundSource[]) => void;
   fetchFundSources: () => Promise<void>;
+  transfers: Transfer[];
+  fetchTransfers: () => Promise<void>;
   tags: Tags[];
   setTags: (tags: Tags[]) => void;
   fetchTags: () => Promise<void>;
@@ -83,6 +86,8 @@ export const AppContext = createContext<AppContextType>({
   fundSources: [],
   setFundSources: () => {},
   fetchFundSources: async () => {},
+  transfers: [],
+  fetchTransfers: async () => {},
   tags: [],
   setTags: () => {},
   fetchTags: async () => {},
@@ -123,6 +128,7 @@ export default function AppContextProvider({
     format(TZDate.tz('asia/singapore'), 'yyyy-MM')
   );
   const [fundSources, setFundSources] = useState<FundSource[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [tags, setTags] = useState<Tags[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [totalIncome, setTotalIncome] = useState<number>(0);
@@ -148,6 +154,7 @@ export default function AppContextProvider({
 
   useEffect(() => {
     fetchFundSources();
+    fetchTransfers();
     fetchTags();
     fetchLendings();
     fetchRecurringExpenses();
@@ -186,6 +193,18 @@ export default function AppContextProvider({
       }
     } catch (error: any) {
       console.error('Error fetching expenses:', error);
+      showErrorSnackBar(error.message);
+    }
+  }
+
+  async function fetchTransfers() {
+    try {
+      const response = await HttpClient.get<any>('/transfers');
+      if (response && response.data) {
+        setTransfers(response.data.transfers || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching transfers:', error);
       showErrorSnackBar(error.message);
     }
   }
@@ -311,6 +330,8 @@ export default function AppContextProvider({
     fundSources,
     setFundSources,
     fetchFundSources,
+    transfers,
+    fetchTransfers,
     formAction,
     setFormAction,
     expenseFormOpen,

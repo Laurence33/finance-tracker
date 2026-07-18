@@ -39,6 +39,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
   const {
     fundSources,
     fetchFundSources,
+    fetchTransfers,
     fetchExpenses,
     fetchTags,
     showSuccessSnackBar,
@@ -89,6 +90,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
       await HttpClient.post('/transfers', formData);
       showSuccessSnackBar('Transfer completed successfully!');
       fetchFundSources();
+      fetchTransfers();
       fetchExpenses();
       if (formData.fee > 0) fetchTags();
       onClose();
