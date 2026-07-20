@@ -11,6 +11,7 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "baseUrl": ".",
+        "types": ["node"],
         "paths": {
             "ft-common-layer": ["../layers/ft-common-layer/src"],
             "ft-common-layer/*": ["../layers/ft-common-layer/src/*"]
