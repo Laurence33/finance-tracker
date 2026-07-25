@@ -30,7 +30,7 @@ what the flexible name column gets. The pre-rebuild recurring row spent it like 
 | Element | Cost |
 |---|---|
 | Amount, `₱2,000 – ₱6,000` (repeated currency sign, spaced dash) | ~130px |
-| Edit + delete `IconButton size="small"` | ~68px |
+| Edit + delete `IconButton size="small"` | ~55px (measured: ~27.5px each — `react-icons` ignores `fontSize="1.1rem"` and renders at 1em) |
 | Two `Stack` gaps (`spacing={1.5}`) | 24px |
 | `Active` chip, inline with the name inside the flexible block | ~66px + 8px gap |
 | **Left for the name** | **~30px** |
@@ -40,6 +40,12 @@ icon buttons and compacting the range to `₱2,000–6,000` (~100px), the name c
 
 **Rule:** when names truncate, do this sum first and cut the biggest non-essential spender. Do not
 reach for a smaller font or a wider container.
+
+**Measure, don't estimate.** Every figure above was originally guessed, and two were wrong by enough
+to matter — the icon rail by 13px and the amount block by 46px. When this page was rebuilt the name
+column was said to have ~20px; measuring `getBoundingClientRect` on the real render gave ~85px. The
+conclusion held (85px is eight characters, hence `Bartolo…`), but a guessed budget can flip a
+keep-or-move decision. Measure the row you are actually changing.
 
 ---
 
@@ -111,10 +117,62 @@ Sort groups in a fixed domain order (`monthly → weekly → yearly → as_neede
 Within a group, put active records first and otherwise **preserve source order** — silently
 re-sorting by value hides the order the user created things in.
 
+When the grouped field is **free text** rather than a closed enum, there is no domain order to key
+off: order groups by aggregate descending with the group name as a deterministic tiebreak, and pin
+the empty-value group last under an explicit label (`Uncategorised`). Trim before grouping — a
+non-optional string field arrives as `''`, and a whitespace-only value otherwise produces a group
+with a blank eyebrow.
+
+Grouping is not always right. **Nothing repeats on a tags row**, so that page uses a single group
+card whose header names the month — the one field its rows genuinely did repeat, once per row as
+`₱340 spent this month`. A header that hoists no field out of the row is chrome; a header that
+restates a count the hero already shows is worse (§8.8). "Over budget / on track" would be worse
+still: that is a §4 exception state, and it makes the list reorder as the month progresses.
+
+### Meter rows
+
+A row may carry a progress meter — spend against a budget, funding against a target. It goes in
+`LedgerRow`'s `footer` slot: full content width, below both the name and the value, never inline with
+either (an inline meter is a fixed-width sibling, so it starves the name — §1).
+
+| Part | Value |
+|---|---|
+| Element | `LinearProgress variant="determinate"`, value clamped to 100 |
+| Height / radius | `height: 4, borderRadius: 2` on bar and track |
+| Track | `alpha(theme.palette.text.primary, 0.09)` |
+| Gap above | owned by `LedgerRow`'s footer slot — don't add your own |
+| Bar colour | `primary` normally, `error` in the over state |
+
+**The meter must not make the row taller.** 4px of bar plus the footer gap is 14px, which fits inside
+the slack `minHeight: 62` already reserves for a single-line row — measured on the tags page, metered
+and unmetered rows are both exactly 62px. So keep the value to **one line** when a meter is present
+(`₱1,200 / 2,000` via the `value` slot with `glyph={false}` on the second figure, not `amount` plus
+`secondaryValue`). Two value lines plus a meter pushes the row to ~78px and it stops reading as a
+ledger row.
+
+**A record with no budget renders no meter and no placeholder track.** Omit `footer` and the row falls
+back to its centred single-child layout, so there is no dead space where a bar would be. Because both
+shapes are the same height, metered and unmetered rows interleave in one group — that equal height is
+exactly why splitting them into "budgeted" / "no budget" sections isn't needed.
+
+**Colour encodes state, length encodes magnitude — never both.** No amber "nearing budget" tier: the
+bar's length already says how close it is, and because it clamps at 100%, colour is the only channel
+left to distinguish at-budget from far over. Pair the over state with a §4 micro-label under the value
+and do **not** mute the row — §4's muting is for records that should recede, and an over-budget record
+is the opposite.
+
 ### Row actions
 
-Row-level action icons cost ~68px of the name's budget. **Remove them only when the name column is
-starved** — and if you do, the detail dialog must gain them, in its title bar, before `Close`.
+Row-level action icons cost ~55px of the name's budget for two, ~83px for three. **Remove them only
+when the name column is starved** — and if you do, the detail dialog must gain them, in its title bar,
+before `Close`.
+
+Grouping can refund enough width that the icons stay. On the assets page, hoisting the category out of
+the row returned the chip's ~65px plus its 8px gap, taking the name from ~106px on one `noWrap` line to
+183px across the two-line clamp — so the icons stayed, and that page needs no detail dialog at all.
+Run the §1 sum *after* grouping before deciding: a page whose value rail is a bare amount usually keeps
+its icons, while a page whose rail also carries a secondary value line and a status label (lendings)
+does not.
 
 When an action moves into a dialog, close the current dialog before opening the next or they stack:
 
@@ -168,6 +226,15 @@ information while spending ~66px and drawing the eye with a saturated fill.
   micro-label under the amount at `0.65rem / 700 / letterSpacing 0.08em / uppercase` —
   `error.main` for destructive/cancelled, `text.disabled` for benign/completed.
 - Full `Chip` components belong in detail dialogs and forms, where one instance is on screen.
+- **Keep exception labels to one short word.** The value block is `flexShrink: 0`, so its widest child
+  — often the label, not the amount — sets the rail's width. `PARTIALLY PAID` costs ~87px against
+  `PARTIAL`'s ~48px, taken straight out of the name column.
+- **When a group header already names the state, the per-row label is redundant.** A `PARTIAL` label
+  under a `PARTIALLY PAID` header is the same fact twice, paid for in name width. Keep the label only
+  where muting alone would be ambiguous, or where rows of that state can appear outside their group.
+- **Direction is sign and colour, not a badge.** When one list holds movements in both directions, the
+  minority direction takes a leading `+` and `success.main` and the majority takes neither. A per-row
+  `Income` chip is a majority-state badge in whichever filter the user is in, and costs ~66px.
 
 ---
 
@@ -200,6 +267,11 @@ which overrides `Money`'s default tracking. Building to the prose below alone wi
 ## 6. Chrome and clearance
 
 - Page container: `<Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>`.
+- A `SpeedDial` needs the same `pb: 12` as a `Fab`, not more. Its box is 184px tall — the actions
+  container adds 160px less a `-32px` margin — but while closed MUI gives that container
+  `pointer-events: none` and its buttons `opacity: 0`, so only the 56px dial is a persistent
+  obstruction. Open, the actions reach ~272px with no backdrop; that is a transient menu and page
+  padding does not size for it.
 - `pb: 12` (96px) is FAB clearance, and it is load-bearing. `Layout` adds `pb: '80px'` for the bottom
   nav; the FAB sits at `bottom: 88` and is 56px tall, so it occupies 88–144px up from the viewport
   bottom. Without ~96px of page padding the FAB covers the last row when scrolled to the end.
@@ -254,6 +326,11 @@ hydration-mismatches and blanks the whole app.
 
 Constrain width for a mobile check with a 390px wrapper plus
 `.narrow-preview .MuiContainer-root { max-width: 390px !important; padding: 0 16px !important; }`;
-`resize_window` alone does not change the rendered viewport. Include a record with no tags, a very
+`resize_window` alone does not change the rendered viewport.
+
+**That wrapper constrains layout width but not media queries.** MUI `{ xs, sm }` values resolve against
+the real browser viewport (~1400px), so anything responsive renders its `sm` branch. A render check on
+a component with breakpoint values is invalid unless you emulate a real narrow viewport. The ledger
+primitives use no breakpoint values; the hero figure and the transaction stat cards do. Include a record with no tags, a very
 long name, and a non-active status in the mock data. Delete the page and revert `_app.tsx` afterwards,
 then confirm with `git status` and a clean `npx tsc --noEmit && npm run build`.
