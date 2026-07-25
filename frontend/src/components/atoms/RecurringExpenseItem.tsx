@@ -1,103 +1,127 @@
-import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  Stack,
-  Typography,
-} from '@mui/material';
-import { MdEdit, MdDelete } from 'react-icons/md';
+import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { RecurringExpense } from '@/types/RecurringExpense';
-import { getAmountDisplay, getFrequencyLabel } from '@/utils/recurring-helpers';
+import { getAmountValueDisplay } from '@/utils/recurring-helpers';
 
-function getStatusColor(status: string): 'success' | 'default' | 'error' {
-  if (status === 'active') return 'success';
-  if (status === 'cancelled') return 'error';
-  return 'default';
-}
+const STATUS_LABEL: Record<RecurringExpense['status'], string> = {
+  active: '',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
 
+/**
+ * A single ledger row. Deliberately has no Card / border of its own — it is
+ * meant to sit inside a frequency-grouped card that owns the dividers, so the
+ * frequency never has to be repeated on every row.
+ */
 export default function RecurringExpenseItem({
   recurringExpense,
-  onEdit,
-  onDelete,
   onTap,
 }: {
   recurringExpense: RecurringExpense;
-  onEdit: (re: RecurringExpense) => void;
-  onDelete: (re: RecurringExpense) => void;
   onTap: (re: RecurringExpense) => void;
 }) {
+  const isActive = recurringExpense.status === 'active';
+  const statusLabel = STATUS_LABEL[recurringExpense.status];
+  const meta = recurringExpense.tags.join(' · ');
+
   return (
-    <Card
-      sx={{
-        transition: 'box-shadow 0.2s ease',
-        cursor: 'pointer',
-        '&:hover': {
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-        },
-      }}
+    <ButtonBase
       onClick={() => onTap(recurringExpense)}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        textAlign: 'left',
+        px: 2,
+        py: 1.5,
+        minHeight: 62,
+        transition: 'background-color 0.18s ease',
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-              <Typography
-                variant="body1"
-                sx={{ fontWeight: 600, color: 'text.primary' }}
-                noWrap
-              >
-                {recurringExpense.displayName}
-              </Typography>
-              <Chip
-                label={recurringExpense.status}
-                color={getStatusColor(recurringExpense.status)}
-                size="small"
-                sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600, textTransform: 'capitalize' }}
-              />
-            </Stack>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              {getFrequencyLabel(recurringExpense.frequency)} · {recurringExpense.tags.join(', ')}
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 700, color: 'text.primary' }}
-            >
-              {getAmountDisplay(recurringExpense)}
-            </Typography>
-          </Box>
-          <Stack
-            direction="row"
-            spacing={0}
-            sx={{ flexShrink: 0 }}
-            onClick={(e) => e.stopPropagation()}
+      <Stack
+        direction="row"
+        alignItems="flex-start"
+        spacing={1.5}
+        sx={{ width: '100%' }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontSize: '0.9375rem',
+              fontWeight: 600,
+              lineHeight: 1.3,
+              color: isActive ? 'text.primary' : 'text.secondary',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              overflowWrap: 'anywhere',
+            }}
           >
-            <IconButton
-              size="small"
-              onClick={() => onEdit(recurringExpense)}
+            {recurringExpense.displayName}
+          </Typography>
+          {meta && (
+            <Typography
               sx={{
+                display: 'block',
+                mt: 0.25,
+                fontSize: '0.75rem',
                 color: 'text.secondary',
-                '&:hover': { color: 'primary.main' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              <MdEdit fontSize="1.1rem" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => onDelete(recurringExpense)}
+              {meta}
+            </Typography>
+          )}
+        </Box>
+
+        <Stack alignItems="flex-end" sx={{ flexShrink: 0 }}>
+          <Typography
+            sx={{
+              fontSize: '0.9375rem',
+              fontWeight: 700,
+              lineHeight: 1.3,
+              letterSpacing: '-0.01em',
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
+              color: isActive ? 'text.primary' : 'text.disabled',
+            }}
+          >
+            <Box
+              component="span"
               sx={{
+                fontSize: '0.8em',
+                fontWeight: 500,
                 color: 'text.secondary',
-                '&:hover': { color: 'error.main' },
+                mr: '2px',
               }}
             >
-              <MdDelete fontSize="1.1rem" />
-            </IconButton>
-          </Stack>
+              ₱
+            </Box>
+            {getAmountValueDisplay(recurringExpense)}
+          </Typography>
+          {statusLabel && (
+            <Typography
+              sx={{
+                mt: 0.25,
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color:
+                  recurringExpense.status === 'cancelled'
+                    ? 'error.main'
+                    : 'text.disabled',
+              }}
+            >
+              {statusLabel}
+            </Typography>
+          )}
         </Stack>
-      </CardContent>
-    </Card>
+      </Stack>
+    </ButtonBase>
   );
 }

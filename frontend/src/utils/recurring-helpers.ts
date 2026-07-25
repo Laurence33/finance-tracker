@@ -66,6 +66,18 @@ export function getAmountDisplay(re: RecurringExpense): string {
   return `₱${re.amountMin.toLocaleString()} - ₱${re.amountMax.toLocaleString()}`;
 }
 
+/**
+ * Amount without the currency symbol, ranges collapsed to a single en dash
+ * (`2,000–6,000`). Used in dense list rows where the peso sign is rendered
+ * separately so it can be de-emphasised.
+ */
+export function getAmountValueDisplay(re: RecurringExpense): string {
+  if (re.amountType === 'fixed') {
+    return re.amount.toLocaleString();
+  }
+  return `${re.amountMin.toLocaleString()}–${re.amountMax.toLocaleString()}`;
+}
+
 export function getFrequencyLabel(frequency: string): string {
   switch (frequency) {
     case 'weekly':

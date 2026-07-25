@@ -13,6 +13,8 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { RecurringExpense, RecurringExpensePayment } from '@/types/RecurringExpense';
 import { HttpClient } from '@/utils/httpClient';
 import {
@@ -29,12 +31,16 @@ export default function RecurringExpenseDetailDialog({
   recurringExpense,
   onPay,
   onUpdateStatus,
+  onEdit,
+  onDelete,
 }: {
   open: boolean;
   onClose: () => void;
   recurringExpense: RecurringExpense | null;
   onPay: (re: RecurringExpense) => void;
   onUpdateStatus: (re: RecurringExpense, status: string) => void;
+  onEdit: (re: RecurringExpense) => void;
+  onDelete: (re: RecurringExpense) => void;
 }) {
   const [payments, setPayments] = useState<RecurringExpensePayment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,9 +81,27 @@ export default function RecurringExpenseDetailDialog({
       <DialogTitle sx={{ pb: 1 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">Recurring Details</Typography>
-          <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
+          <Stack direction="row" spacing={0.5}>
+            <IconButton
+              size="small"
+              onClick={() => onEdit(recurringExpense)}
+              aria-label="Edit recurring expense"
+              sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => onDelete(recurringExpense)}
+              aria-label="Delete recurring expense"
+              sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
         </Stack>
       </DialogTitle>
       <DialogContent>
