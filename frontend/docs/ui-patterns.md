@@ -173,19 +173,27 @@ information while spending ~66px and drawing the eye with a saturated fill.
 
 ## 5. Summary hero card
 
-One per screen, above the list.
+One per screen, above the list. **Compose `SummaryHeroCard` (molecule)** — it implements all of this,
+including the exact circle geometry and the figure's `lineHeight: 1.15` / `letterSpacing: -0.02em`,
+which overrides `Money`'s default tracking. Building to the prose below alone will drift.
 
-- Gradient `linear-gradient(135deg, …main 0%, …dark 100%)` on a `Card` with `border: 'none'`. Keep the
-  hue consistent with the page's existing role colour — don't re-hue one page in isolation.
+- Gradient `linear-gradient(135deg, …main 0%, …dark 100%)` on a `Card` with `border: 'none'`. The hue
+  is the page's existing role colour, passed in — don't re-hue one page in isolation.
 - Depth comes from one oversized off-canvas circle at `alpha('#ffffff', 0.09)` inside
   `overflow: 'hidden'`, not from a second gradient.
-- Left-aligned, three tiers: eyebrow (icon + `0.6875rem / 700 / letterSpacing 0.16em / uppercase`),
-  the figure (`{ xs: '1.75rem', sm: '2rem' } / 700 / tabular-nums`), then the honesty caption.
+- Left-aligned, **four** tiers: eyebrow (icon + `0.6875rem / 700 / letterSpacing 0.16em / uppercase`),
+  a label tier (`0.75rem / 500 / opacity 0.85`) naming what the figure measures, the figure itself
+  (`{ xs: '1.75rem', sm: '2rem' } / 700 / tabular-nums`), then the honesty caption.
+- The figure is normally money. A non-money headline (a state like `Off`) is supported and renders at
+  figure size.
 - Secondary stats go right, as a `Stack direction="row"` with a
   `<Divider orientation="vertical" flexItem>` at `alpha('#ffffff', 0.25)` — value above
-  `0.625rem` uppercase label. Two or three, never more.
+  `0.625rem` uppercase label. **0 to 3**: zero is legitimate, and a stat may be conditional (an
+  overdue count that only appears when non-zero). Four does not fit at 390px.
 - The hero carries the screen's title in its eyebrow, which removes the need for a separate page
   heading above the list.
+- The hero owns its own `mb: 2.5`. Pages currently using `mb: 3` will tighten on adoption; that's §6
+  conformance, not drift.
 
 ---
 
