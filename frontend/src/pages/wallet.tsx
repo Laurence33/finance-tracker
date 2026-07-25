@@ -1,38 +1,30 @@
 import { use, useState } from 'react';
 import {
-  Box,
   Button,
-  Card,
-  CardContent,
   Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
   SpeedDial,
   SpeedDialAction,
   SpeedDialIcon,
-  Stack,
-  Typography,
-  alpha,
-  useTheme,
 } from '@mui/material';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AddIcon from '@mui/icons-material/Add';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import { MdEdit, MdDelete } from 'react-icons/md';
 import { AppContext } from '@/context/AppContext';
 import { FundSource } from '@/types/FundSource';
 import { HttpClient } from '@/utils/httpClient';
-import ExpenseIcon from '@/components/atoms/ExpenseIcon';
+import Money from '@/components/atoms/Money';
+import FundSourceList from '@/components/molecules/FundSourceList';
+import SummaryHeroCard from '@/components/molecules/SummaryHeroCard';
 import FundSourceDialog from '@/components/organisms/FundSourceDialog';
 import TransferDialog from '@/components/organisms/TransferDialog';
 import TransferHistory from '@/components/organisms/TransferHistory';
 
 export default function WalletPage() {
-  const theme = useTheme();
   const { fundSources, fetchFundSources, showSuccessSnackBar, showErrorSnackBar } =
     use(AppContext);
 
@@ -41,7 +33,22 @@ export default function WalletPage() {
   const [deleteTarget, setDeleteTarget] = useState<FundSource | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
 
-  const totalBalance = fundSources.reduce((sum, fs) => sum + fs.balance, 0);
+  // The headline figure is cash only. It used to be `fundSources.reduce(...)`
+  // over every source, which quietly nets a liability off an asset and yields a
+  // number that is neither the money you hold nor what you owe (§3 "label
+  // derived aggregates honestly"). `budget.tsx` already defines the cash-only
+  // sum as "Cash you actually hold (exclude credit cards)"; this matches it, and
+  // the hero's caption plus the `Card debt` stat carry the cards.
+  const cashOnHand = fundSources
+    .filter((fs) => !fs.isCreditCard)
+    .reduce((sum, fs) => sum + fs.balance, 0);
+  const hasCreditCards = fundSources.some((fs) => fs.isCreditCard);
+  // What is owed, not the net of the card group: a card at -7,350 alongside one
+  // prepaid at +500 is 7,350 of debt, not 6,850.
+  const cardDebt = fundSources.reduce(
+    (sum, fs) => sum + (fs.isCreditCard ? Math.max(0, -fs.balance) : 0),
+    0,
+  );
 
   const handleCreate = () => {
     setEditingFundSource(undefined);
@@ -104,129 +111,52 @@ export default function WalletPage() {
         </DialogActions>
       </Dialog>
 
-      <Container maxWidth="sm" sx={{ py: 3 }}>
-        <Card
-          sx={{
-            mb: 3,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            color: 'white',
-          }}
-        >
-          <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-            <Stack alignItems="center" spacing={1}>
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: alpha('#ffffff', 0.2),
-                }}
-              >
-                <AccountBalanceWalletIcon sx={{ fontSize: 28 }} />
-              </Box>
-              <Typography
-                variant="caption"
-                sx={{ opacity: 0.85, fontWeight: 500 }}
-              >
-                Total Balance
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                ₱{totalBalance.toLocaleString()}
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Typography
-          variant="subtitle1"
-          sx={{ fontWeight: 600, color: 'text.secondary', mb: 1.5 }}
-        >
-          Fund Sources
-        </Typography>
-
-        {fundSources.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <AccountBalanceWalletIcon
-              sx={{ fontSize: 56, color: 'action.disabled', mb: 2 }}
-            />
-            <Typography variant="h6" sx={{ color: 'text.secondary', mb: 0.5 }}>
-              No fund sources
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-              Tap the + button to add your first fund source
-            </Typography>
-          </Box>
-        ) : (
-          <Stack spacing={1.5}>
-            {fundSources.map((fundSource) => (
-              <Card
-                key={fundSource.name}
-                sx={{
-                  transition: 'box-shadow 0.2s ease',
-                  '&:hover': {
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      {/* pb: 12 is SpeedDial clearance and load-bearing — see §6. */}
+      <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
+        <SummaryHeroCard
+          hue="primary"
+          icon={<AccountBalanceWalletIcon />}
+          eyebrow="Wallet"
+          label="Cash on hand"
+          // Rounded here, not in the hero — §3 leaves rounding to the caller.
+          // Signed rather than negative, also §3: a cash account cannot go below
+          // zero (the backend refuses it), but this is a derived sum and the
+          // guarantee is not local, so the glyph must never end up ahead of a
+          // minus.
+          amount={Math.abs(Math.round(cashOnHand))}
+          sign={cashOnHand < 0 ? '-' : undefined}
+          caption={
+            hasCreditCards
+              ? 'cash accounts only · card balances not deducted'
+              : 'sum of all account balances'
+          }
+          // One conditional stat, which §5 allows: a permanent `₱0 Card debt` on
+          // a cash-only wallet would be noise. `component="span"` because
+          // `SummaryHeroStat.value` renders inside a `<p>`, and no `sign` — the
+          // label already says debt, so a minus would be the same fact twice.
+          stats={
+            cardDebt > 0
+              ? [
+                  {
+                    value: (
+                      <Money
+                        component="span"
+                        surface="onColor"
+                        amount={Math.round(cardDebt)}
+                      />
+                    ),
+                    label: 'Card debt',
                   },
-                }}
-              >
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <ExpenseIcon fundSource={fundSource.name} />
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography
-                        variant="body1"
-                        sx={{ fontWeight: 600, color: 'text.primary' }}
-                      >
-                        {fundSource.displayText}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{ color: 'text.secondary' }}
-                      >
-                        {fundSource.name}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        fontWeight: 700,
-                        color:
-                          fundSource.balance < 0 ? 'error.main' : 'text.primary',
-                        flexShrink: 0,
-                      }}
-                    >
-                      ₱{fundSource.balance.toLocaleString()}
-                    </Typography>
-                    <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEdit(fundSource)}
-                        sx={{
-                          color: 'text.secondary',
-                          '&:hover': { color: 'primary.main' },
-                        }}
-                      >
-                        <MdEdit fontSize="1.1rem" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => setDeleteTarget(fundSource)}
-                        sx={{
-                          color: 'text.secondary',
-                          '&:hover': { color: 'error.main' },
-                        }}
-                      >
-                        <MdDelete fontSize="1.1rem" />
-                      </IconButton>
-                    </Stack>
-                  </Stack>
-                </CardContent>
-              </Card>
-            ))}
-          </Stack>
-        )}
+                ]
+              : []
+          }
+        />
+
+        <FundSourceList
+          fundSources={fundSources}
+          onEdit={handleEdit}
+          onDelete={setDeleteTarget}
+        />
 
         <TransferHistory />
       </Container>
