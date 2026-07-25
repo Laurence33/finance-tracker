@@ -54,7 +54,8 @@ export default function LendingItem({
       secondaryValue={
         lending.totalPaid > 0 && !settled ? (
           <Box component="span" sx={{ color: 'success.main', fontWeight: 600 }}>
-            <Money component="span" amount={lending.totalPaid} /> paid
+            <Money component="span" surface="inherit" amount={lending.totalPaid} />{' '}
+            paid
           </Box>
         ) : undefined
       }

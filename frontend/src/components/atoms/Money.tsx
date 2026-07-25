@@ -6,19 +6,32 @@ import {
 } from '@/utils/money';
 
 /**
- * Which kind of background the figure sits on. On a normal surface the glyph
- * is de-emphasised with `text.secondary`; on a coloured/gradient surface there
- * is no theme text colour that works, so it is de-emphasised with opacity and
- * set smaller against the larger display size. See §3 and §5 of
+ * How the glyph is de-emphasised, which depends on what the figure sits on and
+ * whether the digits are themselves coloured. See §3 and §5 of
  * `docs/ui-patterns.md`.
+ *
+ * - `default` — body figure in a text colour on a normal surface. The glyph
+ *   steps down to `text.secondary`.
+ * - `inherit` — body figure whose digits carry a *semantic* colour (success
+ *   green for income, error red for a negative). A fixed `text.secondary` glyph
+ *   reads as a grey glyph against coloured digits, so here it inherits the
+ *   caller's colour and steps down by opacity instead.
+ * - `onColor` — large figure on a gradient surface. Inherits the colour and is
+ *   set smaller, calibrated against the hero's display size.
  */
-export type MoneySurface = 'default' | 'onColor';
+export type MoneySurface = 'default' | 'inherit' | 'onColor';
 
 const GLYPH_SX: Record<MoneySurface, SxProps<Theme>> = {
   default: {
     fontSize: '0.8em',
     fontWeight: 500,
     color: 'text.secondary',
+    mr: '2px',
+  },
+  inherit: {
+    fontSize: '0.8em',
+    fontWeight: 500,
+    opacity: 0.7,
     mr: '2px',
   },
   onColor: {

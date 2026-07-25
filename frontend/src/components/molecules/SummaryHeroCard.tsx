@@ -234,6 +234,11 @@ export default function SummaryHeroCard({
             <Stack
               direction="row"
               spacing={1.75}
+              // Bottom-aligned so the labels share a baseline even when only
+              // some stats carry an icon — otherwise an icon-less stat rides up
+              // to the top of the stretched row. `flexItem` keeps the divider
+              // full height regardless.
+              alignItems="flex-end"
               divider={
                 <Divider
                   orientation="vertical"
