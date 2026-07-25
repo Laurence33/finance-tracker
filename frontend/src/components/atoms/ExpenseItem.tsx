@@ -1,11 +1,7 @@
 import { use, useState } from 'react';
 import { MdDelete, MdEdit } from 'react-icons/md';
 import {
-  Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   DialogActions,
   DialogContent,
   DialogContentText,
@@ -13,13 +9,21 @@ import {
   Stack,
   Dialog,
   DialogTitle,
-  Typography,
 } from '@mui/material';
 import { Expense } from '@/types/Expense';
 import ExpenseIconRenderer from './ExpenseIcon';
+import LedgerRow from './LedgerRow';
 import { HttpClient } from '@/utils/httpClient';
 import { AppContext } from '@/context/AppContext';
+import { transactionTime } from '@/utils/transaction-display';
 
+/**
+ * Binds an expense to the shared ledger row (§2 of `docs/ui-patterns.md`). All
+ * the vocabulary lives here: an expense has no name of its own, so its notes
+ * carry the row and the fund source names it when there are none; tags and the
+ * time of day collapse into the dot-separated meta line. The date is deliberately
+ * absent — `TransactionsList` hoists it into the group header.
+ */
 export default function ExpenseItem({ expense }: { expense: Expense }) {
   const {
     fetchExpenses,
@@ -29,6 +33,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
     setSelectedExpense,
     setFormAction,
     setExpenseFormOpen,
+    fundSources,
   } = use(AppContext);
   const [open, setOpen] = useState(false);
 
@@ -62,8 +67,18 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
     setExpenseFormOpen(true);
   };
 
-  const formattedTime = expense.timestamp.split(' ')[1]?.slice(0, 5) || '';
-  const formattedDate = expense.timestamp.split(' ')[0] || expense.timestamp;
+  const fundSourceLabel =
+    fundSources.find((fs) => fs.name === expense.fundSource)?.displayText ??
+    expense.fundSource;
+
+  // Notes are the only free-text description an expense has, so they are the
+  // name; `LedgerRow` clamps them to two lines. Falling back to the fund source
+  // keeps a bare record readable without repeating a tag that the meta line
+  // already shows.
+  const name = expense.notes || fundSourceLabel || 'Expense';
+  const meta = [transactionTime(expense.timestamp), ...(expense.tags ?? [])]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <>
@@ -95,110 +110,40 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
         </DialogActions>
       </Dialog>
 
-      <Card
-        sx={{
-          transition: 'box-shadow 0.2s ease',
-          '&:hover': {
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          },
-        }}
-      >
-        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            {/* Icon */}
-            <ExpenseIconRenderer fundSource={expense.fundSource} />
-
-            {/* Details */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="flex-start"
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="body1"
-                    sx={{ fontWeight: 700, color: 'text.primary' }}
-                  >
-                    ₱{expense.amount.toLocaleString()}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {formattedDate} {formattedTime && `at ${formattedTime}`}
-                  </Typography>
-                </Box>
-
-                {/* Actions */}
-                <Stack direction="row" spacing={0} sx={{ ml: 1, flexShrink: 0 }}>
-                  <IconButton
-                    size="small"
-                    onClick={editClickHandler}
-                    sx={{
-                      color: 'text.secondary',
-                      '&:hover': { color: 'primary.main' },
-                    }}
-                  >
-                    <MdEdit fontSize="1.1rem" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={deleteClickHandler}
-                    sx={{
-                      color: 'text.secondary',
-                      '&:hover': { color: 'error.main' },
-                    }}
-                  >
-                    <MdDelete fontSize="1.1rem" />
-                  </IconButton>
-                </Stack>
-              </Stack>
-
-              {/* Tags */}
-              {expense.tags && expense.tags.length > 0 && (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ mt: 1 }}
-                  flexWrap="wrap"
-                  useFlexGap
-                >
-                  {expense.tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      size="small"
-                      variant="outlined"
-                      sx={{
-                        height: 22,
-                        fontSize: '0.7rem',
-                        borderColor: 'divider',
-                        color: 'text.secondary',
-                      }}
-                    />
-                  ))}
-                </Stack>
-              )}
-
-              {/* Notes */}
-              {expense.notes && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: 'block',
-                    mt: 0.75,
-                    color: 'text.secondary',
-                    fontStyle: 'italic',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {expense.notes}
-                </Typography>
-              )}
-            </Box>
+      <LedgerRow
+        leading={<ExpenseIconRenderer fundSource={expense.fundSource} />}
+        name={name}
+        meta={meta}
+        amount={expense.amount}
+        trailing={
+          <Stack direction="row" sx={{ flexShrink: 0 }}>
+            <IconButton
+              size="small"
+              onClick={editClickHandler}
+              aria-label="Edit expense"
+              sx={{
+                p: 0.5,
+                color: 'text.secondary',
+                '&:hover': { color: 'primary.main' },
+              }}
+            >
+              <MdEdit fontSize="1.1rem" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={deleteClickHandler}
+              aria-label="Delete expense"
+              sx={{
+                p: 0.5,
+                color: 'text.secondary',
+                '&:hover': { color: 'error.main' },
+              }}
+            >
+              <MdDelete fontSize="1.1rem" />
+            </IconButton>
           </Stack>
-        </CardContent>
-      </Card>
+        }
+      />
     </>
   );
 }
