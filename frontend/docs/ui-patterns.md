@@ -71,6 +71,16 @@ One `Card` per group, `overflow: 'hidden'`, rows separated by `<Stack divider={<
 are **not** cards — `RecurringExpenseItem` deliberately has no border or elevation of its own, so a
 row can never be styled independently of the group that owns it.
 
+### Use the primitives, don't rebuild them
+
+`LedgerGroupCard` (molecule) and `LedgerRow` (atom) implement everything in this section, including
+values the spec table below never captured — amount typography, the secondary value line, the
+`leading` / `trailing` / `footer` slots and the inert (non-tappable) row. Compose those; the tables
+below are why they look the way they do, not a licence to hand-roll a second copy.
+
+A page-specific item component should be a thin adapter that maps its domain onto `LedgerRow` and
+holds all the vocabulary — statuses, categories, frequencies. `RecurringExpenseItem` is the model.
+
 ### Row spec
 
 | Part | Value |
@@ -136,6 +146,11 @@ These rules apply everywhere numbers appear, not just in ledger rows.
   `₱2,000 – ₱6,000`. Formatter: `getAmountValueDisplay` in `src/utils/recurring-helpers.ts` returns
   the value without the glyph so the glyph can be styled separately. Keep the long form
   (`getAmountDisplay`) for dialogs and forms, where width is not contested.
+- **Negative amounts take a sign, not a negative number.** `Money` formats with `toLocaleString()`,
+  so `amount={-7350}` renders `₱-7,350` with the glyph ahead of the minus. Pass
+  `amount={Math.abs(x)} sign="-"` and let the caller colour it.
+- **Rounding is the caller's job.** `toLocaleString()` emits up to three fraction digits;
+  `Money` does not round. A derived total needs `Math.round` at the call site.
 - **Label derived aggregates honestly.** A total that resolves ranges to `amountMax` and skips
   as-needed items is not "the" total — say so in a `0.6875rem` caption: `upper bound · excludes
   as-needed`. Never put a derived total in a group header where it sits directly above the rows it
