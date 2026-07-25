@@ -13,7 +13,6 @@ import {
 import { Income } from '@/types/Income';
 import ExpenseIconRenderer from './ExpenseIcon';
 import LedgerRow from './LedgerRow';
-import Money from './Money';
 import { HttpClient } from '@/utils/httpClient';
 import { AppContext } from '@/context/AppContext';
 import { transactionTime } from '@/utils/transaction-display';
@@ -23,10 +22,6 @@ import { transactionTime } from '@/utils/transaction-display';
  * It shares the list with expenses, so the only thing marking it out is its
  * figure: a leading `+` and `success.main`. No badge — that would be §4's
  * majority-state chip on whichever filter the user is in.
- *
- * The amount goes through the `value` slot rather than `amount`, because
- * `LedgerRow` owns the colour of the figure it builds itself. The typography
- * below is the row spec's, restated only so the colour can change.
  */
 export default function IncomeItem({ income }: { income: Income }) {
   const {
@@ -99,18 +94,9 @@ export default function IncomeItem({ income }: { income: Income }) {
         leading={<ExpenseIconRenderer fundSource={income.fundSource} />}
         name={name}
         meta={meta}
-        value={
-          <Money
-            amount={income.amount}
-            sign="+"
-            sx={{
-              fontSize: '0.9375rem',
-              fontWeight: 700,
-              lineHeight: 1.3,
-              color: 'success.main',
-            }}
-          />
-        }
+        amount={income.amount}
+        sign="+"
+        amountColor="success.main"
         trailing={
           <Stack direction="row" sx={{ flexShrink: 0 }}>
             <IconButton

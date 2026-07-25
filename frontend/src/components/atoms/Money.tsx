@@ -52,6 +52,13 @@ export type MoneyProps = Omit<TypographyProps, 'children'> & {
   sign?: '+' | '-';
   /** @default 'default' */
   surface?: MoneySurface;
+  /**
+   * Set `false` to render the digits alone, keeping the tabular numerals and
+   * tracking. For a second figure in a pair whose glyph the first already
+   * carries — `₱1,200 / 2,000` — so the row shows one glyph, not two (§3).
+   * @default true
+   */
+  glyph?: boolean;
 };
 
 /**
@@ -63,6 +70,7 @@ export default function Money({
   amount,
   sign,
   surface = 'default',
+  glyph = true,
   sx,
   ...rest
 }: MoneyProps) {
@@ -79,9 +87,11 @@ export default function Money({
       ]}
     >
       {sign}
-      <Box component="span" sx={GLYPH_SX[surface]}>
-        {CURRENCY_GLYPH}
-      </Box>
+      {glyph ? (
+        <Box component="span" sx={GLYPH_SX[surface]}>
+          {CURRENCY_GLYPH}
+        </Box>
+      ) : null}
       {formatMoneyValue(amount)}
     </Typography>
   );

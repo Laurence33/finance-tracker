@@ -1,9 +1,8 @@
-import { Box, LinearProgress, Typography, alpha, useTheme } from '@mui/material';
+import { Box, LinearProgress, alpha, useTheme } from '@mui/material';
 import LedgerRow from '@/components/atoms/LedgerRow';
 import Money from '@/components/atoms/Money';
 import { Tags } from '@/types/Tags';
 import { computeBudgetStatus } from '@/utils/budget-helpers';
-import { formatMoneyValue } from '@/utils/money';
 
 /** Shared by both halves of the value so `/ 2,000` sits on the spend's baseline. */
 const VALUE_SX = {
@@ -40,9 +39,8 @@ export default function TagItem({
   return (
     <LedgerRow
       name={tag.name}
-      // One glyph for the pair (§3): the budget's digits come from
-      // `formatMoneyValue`, which exists for exactly this — a second figure
-      // whose glyph is already carried by the first.
+      // One glyph for the pair (§3): the budget renders with `glyph={false}`,
+      // since the spent figure ahead of it already carries the ₱.
       value={
         <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
           <Money
@@ -51,19 +49,18 @@ export default function TagItem({
             sx={{ ...VALUE_SX, fontWeight: 700 }}
           />
           {hasBudget ? (
-            <Typography
+            <Money
               component="span"
+              amount={status.budget}
+              glyph={false}
               sx={{
                 ...VALUE_SX,
                 ml: '4px',
                 fontWeight: 500,
                 color: 'text.secondary',
-                fontVariantNumeric: 'tabular-nums',
-                letterSpacing: '-0.01em',
+                '&::before': { content: '"/ "' },
               }}
-            >
-              / {formatMoneyValue(status.budget)}
-            </Typography>
+            />
           ) : null}
         </Box>
       }
@@ -89,7 +86,6 @@ export default function TagItem({
             // left to distinguish at-budget from far over it.
             color={status.isOver ? 'error' : 'primary'}
             sx={{
-              mt: 1.25,
               height: 4,
               borderRadius: 2,
               bgcolor: alpha(theme.palette.text.primary, 0.09),

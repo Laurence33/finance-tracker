@@ -56,13 +56,25 @@ export type LedgerRowProps = {
   leading?: ReactNode;
   /**
    * Fixed-width slot after the value — row-level action icons. Note §2: these
-   * cost ~68px of the name's budget, so only keep them when the name column can
-   * afford it. Their presence switches the row off `<button>` (nested buttons
-   * are invalid HTML), so the handlers inside must stop propagation themselves.
+   * cost ~55px of the name's budget for two, so only keep them when the name
+   * column can afford it. Their presence switches the row off `<button>` (nested
+   * buttons are invalid HTML), so the handlers inside must stop propagation.
    */
   trailing?: ReactNode;
-  /** Full-width slot below the row content — a progress meter, a sparkline. */
+  /**
+   * Full-width slot below the row content — a progress meter, a sparkline. The
+   * row owns the gap above it: 4px of meter plus this gap is 14px, which fits
+   * inside the slack `minHeight` already reserves for a single-line row, so a
+   * metered row stays exactly as tall as an unmetered one (§2 "Meter rows").
+   * Don't add your own top margin — that equality is load-bearing.
+   */
   footer?: ReactNode;
+  /**
+   * Theme colour for the figure built from `amount`, when its colour carries
+   * meaning — `success.main` for an inflow in a mixed ledger, `error.main` for
+   * a negative balance. The glyph follows it. Overrides the `muted` colour.
+   */
+  amountColor?: string;
   /** Optional. Without it the row renders as inert, non-focusable content. */
   onTap?: () => void;
   sx?: SxProps<Theme>;
@@ -88,6 +100,7 @@ export default function LedgerRow({
   leading,
   trailing,
   footer,
+  amountColor,
   onTap,
   sx,
 }: LedgerRowProps) {
@@ -101,11 +114,14 @@ export default function LedgerRow({
       <Money
         amount={amount}
         sign={sign}
+        // A semantically coloured figure needs the glyph to follow the digits,
+        // or a fixed text.secondary ₱ reads as grey against green/red.
+        surface={amountColor ? 'inherit' : 'default'}
         sx={{
           fontSize: '0.9375rem',
           fontWeight: 700,
           lineHeight: 1.3,
-          color: muted ? 'text.disabled' : 'text.primary',
+          color: amountColor ?? (muted ? 'text.disabled' : 'text.primary'),
         }}
       />
     ) : (
@@ -117,6 +133,10 @@ export default function LedgerRow({
       component={component}
       onClick={onTap}
       disableRipple={!interactive}
+      // An inert row is not a button. ButtonBase sets role="button"
+      // unconditionally on a non-button component, so it has to be cleared or
+      // screen readers announce a control that does nothing.
+      role={interactive ? undefined : 'presentation'}
       tabIndex={interactive ? 0 : -1}
       sx={[
         {
@@ -209,7 +229,7 @@ export default function LedgerRow({
         {trailing}
       </Stack>
 
-      {footer ? <Box sx={{ width: '100%' }}>{footer}</Box> : null}
+      {footer ? <Box sx={{ width: '100%', mt: 1.25 }}>{footer}</Box> : null}
     </ButtonBase>
   );
 }
