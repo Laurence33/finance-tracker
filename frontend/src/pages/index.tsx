@@ -29,8 +29,19 @@ import ExpenseDialog from '@/components/organisms/ExpenseDialog';
 import IncomeDialog from '@/components/organisms/IncomeDialog';
 import MonthSelector from '@/components/molecules/MonthSelector';
 import TransactionsList from '@/components/molecules/TransactionsList';
+import Money from '@/components/atoms/Money';
 
 type TransactionFilter = 'all' | 'expenses' | 'income';
+
+/**
+ * The figure typography, shared by the money and the count stats so they stay
+ * one column of numerals (§3). Money supplies its own tabular-nums.
+ */
+const FIGURE_SX = {
+  fontWeight: 700,
+  lineHeight: 1.3,
+  fontSize: { xs: '1rem', sm: '1.1rem' },
+} as const;
 
 function SummaryCard({
   title,
@@ -39,7 +50,8 @@ function SummaryCard({
   color,
 }: {
   title: string;
-  value: string;
+  /** The figure itself — a `Money`, or a `Typography` for a plain count. */
+  value: React.ReactNode;
   icon: React.ReactNode;
   color: string;
 }) {
@@ -78,20 +90,25 @@ function SummaryCard({
           >
             {title}
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              fontWeight: 700,
-              lineHeight: 1.3,
-              fontSize: { xs: '1rem', sm: '1.1rem' },
-            }}
-          >
-            {value}
-          </Typography>
+          {value}
         </Box>
       </CardContent>
     </Card>
   );
+}
+
+/** A non-money stat, kept on the same numerals as the money ones (§3). */
+function CountFigure({ value }: { value: number }) {
+  return (
+    <Typography sx={{ ...FIGURE_SX, fontVariantNumeric: 'tabular-nums' }}>
+      {value}
+    </Typography>
+  );
+}
+
+/** A money stat. `Money` rounds nothing, so the caller does (§3). */
+function MoneyFigure({ amount, sign }: { amount: number; sign?: '+' | '-' }) {
+  return <Money amount={Math.round(amount)} sign={sign} sx={FIGURE_SX} />;
 }
 
 export default function ExpensesPage() {
@@ -153,19 +170,19 @@ export default function ExpensesPage() {
         <>
           <SummaryCard
             title="Total Spent"
-            value={`₱${totalExpenses.toLocaleString()}`}
+            value={<MoneyFigure amount={totalExpenses} />}
             icon={<AccountBalanceWalletIcon />}
             color={theme.palette.primary.main}
           />
           <SummaryCard
             title="Transactions"
-            value={expenses.length.toString()}
+            value={<CountFigure value={expenses.length} />}
             icon={<ReceiptLongIcon />}
             color={theme.palette.secondary.main}
           />
           <SummaryCard
             title="Average"
-            value={`₱${averageExpense.toLocaleString()}`}
+            value={<MoneyFigure amount={averageExpense} />}
             icon={<TrendingUpIcon />}
             color={theme.palette.warning.main}
           />
@@ -178,19 +195,19 @@ export default function ExpensesPage() {
         <>
           <SummaryCard
             title="Total Received"
-            value={`₱${totalIncome.toLocaleString()}`}
+            value={<MoneyFigure amount={totalIncome} />}
             icon={<SavingsIcon />}
             color={theme.palette.success.main}
           />
           <SummaryCard
             title="Transactions"
-            value={incomes.length.toString()}
+            value={<CountFigure value={incomes.length} />}
             icon={<ReceiptLongIcon />}
             color={theme.palette.secondary.main}
           />
           <SummaryCard
             title="Average"
-            value={`₱${averageIncome.toLocaleString()}`}
+            value={<MoneyFigure amount={averageIncome} />}
             icon={<TrendingUpIcon />}
             color={theme.palette.warning.main}
           />
@@ -203,19 +220,26 @@ export default function ExpensesPage() {
       <>
         <SummaryCard
           title="Net"
-          value={`${net >= 0 ? '+' : ''}₱${net.toLocaleString()}`}
+          // §3: a negative amount takes a sign, not a negative number, or the
+          // glyph ends up ahead of the minus (`₱-7,350`).
+          value={
+            <MoneyFigure
+              amount={Math.abs(net)}
+              sign={net === 0 ? undefined : net > 0 ? '+' : '-'}
+            />
+          }
           icon={net >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
           color={net >= 0 ? theme.palette.success.main : theme.palette.error.main}
         />
         <SummaryCard
           title="Income"
-          value={`₱${totalIncome.toLocaleString()}`}
+          value={<MoneyFigure amount={totalIncome} />}
           icon={<SavingsIcon />}
           color={theme.palette.success.main}
         />
         <SummaryCard
           title="Expenses"
-          value={`₱${totalExpenses.toLocaleString()}`}
+          value={<MoneyFigure amount={totalExpenses} />}
           icon={<AccountBalanceWalletIcon />}
           color={theme.palette.error.main}
         />
@@ -234,7 +258,18 @@ export default function ExpensesPage() {
       <ExpenseDialog />
       <IncomeDialog />
 
-      <Container maxWidth="sm" sx={{ py: 3 }}>
+      {/*
+        `pb: 12` is SpeedDial clearance (§6). Only the dial's own 56px Fab is a
+        persistent obstruction: it sits at `bottom: 88`, so it covers 88–144px up
+        from the viewport bottom, and Layout's 80px plus this 96px clears it with
+        32px to spare. The dial's box is far taller — 184px, because its actions
+        container adds 160px less a -32px margin — but while closed MUI gives that
+        container `pointer-events: none` and its buttons `opacity: 0`, so it
+        neither shows nor swallows taps. Open, the actions reach ~272px up over
+        the last rows with no backdrop; that is a transient menu and is not
+        padded for, exactly as a Select's popover isn't.
+      */}
+      <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
         <MonthSelector />
 
         <Box

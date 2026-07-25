@@ -4,12 +4,24 @@ import { Expense } from '@/types/Expense';
 import { Income } from '@/types/Income';
 import ExpenseItem from '@/components/atoms/ExpenseItem';
 import IncomeItem from '@/components/atoms/IncomeItem';
+import Money from '@/components/atoms/Money';
+import LedgerGroupCard from '@/components/molecules/LedgerGroupCard';
+import {
+  transactionDateHeading,
+  transactionDateKey,
+} from '@/utils/transaction-display';
 
 type TransactionFilter = 'all' | 'expenses' | 'income';
 
 type Transaction =
   | { type: 'expense'; data: Expense; sortKey: string }
   | { type: 'income'; data: Income; sortKey: string };
+
+type DayGroup = {
+  dateKey: string;
+  heading: string;
+  items: Transaction[];
+};
 
 export default function TransactionsList({
   expenses,
@@ -101,20 +113,45 @@ export default function TransactionsList({
     );
   }
 
+  // The date was on all 20-odd rows, so it becomes the section header (§2). The
+  // rows are already newest-first, so walking them in order gives the groups in
+  // that order too and preserves source order inside each day.
+  const groups: DayGroup[] = [];
+  const groupByDate = new Map<string, DayGroup>();
+  for (const tx of visible) {
+    const dateKey = transactionDateKey(tx.sortKey);
+    let group = groupByDate.get(dateKey);
+    if (!group) {
+      group = { dateKey, heading: transactionDateHeading(dateKey), items: [] };
+      groupByDate.set(dateKey, group);
+      groups.push(group);
+    }
+    group.items.push(tx);
+  }
+
   const net = visible.reduce(
     (sum, tx) => sum + (tx.type === 'income' ? tx.data.amount : -tx.data.amount),
     0,
   );
 
   return (
-    <Stack spacing={1.5}>
-      {visible.map((tx) =>
-        tx.type === 'expense' ? (
-          <ExpenseItem key={`exp-${tx.data.timestamp}`} expense={tx.data} />
-        ) : (
-          <IncomeItem key={`inc-${tx.data.timestamp}`} income={tx.data} />
-        ),
-      )}
+    <Stack spacing={2}>
+      {groups.map((group, index) => (
+        <LedgerGroupCard
+          key={group.dateKey}
+          label={group.heading}
+          count={group.items.length}
+          index={index}
+        >
+          {group.items.map((tx) =>
+            tx.type === 'expense' ? (
+              <ExpenseItem key={`exp-${tx.data.timestamp}`} expense={tx.data} />
+            ) : (
+              <IncomeItem key={`inc-${tx.data.timestamp}`} income={tx.data} />
+            ),
+          )}
+        </LedgerGroupCard>
+      ))}
 
       {isSearching && (
         <Box
@@ -131,15 +168,15 @@ export default function TransactionsList({
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {visible.length} {visible.length === 1 ? 'result' : 'results'} · Net
           </Typography>
-          <Typography
+          <Money
             variant="subtitle1"
+            amount={Math.round(Math.abs(net))}
+            sign={net < 0 ? '-' : undefined}
             sx={{
               fontWeight: 700,
               color: net >= 0 ? 'success.main' : 'error.main',
             }}
-          >
-            {net < 0 ? '-' : ''}₱{Math.abs(net).toLocaleString()}
-          </Typography>
+          />
         </Box>
       )}
     </Stack>

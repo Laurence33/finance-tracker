@@ -1,11 +1,7 @@
 import { use, useState } from 'react';
 import { MdDelete, MdEdit } from 'react-icons/md';
 import {
-  Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   DialogActions,
   DialogContent,
   DialogContentText,
@@ -13,13 +9,25 @@ import {
   Stack,
   Dialog,
   DialogTitle,
-  Typography,
 } from '@mui/material';
 import { Income } from '@/types/Income';
 import ExpenseIconRenderer from './ExpenseIcon';
+import LedgerRow from './LedgerRow';
+import Money from './Money';
 import { HttpClient } from '@/utils/httpClient';
 import { AppContext } from '@/context/AppContext';
+import { transactionTime } from '@/utils/transaction-display';
 
+/**
+ * Binds an income record to the shared ledger row (§2 of `docs/ui-patterns.md`).
+ * It shares the list with expenses, so the only thing marking it out is its
+ * figure: a leading `+` and `success.main`. No badge — that would be §4's
+ * majority-state chip on whichever filter the user is in.
+ *
+ * The amount goes through the `value` slot rather than `amount`, because
+ * `LedgerRow` owns the colour of the figure it builds itself. The typography
+ * below is the row spec's, restated only so the colour can change.
+ */
 export default function IncomeItem({ income }: { income: Income }) {
   const {
     fetchIncomes,
@@ -29,6 +37,7 @@ export default function IncomeItem({ income }: { income: Income }) {
     setSelectedIncome,
     setIncomeFormAction,
     setIncomeFormOpen,
+    fundSources,
   } = use(AppContext);
   const [open, setOpen] = useState(false);
 
@@ -50,8 +59,21 @@ export default function IncomeItem({ income }: { income: Income }) {
     setIncomeFormOpen(true);
   };
 
-  const formattedTime = income.timestamp.split(' ')[1]?.slice(0, 5) || '';
-  const formattedDate = income.timestamp.split(' ')[0] || income.timestamp;
+  const fundSourceLabel =
+    fundSources.find((fs) => fs.name === income.fundSource)?.displayText ??
+    income.fundSource;
+
+  // Unlike an expense, income has a name of its own — where it came from. That
+  // frees the notes to sit in the meta line, after the tags, so the scannable
+  // parts survive the ellipsis.
+  const name = income.source || income.notes || fundSourceLabel || 'Income';
+  const meta = [
+    transactionTime(income.timestamp),
+    ...(income.tags ?? []),
+    income.source ? income.notes : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <>
@@ -73,107 +95,51 @@ export default function IncomeItem({ income }: { income: Income }) {
         </DialogActions>
       </Dialog>
 
-      <Card
-        sx={{
-          transition: 'box-shadow 0.2s ease',
-          '&:hover': {
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          },
-          borderLeft: '3px solid',
-          borderColor: 'success.main',
-        }}
-      >
-        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <ExpenseIconRenderer fundSource={income.fundSource} />
-
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="flex-start"
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="body1"
-                    sx={{ fontWeight: 700, color: 'success.main' }}
-                  >
-                    +₱{income.amount.toLocaleString()}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {income.source} · {formattedDate} {formattedTime && `at ${formattedTime}`}
-                  </Typography>
-                </Box>
-
-                <Stack direction="row" spacing={0} sx={{ ml: 1, flexShrink: 0 }}>
-                  <IconButton
-                    size="small"
-                    onClick={editClickHandler}
-                    sx={{
-                      color: 'text.secondary',
-                      '&:hover': { color: 'primary.main' },
-                    }}
-                  >
-                    <MdEdit fontSize="1.1rem" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => setOpen(true)}
-                    sx={{
-                      color: 'text.secondary',
-                      '&:hover': { color: 'error.main' },
-                    }}
-                  >
-                    <MdDelete fontSize="1.1rem" />
-                  </IconButton>
-                </Stack>
-              </Stack>
-
-              {income.tags && income.tags.length > 0 && (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ mt: 1 }}
-                  flexWrap="wrap"
-                  useFlexGap
-                >
-                  {income.tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      size="small"
-                      variant="outlined"
-                      sx={{
-                        height: 22,
-                        fontSize: '0.7rem',
-                        borderColor: 'divider',
-                        color: 'text.secondary',
-                      }}
-                    />
-                  ))}
-                </Stack>
-              )}
-
-              {income.notes && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: 'block',
-                    mt: 0.75,
-                    color: 'text.secondary',
-                    fontStyle: 'italic',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {income.notes}
-                </Typography>
-              )}
-            </Box>
+      <LedgerRow
+        leading={<ExpenseIconRenderer fundSource={income.fundSource} />}
+        name={name}
+        meta={meta}
+        value={
+          <Money
+            amount={income.amount}
+            sign="+"
+            sx={{
+              fontSize: '0.9375rem',
+              fontWeight: 700,
+              lineHeight: 1.3,
+              color: 'success.main',
+            }}
+          />
+        }
+        trailing={
+          <Stack direction="row" sx={{ flexShrink: 0 }}>
+            <IconButton
+              size="small"
+              onClick={editClickHandler}
+              aria-label="Edit income"
+              sx={{
+                p: 0.5,
+                color: 'text.secondary',
+                '&:hover': { color: 'primary.main' },
+              }}
+            >
+              <MdEdit fontSize="1.1rem" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setOpen(true)}
+              aria-label="Delete income"
+              sx={{
+                p: 0.5,
+                color: 'text.secondary',
+                '&:hover': { color: 'error.main' },
+              }}
+            >
+              <MdDelete fontSize="1.1rem" />
+            </IconButton>
           </Stack>
-        </CardContent>
-      </Card>
+        }
+      />
     </>
   );
 }
