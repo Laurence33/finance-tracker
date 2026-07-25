@@ -1,134 +1,65 @@
-import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  Stack,
-  Typography,
-} from '@mui/material';
-import { MdEdit, MdDelete, MdPayment } from 'react-icons/md';
+import { Box } from '@mui/material';
 import { Lending } from '@/types/Lending';
+import { LendingGroup, getLendingGroup } from '@/utils/lending-helpers';
+import LedgerRow from '@/components/atoms/LedgerRow';
+import Money from '@/components/atoms/Money';
 
-function isOverdue(lending: Lending): boolean {
-  if (lending.status === 'paid') return false;
-  return new Date(lending.promisedDate) < new Date(new Date().toDateString());
-}
+/**
+ * Exception labels, deliberately short. They sit in the row's value rail, which
+ * is `flexShrink: 0` — its widest child sets the rail's width, so every extra
+ * character here is taken straight out of the borrower's name. `PARTIALLY PAID`
+ * would cost ~87px against `PARTIAL`'s ~48px.
+ *
+ * `active` is absent on purpose: it is the majority state, so it gets no badge
+ * at all (§4). The group header already names it.
+ */
+const EXCEPTION: Partial<
+  Record<LendingGroup, { label: string; color: string }>
+> = {
+  overdue: { label: 'Overdue', color: 'error.main' },
+  partially_paid: { label: 'Partial', color: 'text.disabled' },
+  paid: { label: 'Paid', color: 'text.disabled' },
+};
 
-function getStatusLabel(lending: Lending): string {
-  if (isOverdue(lending)) return 'Overdue';
-  if (lending.status === 'partially_paid') return 'Partial';
-  if (lending.status === 'paid') return 'Paid';
-  return 'Active';
-}
-
-function getStatusColor(lending: Lending): 'error' | 'warning' | 'success' | 'default' {
-  if (isOverdue(lending)) return 'error';
-  if (lending.status === 'partially_paid') return 'warning';
-  if (lending.status === 'paid') return 'success';
-  return 'default';
-}
-
+/**
+ * Binds a lending to the shared ledger row. All the vocabulary — which state is
+ * an exception, how it is coloured, what the meta line says — lives here;
+ * `LedgerRow` knows none of it.
+ *
+ * Deliberately has no row-level action icons: three of them cost ~83px of a
+ * ~326px budget and left the borrower's name ~85px. Pay, edit and delete live
+ * in `LendingDetailDialog`'s title bar instead (§2, "Row actions").
+ */
 export default function LendingItem({
   lending,
-  onEdit,
-  onDelete,
-  onPay,
   onTap,
 }: {
   lending: Lending;
-  onEdit: (lending: Lending) => void;
-  onDelete: (lending: Lending) => void;
-  onPay: (lending: Lending) => void;
   onTap: (lending: Lending) => void;
 }) {
+  const group = getLendingGroup(lending);
+  const settled = lending.status === 'paid';
+  // Overdue is urgent, so it keeps full contrast; a partial or settled lending
+  // recedes instead.
+  const muted = group === 'partially_paid' || group === 'paid';
+
   return (
-    <Card
-      sx={{
-        transition: 'box-shadow 0.2s ease',
-        cursor: 'pointer',
-        '&:hover': {
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-        },
-      }}
-      onClick={() => onTap(lending)}
-    >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-              <Typography
-                variant="body1"
-                sx={{ fontWeight: 600, color: 'text.primary' }}
-                noWrap
-              >
-                {lending.borrower}
-              </Typography>
-              <Chip
-                label={getStatusLabel(lending)}
-                color={getStatusColor(lending)}
-                size="small"
-                sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600 }}
-              />
-            </Stack>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Due: {new Date(lending.promisedDate).toLocaleDateString()} · {lending.fundSource}
-            </Typography>
+    <LedgerRow
+      name={lending.borrower}
+      meta={`Due ${new Date(lending.promisedDate).toLocaleDateString()} · ${lending.fundSource}`}
+      muted={muted}
+      amount={lending.amount}
+      // Suppressed once settled: the amount and the `PAID` label already say it,
+      // and dropping it keeps the value rail narrower.
+      secondaryValue={
+        lending.totalPaid > 0 && !settled ? (
+          <Box component="span" sx={{ color: 'success.main', fontWeight: 600 }}>
+            <Money component="span" amount={lending.totalPaid} /> paid
           </Box>
-          <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 700, color: 'text.primary' }}
-            >
-              ₱{lending.amount.toLocaleString()}
-            </Typography>
-            {lending.totalPaid > 0 && (
-              <Typography variant="caption" sx={{ color: 'success.main' }}>
-                ₱{lending.totalPaid.toLocaleString()} paid
-              </Typography>
-            )}
-          </Box>
-          <Stack
-            direction="row"
-            spacing={0}
-            sx={{ flexShrink: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {lending.status !== 'paid' && (
-              <IconButton
-                size="small"
-                onClick={() => onPay(lending)}
-                sx={{
-                  color: 'text.secondary',
-                  '&:hover': { color: 'success.main' },
-                }}
-              >
-                <MdPayment fontSize="1.1rem" />
-              </IconButton>
-            )}
-            <IconButton
-              size="small"
-              onClick={() => onEdit(lending)}
-              sx={{
-                color: 'text.secondary',
-                '&:hover': { color: 'primary.main' },
-              }}
-            >
-              <MdEdit fontSize="1.1rem" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => onDelete(lending)}
-              sx={{
-                color: 'text.secondary',
-                '&:hover': { color: 'error.main' },
-              }}
-            >
-              <MdDelete fontSize="1.1rem" />
-            </IconButton>
-          </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+        ) : undefined
+      }
+      exception={EXCEPTION[group]}
+      onTap={() => onTap(lending)}
+    />
   );
 }

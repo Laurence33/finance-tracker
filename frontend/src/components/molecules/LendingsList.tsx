@@ -1,46 +1,30 @@
 import { Box, Stack, Typography } from '@mui/material';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import { Lending } from '@/types/Lending';
+import { LENDING_GROUPS, getLendingGroup } from '@/utils/lending-helpers';
 import LendingItem from '@/components/atoms/LendingItem';
+import LedgerGroupCard from '@/components/molecules/LedgerGroupCard';
 
-function sortLendings(lendings: Lending[]): Lending[] {
-  const priority: Record<string, number> = {
-    overdue: 0,
-    active: 1,
-    partially_paid: 2,
-    paid: 3,
-  };
-
-  return [...lendings].sort((a, b) => {
-    const aOverdue = a.status !== 'paid' && new Date(a.promisedDate) < new Date(new Date().toDateString());
-    const bOverdue = b.status !== 'paid' && new Date(b.promisedDate) < new Date(new Date().toDateString());
-
-    const aKey = aOverdue ? 'overdue' : a.status;
-    const bKey = bOverdue ? 'overdue' : b.status;
-
-    return (priority[aKey] ?? 4) - (priority[bKey] ?? 4);
-  });
-}
-
+/**
+ * The lendings ledger (§2 of `docs/ui-patterns.md`): one group card per status
+ * in a fixed domain order, most actionable first.
+ *
+ * Status repeated on every row as a chip, which is what starved the borrower's
+ * name; hoisting it into the group header is what bought that width back. Source
+ * order is preserved inside each group — `filter` never reorders — so the order
+ * the user created lendings in survives.
+ */
 export default function LendingsList({
   lendings,
-  onEdit,
-  onDelete,
-  onPay,
   onTap,
 }: {
   lendings: Lending[];
-  onEdit: (lending: Lending) => void;
-  onDelete: (lending: Lending) => void;
-  onPay: (lending: Lending) => void;
   onTap: (lending: Lending) => void;
 }) {
   if (lendings.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
-        <HandshakeIcon
-          sx={{ fontSize: 56, color: 'action.disabled', mb: 2 }}
-        />
+        <HandshakeIcon sx={{ fontSize: 56, color: 'action.disabled', mb: 2 }} />
         <Typography variant="h6" sx={{ color: 'text.secondary', mb: 0.5 }}>
           No lendings
         </Typography>
@@ -51,19 +35,28 @@ export default function LendingsList({
     );
   }
 
-  const sorted = sortLendings(lendings);
+  const groups = LENDING_GROUPS.map(({ group, heading }) => ({
+    heading,
+    items: lendings.filter((lending) => getLendingGroup(lending) === group),
+  })).filter((group) => group.items.length > 0);
 
   return (
-    <Stack spacing={1.5}>
-      {sorted.map((lending) => (
-        <LendingItem
-          key={lending.timestamp}
-          lending={lending}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onPay={onPay}
-          onTap={onTap}
-        />
+    <Stack spacing={2}>
+      {groups.map((group, index) => (
+        <LedgerGroupCard
+          key={group.heading}
+          label={group.heading}
+          count={group.items.length}
+          index={index}
+        >
+          {group.items.map((lending) => (
+            <LendingItem
+              key={lending.timestamp}
+              lending={lending}
+              onTap={onTap}
+            />
+          ))}
+        </LedgerGroupCard>
       ))}
     </Stack>
   );
