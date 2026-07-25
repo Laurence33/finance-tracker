@@ -1,9 +1,6 @@
 import { use, useState } from 'react';
 import {
-  Box,
   Button,
-  Card,
-  CardContent,
   Container,
   Dialog,
   DialogActions,
@@ -11,10 +8,6 @@ import {
   DialogContentText,
   DialogTitle,
   Fab,
-  Stack,
-  Typography,
-  alpha,
-  useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import HandshakeIcon from '@mui/icons-material/Handshake';
@@ -22,13 +15,17 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { AppContext } from '@/context/AppContext';
 import { Lending } from '@/types/Lending';
 import { HttpClient } from '@/utils/httpClient';
+import { getLendingRemaining, isLendingOverdue } from '@/utils/lending-helpers';
+import { formatMoneyLong } from '@/utils/money';
 import LendingsList from '@/components/molecules/LendingsList';
+import SummaryHeroCard, {
+  SummaryHeroStat,
+} from '@/components/molecules/SummaryHeroCard';
 import LendingDialog from '@/components/organisms/LendingDialog';
 import LendingPaymentDialog from '@/components/organisms/LendingPaymentDialog';
 import LendingDetailDialog from '@/components/organisms/LendingDetailDialog';
 
 export default function LendingsPage() {
-  const theme = useTheme();
   const { lendings, fetchLendings, fetchFundSources, showSuccessSnackBar, showErrorSnackBar } =
     use(AppContext);
 
@@ -38,14 +35,24 @@ export default function LendingsPage() {
   const [detailLending, setDetailLending] = useState<Lending | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lending | null>(null);
 
-  const activeLendings = lendings.filter((l) => l.status !== 'paid');
-  const totalLentOut = activeLendings.reduce(
-    (sum, l) => sum + (l.amount - l.totalPaid),
+  const unsettled = lendings.filter((l) => l.status !== 'paid');
+  const totalLentOut = unsettled.reduce(
+    (sum, l) => sum + getLendingRemaining(l),
     0,
   );
-  const overdueCount = activeLendings.filter(
-    (l) => new Date(l.promisedDate) < new Date(new Date().toDateString()),
-  ).length;
+  const overdueCount = unsettled.filter(isLendingOverdue).length;
+
+  // One conditional stat, which §5 explicitly allows: a permanent `0 Overdue`
+  // would be noise, and the group headers already carry the per-status counts
+  // that the old `Lendings (N)` heading used to show.
+  //
+  // Deliberately the *only* stat. A stat carrying an icon is taller than one
+  // without, and `SummaryHeroCard` stacks the icon above the value, so pairing
+  // this with a plain second stat leaves their figures on different baselines.
+  const stats: SummaryHeroStat[] =
+    overdueCount > 0
+      ? [{ value: overdueCount, label: 'Overdue', icon: <WarningAmberIcon /> }]
+      : [];
 
   const handleCreate = () => {
     setEditingLending(undefined);
@@ -81,9 +88,22 @@ export default function LendingsPage() {
     setPayingLending(null);
   };
 
-  const handleAddPaymentFromDetail = (lending: Lending) => {
+  // The detail dialog owns pay / edit / delete now that the row has no icons.
+  // Every one of these closes the detail view *first* — otherwise the form
+  // renders stacked on top of it.
+  const handlePayFromDetail = (lending: Lending) => {
     setDetailLending(null);
     setPayingLending(lending);
+  };
+
+  const handleEditFromDetail = (lending: Lending) => {
+    setDetailLending(null);
+    handleEdit(lending);
+  };
+
+  const handleDeleteFromDetail = (lending: Lending) => {
+    setDetailLending(null);
+    setDeleteTarget(lending);
   };
 
   return (
@@ -106,7 +126,9 @@ export default function LendingsPage() {
         open={!!detailLending}
         onClose={() => setDetailLending(null)}
         lending={detailLending}
-        onAddPayment={handleAddPaymentFromDetail}
+        onPay={handlePayFromDetail}
+        onEdit={handleEditFromDetail}
+        onDelete={handleDeleteFromDetail}
       />
 
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
@@ -114,9 +136,9 @@ export default function LendingsPage() {
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete the lending to{' '}
-            <strong>{deleteTarget?.borrower}</strong> for ₱
-            {deleteTarget?.amount.toLocaleString()}? The amount will be restored
-            to the fund source.
+            <strong>{deleteTarget?.borrower}</strong> for{' '}
+            {deleteTarget ? formatMoneyLong(deleteTarget.amount) : ''}? The
+            amount will be restored to the fund source.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -132,72 +154,20 @@ export default function LendingsPage() {
         </DialogActions>
       </Dialog>
 
-      <Container maxWidth="sm" sx={{ py: 3 }}>
-        <Card
-          sx={{
-            mb: 3,
-            background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${theme.palette.warning.dark} 100%)`,
-            color: 'white',
-          }}
-        >
-          <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-            <Stack direction="row" alignItems="center" spacing={3}>
-              <Stack alignItems="center" spacing={1} sx={{ flex: 1 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: alpha('#ffffff', 0.2),
-                  }}
-                >
-                  <HandshakeIcon sx={{ fontSize: 28 }} />
-                </Box>
-                <Typography
-                  variant="caption"
-                  sx={{ opacity: 0.85, fontWeight: 500 }}
-                >
-                  Total Lent Out
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  ₱{totalLentOut.toLocaleString()}
-                </Typography>
-              </Stack>
-              {overdueCount > 0 && (
-                <Stack alignItems="center" spacing={0.5}>
-                  <WarningAmberIcon sx={{ fontSize: 24, opacity: 0.9 }} />
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {overdueCount}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ opacity: 0.85, fontWeight: 500 }}
-                  >
-                    Overdue
-                  </Typography>
-                </Stack>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Typography
-          variant="subtitle1"
-          sx={{ fontWeight: 600, color: 'text.secondary', mb: 1.5 }}
-        >
-          Lendings ({lendings.length})
-        </Typography>
-
-        <LendingsList
-          lendings={lendings}
-          onEdit={handleEdit}
-          onDelete={setDeleteTarget}
-          onPay={setPayingLending}
-          onTap={setDetailLending}
+      {/* pb: 12 is FAB clearance and is load-bearing — see §6. */}
+      <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
+        <SummaryHeroCard
+          hue="warning"
+          icon={<HandshakeIcon />}
+          eyebrow="Lendings"
+          label="Outstanding"
+          // Rounded here, not in the hero — §3 leaves rounding to the caller.
+          amount={Math.round(totalLentOut)}
+          caption="unpaid balance · excludes settled"
+          stats={stats}
         />
+
+        <LendingsList lendings={lendings} onTap={setDetailLending} />
       </Container>
 
       <Fab

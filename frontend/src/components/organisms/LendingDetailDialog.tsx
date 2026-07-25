@@ -13,25 +13,40 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PaymentIcon from '@mui/icons-material/Payment';
 import { Lending, LendingPayment } from '@/types/Lending';
 import { HttpClient } from '@/utils/httpClient';
+import {
+  getLendingRemaining,
+  isLendingOverdue,
+} from '@/utils/lending-helpers';
+import Money from '@/components/atoms/Money';
 import LendingPaymentsList from '../molecules/LendingPaymentsList';
 
-function isOverdue(lending: Lending): boolean {
-  if (lending.status === 'paid') return false;
-  return new Date(lending.promisedDate) < new Date(new Date().toDateString());
-}
-
+/**
+ * The detail view, and the only home for this record's actions. Pay, edit and
+ * delete moved off the list row into this dialog's title bar (§2, "Row
+ * actions") because three icons cost ~83px of the row's ~326px budget.
+ *
+ * Every handler here is expected to close this dialog before opening its own —
+ * see `handlePayFromDetail` and friends in `pages/lendings.tsx`.
+ */
 export default function LendingDetailDialog({
   open,
   onClose,
   lending,
-  onAddPayment,
+  onPay,
+  onEdit,
+  onDelete,
 }: {
   open: boolean;
   onClose: () => void;
   lending: Lending | null;
-  onAddPayment: (lending: Lending) => void;
+  onPay: (lending: Lending) => void;
+  onEdit: (lending: Lending) => void;
+  onDelete: (lending: Lending) => void;
 }) {
   const [payments, setPayments] = useState<LendingPayment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,17 +78,46 @@ export default function LendingDetailDialog({
 
   if (!lending) return null;
 
-  const remaining = lending.amount - lending.totalPaid;
+  const remaining = getLendingRemaining(lending);
   const progress = lending.amount > 0 ? (lending.totalPaid / lending.amount) * 100 : 0;
+  const settled = lending.status === 'paid';
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ pb: 1 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">Lending Details</Typography>
-          <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
+          <Stack direction="row" spacing={0.5}>
+            {!settled && (
+              <IconButton
+                size="small"
+                onClick={() => onPay(lending)}
+                aria-label="Record payment"
+                sx={{ color: 'text.secondary', '&:hover': { color: 'success.main' } }}
+              >
+                <PaymentIcon fontSize="small" />
+              </IconButton>
+            )}
+            <IconButton
+              size="small"
+              onClick={() => onEdit(lending)}
+              aria-label="Edit lending"
+              sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => onDelete(lending)}
+              aria-label="Delete lending"
+              sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
         </Stack>
       </DialogTitle>
       <DialogContent>
@@ -91,17 +135,24 @@ export default function LendingDetailDialog({
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Amount
               </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                ₱{lending.amount.toLocaleString()}
-              </Typography>
+              <Money
+                variant="body1"
+                amount={lending.amount}
+                sx={{ fontWeight: 600 }}
+              />
             </Stack>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Remaining
               </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600, color: remaining > 0 ? 'warning.main' : 'success.main' }}>
-                ₱{remaining.toLocaleString()}
-              </Typography>
+              <Money
+                variant="body1"
+                amount={remaining}
+                sx={{
+                  fontWeight: 600,
+                  color: remaining > 0 ? 'warning.main' : 'success.main',
+                }}
+              />
             </Stack>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -117,7 +168,7 @@ export default function LendingDetailDialog({
                 <Typography variant="body2">
                   {new Date(lending.promisedDate).toLocaleDateString()}
                 </Typography>
-                {isOverdue(lending) && (
+                {isLendingOverdue(lending) && (
                   <Chip label="Overdue" color="error" size="small" sx={{ height: 20, fontSize: '0.65rem' }} />
                 )}
               </Stack>
@@ -163,11 +214,11 @@ export default function LendingDetailDialog({
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
               Payment History
             </Typography>
-            {lending.status !== 'paid' && (
+            {!settled && (
               <Button
                 size="small"
                 variant="outlined"
-                onClick={() => onAddPayment(lending)}
+                onClick={() => onPay(lending)}
               >
                 Add Payment
               </Button>

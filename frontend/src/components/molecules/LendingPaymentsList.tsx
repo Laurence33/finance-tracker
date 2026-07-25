@@ -1,5 +1,6 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { LendingPayment } from '@/types/Lending';
+import Money from '@/components/atoms/Money';
 
 export default function LendingPaymentsList({
   payments,
@@ -27,9 +28,11 @@ export default function LendingPaymentsList({
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                ₱{payment.amount.toLocaleString()}
-              </Typography>
+              <Money
+                variant="body2"
+                amount={payment.amount}
+                sx={{ fontWeight: 600 }}
+              />
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {new Date(payment.timestamp.replace(' ', 'T')).toLocaleDateString()} ·{' '}
                 {payment.addedToBalance === false
