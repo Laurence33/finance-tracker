@@ -26,15 +26,26 @@ import {
 } from '@mui/material';
 import SavingsIcon from '@mui/icons-material/Savings';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import Money from '@/components/atoms/Money';
+import SummaryHeroCard from '@/components/molecules/SummaryHeroCard';
 import { AppContext } from '@/context/AppContext';
 import { HttpClient } from '@/utils/httpClient';
 import {
   computeAllocations,
   sumAllocations,
 } from '@/utils/budget-helpers';
+import { CURRENCY_GLYPH, formatMoneyLong } from '@/utils/money';
 
-const peso = (n: number) =>
-  `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/**
+ * §3's numeric treatment for the figures that are *not* money — the bucket
+ * target percentages and the framework picker's split column. Both are
+ * repeating numeric columns, and `Money` is peso-only, so the tabular numerals
+ * and tightened tracking are applied directly here.
+ */
+const PERCENT_SX = {
+  fontVariantNumeric: 'tabular-nums',
+  letterSpacing: '-0.01em',
+} as const;
 
 export default function BudgetPage() {
   const theme = useTheme();
@@ -161,6 +172,7 @@ export default function BudgetPage() {
     }
   };
 
+  const bucketLabel = budgetFramework?.bucketLabel ?? 'bucket';
   const bucketLabelPlural = budgetFramework?.bucketLabelPlural ?? 'Buckets';
   const seedSum = sumAllocations(seedAllocations);
   const totalAllocated = useMemo(
@@ -168,42 +180,41 @@ export default function BudgetPage() {
     [buckets]
   );
 
+  /**
+   * §5's honesty caption. The figure is an exact sum of the balances listed
+   * below it, but those balances are *cumulative* — every income allocates into
+   * them and only tagged spending draws them down, so the total deliberately
+   * diverges from the cash in your accounts. Saying "allocated" alone would
+   * invite reading it as a balance, hence the second clause.
+   *
+   * Off with buckets still on file is its own honest statement: the balances are
+   * not zero, they are simply not moving.
+   */
+  const heroCaption = budgetEnabled
+    ? `sum of ${bucketLabel.toLowerCase()} balances · cumulative, not cash on hand`
+    : hasExistingBuckets
+      ? `${bucketLabelPlural.toLowerCase()} keep their balances while it's off`
+      : undefined;
+
+  // §6's page container. No FAB on this screen, but pb: 12 is the shared
+  // clearance every page keeps above the bottom nav.
   return (
-    <Container maxWidth="sm" sx={{ py: 3 }}>
-      {/* Header */}
-      <Card
-        sx={{
-          mb: 3,
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: 'white',
-        }}
-      >
-        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-          <Stack alignItems="center" spacing={1}>
-            <Box
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: alpha('#ffffff', 0.2),
-              }}
-            >
-              <SavingsIcon sx={{ fontSize: 28 }} />
-            </Box>
-            <Typography variant="caption" sx={{ opacity: 0.85, fontWeight: 500 }}>
-              {budgetEnabled && budgetFramework
-                ? `${budgetFramework.label} • Allocated`
-                : 'Budgeting'}
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              {budgetEnabled ? peso(totalAllocated) : 'Off'}
-            </Typography>
-          </Stack>
-        </CardContent>
-      </Card>
+    <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
+      <SummaryHeroCard
+        hue="primary"
+        icon={<SavingsIcon />}
+        eyebrow="Budget"
+        label={
+          budgetEnabled && budgetFramework
+            ? `${budgetFramework.label} · allocated`
+            : 'Framework'
+        }
+        // Rounded here, not in the hero — §3 leaves rounding to the caller.
+        // `figure` carries the off state, which is not a money amount.
+        amount={budgetEnabled ? Math.round(totalAllocated) : undefined}
+        figure="Off"
+        caption={heroCaption}
+      />
 
       {budgetEnabled ? (
         <>
@@ -216,6 +227,11 @@ export default function BudgetPage() {
           <Stack spacing={1.5}>
             {buckets.map((bucket) => {
               const share = totalAllocated > 0 ? (bucket.balance / totalAllocated) * 100 : 0;
+              // A bucket can be overdrawn, so the figure needs §3's sign
+              // treatment — `abs` + `sign` gives `-₱1,241`, where passing the
+              // negative straight through would put the glyph ahead of the
+              // minus (`₱-1,241`).
+              const overdrawn = bucket.balance < 0;
               return (
                 <Card key={bucket.key}>
                   <CardContent sx={{ '&:last-child': { pb: 2 } }}>
@@ -229,19 +245,26 @@ export default function BudgetPage() {
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                           {bucket.displayLabel}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={PERCENT_SX}
+                        >
                           Target {bucket.percentage}%
                         </Typography>
                       </Box>
-                      <Typography
+                      <Money
                         variant="h6"
+                        amount={Math.round(Math.abs(bucket.balance))}
+                        sign={overdrawn ? '-' : undefined}
+                        // Overdrawn digits carry a semantic colour, so the glyph
+                        // inherits it rather than sitting grey against red (§3).
+                        surface={overdrawn ? 'inherit' : 'default'}
                         sx={{
                           fontWeight: 700,
-                          color: bucket.balance < 0 ? 'error.main' : 'text.primary',
+                          color: overdrawn ? 'error.main' : 'text.primary',
                         }}
-                      >
-                        {peso(bucket.balance)}
-                      </Typography>
+                      />
                     </Stack>
                     <LinearProgress
                       variant="determinate"
@@ -370,7 +393,10 @@ export default function BudgetPage() {
                     <Typography variant="body2" color="text.secondary">
                       {b.displayLabel}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, ...PERCENT_SX }}
+                    >
                       {b.percentage}%
                     </Typography>
                   </Stack>
@@ -388,7 +414,16 @@ export default function BudgetPage() {
                 }
                 label={
                   <Typography variant="body2">
-                    Allocate my current available balance ({peso(availableBalance)})
+                    Allocate my current available balance (
+                    {/* A `Money` inside a `Typography` must be a span — a
+                        nested <p> is invalid and React warns. */}
+                    <Money
+                      component="span"
+                      variant="body2"
+                      amount={Math.round(availableBalance)}
+                      sx={{ fontWeight: 600 }}
+                    />
+                    )
                   </Typography>
                 }
               />
@@ -407,7 +442,11 @@ export default function BudgetPage() {
                       onChange={(e) => handleSeedChange(b.key, e.target.value)}
                       slotProps={{
                         input: {
-                          startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              {CURRENCY_GLYPH}
+                            </InputAdornment>
+                          ),
                         },
                       }}
                     />
@@ -417,9 +456,11 @@ export default function BudgetPage() {
                   <Typography variant="caption" color="text.secondary">
                     Total to seed
                   </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                    {peso(seedSum)}
-                  </Typography>
+                  <Money
+                    variant="caption"
+                    amount={Math.round(seedSum)}
+                    sx={{ fontWeight: 600 }}
+                  />
                 </Stack>
               </Box>
             )}
@@ -458,7 +499,12 @@ export default function BudgetPage() {
             This <strong>permanently deletes</strong> all your{' '}
             {(budgetFramework?.bucketLabelPlural ?? template?.bucketLabelPlural ?? 'buckets').toLowerCase()}{' '}
             and their accumulated balances
-            {totalAllocated !== 0 ? ` (currently ${peso(totalAllocated)})` : ''}.
+            {/* Dialog prose is a string, not a rendered figure — that is what
+                `formatMoneyLong` in `utils/money` exists for (§3). */}
+            {totalAllocated !== 0
+              ? ` (currently ${formatMoneyLong(Math.round(totalAllocated))})`
+              : ''}
+            .
             <Box component="ul" sx={{ mt: 1.5, mb: 0, pl: 2.5 }}>
               <li>This cannot be undone.</li>
               <li>Your income and expense records are kept, but their saved allocations stop tracking against any {(budgetFramework?.bucketLabel ?? 'bucket').toLowerCase()}.</li>
