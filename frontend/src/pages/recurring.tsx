@@ -15,7 +15,6 @@ import {
   Stack,
   Typography,
   alpha,
-  keyframes,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -25,14 +24,10 @@ import { RecurringExpense } from '@/types/RecurringExpense';
 import { HttpClient } from '@/utils/httpClient';
 import Money from '@/components/atoms/Money';
 import RecurringExpenseItem from '@/components/atoms/RecurringExpenseItem';
+import LedgerGroupCard from '@/components/molecules/LedgerGroupCard';
 import RecurringExpenseDialog from '@/components/organisms/RecurringExpenseDialog';
 import RecurringPaymentDialog from '@/components/organisms/RecurringPaymentDialog';
 import RecurringExpenseDetailDialog from '@/components/organisms/RecurringExpenseDetailDialog';
-
-const riseIn = keyframes`
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-`;
 
 const FREQUENCY_GROUPS: {
   frequency: RecurringExpense['frequency'];
@@ -319,63 +314,20 @@ export default function RecurringPage() {
         ) : (
           <Stack spacing={2}>
             {groups.map((group, index) => (
-              <Card
+              <LedgerGroupCard
                 key={group.heading}
-                sx={{
-                  overflow: 'hidden',
-                  animation: `${riseIn} 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) both`,
-                  animationDelay: `${index * 70}ms`,
-                  '@media (prefers-reduced-motion: reduce)': {
-                    animation: 'none',
-                  },
-                }}
+                label={group.heading}
+                count={group.items.length}
+                index={index}
               >
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    px: 2,
-                    py: 1.25,
-                    bgcolor: alpha(theme.palette.primary.main, 0.05),
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      fontSize: '0.6875rem',
-                      fontWeight: 700,
-                      letterSpacing: '0.14em',
-                      textTransform: 'uppercase',
-                      color: 'primary.dark',
-                    }}
-                  >
-                    {group.heading}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '0.6875rem',
-                      fontWeight: 600,
-                      letterSpacing: '0.04em',
-                      color: 'text.secondary',
-                    }}
-                  >
-                    {group.items.length}{' '}
-                    {group.items.length === 1 ? 'item' : 'items'}
-                  </Typography>
-                </Stack>
-
-                <Stack divider={<Divider />}>
-                  {group.items.map((re) => (
-                    <RecurringExpenseItem
-                      key={re.name}
-                      recurringExpense={re}
-                      onTap={setDetailExpense}
-                    />
-                  ))}
-                </Stack>
-              </Card>
+                {group.items.map((re) => (
+                  <RecurringExpenseItem
+                    key={re.name}
+                    recurringExpense={re}
+                    onTap={setDetailExpense}
+                  />
+                ))}
+              </LedgerGroupCard>
             ))}
           </Stack>
         )}
