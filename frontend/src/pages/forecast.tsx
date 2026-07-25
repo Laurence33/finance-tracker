@@ -13,6 +13,7 @@ import { TZDate } from '@date-fns/tz';
 import { AppContext } from '@/context/AppContext';
 import { HttpClient } from '@/utils/httpClient';
 import { generateForecast, computeAverageIncome } from '@/utils/forecast-helpers';
+import { formatMoney } from '@/utils/money';
 import { ForecastHorizon } from '@/types/Forecast';
 import CashFlowForecastChart from '@/components/molecules/CashFlowForecastChart';
 import ForecastBreakdown from '@/components/molecules/ForecastBreakdown';
@@ -28,6 +29,7 @@ export default function ForecastPage() {
   const [horizon, setHorizon] = useState<ForecastHorizon>(30);
   const [incomeOverride, setIncomeOverride] = useState<string>('');
   const [averageIncome, setAverageIncome] = useState<number>(0);
+  const [incomeMonthsUsed, setIncomeMonthsUsed] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   // Fetch prior 2 months of income to compute average
@@ -49,13 +51,17 @@ export default function ForecastPage() {
           res2?.data?.totalIncome || 0,
         ];
 
-        const avg = computeAverageIncome(totals);
-        setAverageIncome(avg);
-        setIncomeOverride(Math.round(avg).toString());
+        const { average, monthsUsed } = computeAverageIncome(totals);
+        setAverageIncome(average);
+        setIncomeMonthsUsed(monthsUsed);
+        setIncomeOverride(Math.round(average).toString());
       } catch {
-        // Fall back to current month's income
-        setAverageIncome(totalIncome);
-        setIncomeOverride(Math.round(totalIncome).toString());
+        // Fall back to current month's income — run through the same helper so
+        // the caption's month count stays true on this path too.
+        const { average, monthsUsed } = computeAverageIncome([totalIncome]);
+        setAverageIncome(average);
+        setIncomeMonthsUsed(monthsUsed);
+        setIncomeOverride(Math.round(average).toString());
       } finally {
         setLoading(false);
       }
@@ -128,7 +134,9 @@ export default function ForecastPage() {
 
         {!loading && averageIncome > 0 && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Based on 3-month average income of ₱{Math.round(averageIncome).toLocaleString()}
+            {incomeMonthsUsed === 1
+              ? `Based on 1 month of recorded income, ${formatMoney(Math.round(averageIncome))}`
+              : `Based on a ${incomeMonthsUsed}-month average income of ${formatMoney(Math.round(averageIncome))}`}
           </Typography>
         )}
 
