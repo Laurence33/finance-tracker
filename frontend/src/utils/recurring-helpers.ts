@@ -1,4 +1,9 @@
 import { RecurringExpense } from '@/types/RecurringExpense';
+import {
+  MoneyAmount,
+  formatMoneyLong,
+  formatMoneyValue,
+} from '@/utils/money';
 
 export function getCurrentPeriodKey(
   frequency: 'weekly' | 'monthly' | 'yearly' | 'as_needed',
@@ -59,23 +64,31 @@ export function getPeriodLabel(
   return periodKey;
 }
 
+/**
+ * The recurring expense's amount as a `MoneyAmount`, collapsing the
+ * `amountType` discriminant. Pass the result to `<Money>` or to the shared
+ * formatters in `@/utils/money`.
+ */
+export function getRecurringAmount(re: RecurringExpense): MoneyAmount {
+  return re.amountType === 'fixed'
+    ? re.amount
+    : { min: re.amountMin, max: re.amountMax };
+}
+
+/** Long form (`₱2,000 - ₱6,000`) for dialogs and forms. */
 export function getAmountDisplay(re: RecurringExpense): string {
-  if (re.amountType === 'fixed') {
-    return `₱${re.amount.toLocaleString()}`;
-  }
-  return `₱${re.amountMin.toLocaleString()} - ₱${re.amountMax.toLocaleString()}`;
+  return formatMoneyLong(getRecurringAmount(re));
 }
 
 /**
  * Amount without the currency symbol, ranges collapsed to a single en dash
- * (`2,000–6,000`). Used in dense list rows where the peso sign is rendered
- * separately so it can be de-emphasised.
+ * (`2,000–6,000`).
+ *
+ * @deprecated Render `<Money amount={getRecurringAmount(re)} />` instead — it
+ * styles the glyph for you. Kept so the string form stays available.
  */
 export function getAmountValueDisplay(re: RecurringExpense): string {
-  if (re.amountType === 'fixed') {
-    return re.amount.toLocaleString();
-  }
-  return `${re.amountMin.toLocaleString()}–${re.amountMax.toLocaleString()}`;
+  return formatMoneyValue(getRecurringAmount(re));
 }
 
 export function getFrequencyLabel(frequency: string): string {

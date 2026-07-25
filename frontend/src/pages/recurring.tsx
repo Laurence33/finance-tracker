@@ -23,6 +23,7 @@ import RepeatIcon from '@mui/icons-material/Repeat';
 import { AppContext } from '@/context/AppContext';
 import { RecurringExpense } from '@/types/RecurringExpense';
 import { HttpClient } from '@/utils/httpClient';
+import Money from '@/components/atoms/Money';
 import RecurringExpenseItem from '@/components/atoms/RecurringExpenseItem';
 import RecurringExpenseDialog from '@/components/organisms/RecurringExpenseDialog';
 import RecurringPaymentDialog from '@/components/organisms/RecurringPaymentDialog';
@@ -245,23 +246,16 @@ export default function RecurringPage() {
                 >
                   Monthly projected
                 </Typography>
-                <Typography
+                <Money
+                  surface="onColor"
+                  amount={Math.round(totalProjected)}
                   sx={{
                     fontSize: { xs: '1.75rem', sm: '2rem' },
                     fontWeight: 700,
                     lineHeight: 1.15,
                     letterSpacing: '-0.02em',
-                    fontVariantNumeric: 'tabular-nums',
                   }}
-                >
-                  <Box
-                    component="span"
-                    sx={{ fontSize: '0.6em', fontWeight: 500, opacity: 0.8, mr: '2px' }}
-                  >
-                    ₱
-                  </Box>
-                  {Math.round(totalProjected).toLocaleString()}
-                </Typography>
+                />
                 <Typography sx={{ fontSize: '0.6875rem', opacity: 0.7, mt: 0.25 }}>
                   upper bound · excludes as-needed
                 </Typography>

@@ -1,6 +1,7 @@
 import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { RecurringExpense } from '@/types/RecurringExpense';
-import { getAmountValueDisplay } from '@/utils/recurring-helpers';
+import { getRecurringAmount } from '@/utils/recurring-helpers';
+import Money from '@/components/atoms/Money';
 
 const STATUS_LABEL: Record<RecurringExpense['status'], string> = {
   active: '',
@@ -79,30 +80,15 @@ export default function RecurringExpenseItem({
         </Box>
 
         <Stack alignItems="flex-end" sx={{ flexShrink: 0 }}>
-          <Typography
+          <Money
+            amount={getRecurringAmount(recurringExpense)}
             sx={{
               fontSize: '0.9375rem',
               fontWeight: 700,
               lineHeight: 1.3,
-              letterSpacing: '-0.01em',
-              fontVariantNumeric: 'tabular-nums',
-              whiteSpace: 'nowrap',
               color: isActive ? 'text.primary' : 'text.disabled',
             }}
-          >
-            <Box
-              component="span"
-              sx={{
-                fontSize: '0.8em',
-                fontWeight: 500,
-                color: 'text.secondary',
-                mr: '2px',
-              }}
-            >
-              ₱
-            </Box>
-            {getAmountValueDisplay(recurringExpense)}
-          </Typography>
+          />
           {statusLabel && (
             <Typography
               sx={{
