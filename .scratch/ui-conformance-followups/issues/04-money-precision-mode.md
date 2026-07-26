@@ -18,7 +18,7 @@ is about *display* precision, not about `Money` starting to round.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] A surface can opt into always-two-decimals without writing its own formatter
 - [ ] The default behaviour is unchanged everywhere it is not opted into — verify the recurring, lendings and dashboard figures are byte-identical

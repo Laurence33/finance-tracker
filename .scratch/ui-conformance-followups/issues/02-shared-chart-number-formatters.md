@@ -19,7 +19,7 @@ change which charts use it.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] A signed money formatter lives in `utils/money`, putting the sign before the glyph
 - [ ] It handles negative zero — `-0 >= 0` is `true` in JS, which is exactly how a zero renders as `+₱0` today (see ticket 03)

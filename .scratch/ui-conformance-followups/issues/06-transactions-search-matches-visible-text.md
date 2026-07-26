@@ -16,7 +16,7 @@ Check the same mismatch on the other lists that gained ledger rows — lendings,
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] Typing a fund source's display text finds expenses and income funded from it
 - [ ] Every field rendered on a transaction row is reachable by search

@@ -18,7 +18,7 @@ the likely candidates.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] Percentage figures render from one shared place with `tabular-nums` and the §3 tracking
 - [ ] The budget page's local `PERCENT_SX` is gone

@@ -13,13 +13,23 @@ breaking them, then tickets 04–11 migrate their own surfaces, then ticket 12 c
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `Money` renders fixed amounts per §3: `tabular-nums`, `letterSpacing: -0.01em`, glyph at `0.8em` / weight 500 / `text.secondary` / `mr: 2px`
-- [ ] `Money` renders ranges compactly — one glyph, en dash, no spaces (`₱2,000–6,000`)
-- [ ] A coloured-surface variant renders the glyph with opacity rather than a theme text colour, per §5
-- [ ] An optional leading sign is supported for income, with the caller choosing the colour
-- [ ] The long form (both glyphs, spaced dash) stays available for dialogs and forms where width is not contested; existing callers of the current long-form helper are unaffected
-- [ ] Money formatting helpers live in a shared util, not in a per-feature helpers file
-- [ ] The recurring row and hero adopt `Money` and render identically to today at 390px
-- [ ] `npx tsc --noEmit` and `npm run build` are clean
+- [x] `Money` renders fixed amounts per §3: `tabular-nums`, `letterSpacing: -0.01em`, glyph at `0.8em` / weight 500 / `text.secondary` / `mr: 2px`
+- [x] `Money` renders ranges compactly — one glyph, en dash, no spaces (`₱2,000–6,000`)
+- [x] A coloured-surface variant renders the glyph with opacity rather than a theme text colour, per §5
+- [x] An optional leading sign is supported for income, with the caller choosing the colour
+- [x] The long form (both glyphs, spaced dash) stays available for dialogs and forms where width is not contested; existing callers of the current long-form helper are unaffected
+- [x] Money formatting helpers live in a shared util, not in a per-feature helpers file
+- [x] The recurring row and hero adopt `Money` and render identically to today at 390px
+- [x] `npx tsc --noEmit` and `npm run build` are clean
+
+## Outcome
+
+Shipped in `0f33d98`. Merged to `main` and pushed.
+
+Landed as `Money` (atom) + `utils/money`. The prop is `surface`, not `variant`, because
+`variant` is a real MUI Typography prop that passes through. Three later additions the page
+migrations forced: a third surface `inherit` for a semantically coloured figure (green income was
+rendering a grey glyph), `glyph={false}` for the second figure in a pair, and a formatter guarantee
+of no-decimals-or-exactly-two — a `4820.50` payment was rendering `₱4,820.5` (`1ac4fc4`).

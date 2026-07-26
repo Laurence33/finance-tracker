@@ -14,7 +14,7 @@ which is why it wasn't done inline.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] `@types/date-fns` is removed from `package.json` and the lockfile
 - [ ] `npx tsc --noEmit` is clean with no new errors anywhere in the frontend

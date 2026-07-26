@@ -24,7 +24,7 @@ whichever convention wins, fix this in the shared formatter rather than at each 
 **Blocked by:** 02 — the zero-sign fix belongs inside the shared signed formatter, not scattered
 across callers.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] A single documented rule for when a figure is signed, added to §4 of `ui-patterns.md` with the reasoning
 - [ ] Transactions, forecast, dashboard and any other signing surface all follow it

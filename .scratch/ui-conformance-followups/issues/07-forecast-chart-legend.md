@@ -17,7 +17,7 @@ block — it costs no vertical space and is usually easier to read.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent — not started. Filed after the UI conformance epic (`3507cc0..f293f9c`), which is complete and merged.
 
 - [ ] All three series are identifiable at 390px without interaction
 - [ ] The chart's plot area does not lose meaningful height to the labelling
