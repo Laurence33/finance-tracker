@@ -129,6 +129,27 @@ card whose header names the month — the one field its rows genuinely did repea
 restates a count the hero already shows is worse (§8.8). "Over budget / on track" would be worse
 still: that is a §4 exception state, and it makes the list reorder as the month progresses.
 
+### When cards beat ledger rows
+
+A ledger list is for records the user **creates and compares** in a list that grows. Not every set of
+records is that. A **closed partition of a whole** — fixed membership, defined elsewhere, each member a
+standing purpose with its own target share — keeps a card each, however many members it has.
+
+The budget page's buckets are the example. A framework defines between two and six of them, and the
+user never adds one, so there is no scan-and-compare job and no risk of the viewport flooding that
+anti-pattern 1 describes. Each bucket's full-width progress meter *is* the content, not an accessory
+to a value, and a card gives it width a row cannot.
+
+Because those meters are not in a `LedgerRow`, the **Meter rows** geometry above does not govern them:
+`height: 4` exists to fit a bar inside a 62px row's slack. The budget cards' taller bar is a different
+context, not drift.
+
+Dashboard widgets are the other case: heterogeneous summaries of different domains, not a list of one
+record type. Their mini-lists still adopt the row spec's name-left / value-right alignment and tabular
+figures, without becoming groups with headers and counts.
+
+Card sets still owe §3, §5 and §6 in full. Staying a card exempts a screen from §2, nothing else.
+
 ### Meter rows
 
 A row may carry a progress meter — spend against a budget, funding against a target. It goes in
@@ -215,6 +236,30 @@ These rules apply everywhere numbers appear, not just in ledger rows.
   as-needed items is not "the" total — say so in a `0.6875rem` caption: `upper bound · excludes
   as-needed`. Never put a derived total in a group header where it sits directly above the rows it
   approximates; the mismatch reads as a bug.
+
+### Figures inside charts
+
+A chart holds two kinds of figure with different jobs, and they do not get the same treatment.
+
+- **An axis tick is a scale reference**, read approximately, repeated down a gutter. It may abbreviate
+  (`12k`) and it may drop the currency glyph — the card title already says what the axis measures.
+- **A tooltip figure is a value read exactly.** It carries the full figure and the de-emphasised glyph,
+  like any other figure in the app.
+
+**Abbreviate a tick on measurement, never for symmetry.** Run the §1 sum on the axis gutter: abbreviate
+when a tick would overflow it, not because another chart abbreviates. Two charts formatting ticks
+differently is not drift.
+
+**`fontVariantNumeric` is not a valid SVG presentation attribute.** Passing it through Recharts'
+`tick={{ … }}` silently renders nothing. Set it once on the `Box` wrapping the chart — the property is
+inherited and applies to SVG `<text>`.
+
+**Recharts' `formatter` returns a string, so it cannot carry a separately styled glyph.** A tooltip
+whose figures need the §3 treatment has to use a custom `content` renderer and compose `<Money>`. Reach
+for the string formatters only where the API genuinely demands a string.
+
+**Sign before glyph applies to chart strings too.** `₱-105,000` is as wrong on an axis as in a row, and
+`Money`'s `sign` handling does not reach a string callback.
 
 ---
 
