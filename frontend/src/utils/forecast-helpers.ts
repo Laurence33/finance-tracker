@@ -192,10 +192,25 @@ function getOccurrencesInRange(
   return occurrences;
 }
 
-export function computeAverageIncome(monthlyTotals: number[]): number {
+export type AverageIncome = {
+  average: number;
+  /** How many of the supplied months actually recorded income. */
+  monthsUsed: number;
+};
+
+/**
+ * Averages only the months that recorded income — and reports how many those
+ * were, so the caller can label the figure with the real month count instead of
+ * claiming a three-month average it may not have (§3 "Label derived aggregates
+ * honestly" in `docs/ui-patterns.md`).
+ */
+export function computeAverageIncome(monthlyTotals: number[]): AverageIncome {
   const nonZero = monthlyTotals.filter((t) => t > 0);
-  if (nonZero.length === 0) return 0;
-  return nonZero.reduce((sum, t) => sum + t, 0) / nonZero.length;
+  if (nonZero.length === 0) return { average: 0, monthsUsed: 0 };
+  return {
+    average: nonZero.reduce((sum, t) => sum + t, 0) / nonZero.length,
+    monthsUsed: nonZero.length,
+  };
 }
 
 function formatDate(date: Date): string {
