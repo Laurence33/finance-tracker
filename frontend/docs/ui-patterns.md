@@ -315,6 +315,16 @@ recognise the problem on another screen.
 
 ---
 
+## The conformance guard
+
+`npm run check:ui` (also wired into `npm run build`) fails on the two anti-patterns that are
+mechanically detectable: a hand-assembled currency figure (`₱` followed by an interpolation) and an
+item component wrapping a record in a `Card`. It skips comment lines, so prose quoting a bad pattern
+is not a violation.
+
+It cannot catch a hand-rolled group card, a re-implemented row spec, or a badge on a majority state.
+Those need this document and a render.
+
 ## Verifying a change like this
 
 The app is behind a Cognito `Authenticator`, so a signed-out session cannot reach an authenticated

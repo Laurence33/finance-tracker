@@ -13,7 +13,7 @@ const SERIES_LABELS: Record<string, string> = {
 
 /**
  * An axis tick has to be a string, so `Money`'s sign handling is repeated here:
- * a projected balance can go negative and `₱${v.toLocaleString()}` would put the
+ * a projected balance can go negative, and hand-assembling the glyph would put the
  * glyph ahead of the minus (§3). Rounds because the series carries centavos.
  */
 function formatAxisTick(value: number): string {

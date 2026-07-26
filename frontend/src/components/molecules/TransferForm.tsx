@@ -1,4 +1,5 @@
 import { use, useState } from 'react';
+import { formatMoney } from '@/utils/money';
 import {
   Box,
   Button,
@@ -131,7 +132,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
             </MenuItem>
             {fundSources.map((fundSource) => (
               <MenuItem key={fundSource.name} value={fundSource.name}>
-                {fundSource.displayText} (₱{fundSource.balance.toLocaleString()})
+                {fundSource.displayText} ({formatMoney(fundSource.balance)})
               </MenuItem>
             ))}
           </Select>
@@ -181,7 +182,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
             helperText={
               fieldErrors.amount ||
               (insufficient
-                ? `Exceeds available balance of ₱${sourceBalance.toLocaleString()}`
+                ? `Exceeds available balance of ${formatMoney(sourceBalance)}`
                 : ' ')
             }
             slotProps={{
@@ -246,8 +247,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
 
         {sourceFund && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Available in {sourceFund.displayText}: ₱
-            {sourceBalance.toLocaleString()}
+            Available in {sourceFund.displayText}: {formatMoney(sourceBalance)}
           </Typography>
         )}
 

@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port 8001",
-    "build": "next build",
+    "build": "node scripts/check-ui.mjs && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check:ui": "node scripts/check-ui.mjs"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.4",

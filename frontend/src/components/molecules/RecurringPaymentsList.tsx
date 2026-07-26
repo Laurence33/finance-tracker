@@ -1,4 +1,5 @@
 import { Box, Stack, Typography } from '@mui/material';
+import Money from '@/components/atoms/Money';
 import { RecurringExpensePayment } from '@/types/RecurringExpense';
 import { getPeriodLabel } from '@/utils/recurring-helpers';
 
@@ -37,9 +38,11 @@ export default function RecurringPaymentsList({
                 {new Date(payment.paidAt.replace(' ', 'T')).toLocaleDateString()} · {payment.fundSource}
               </Typography>
             </Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              ₱{payment.amount.toLocaleString()}
-            </Typography>
+            <Money
+              variant="body2"
+              amount={payment.amount}
+              sx={{ fontWeight: 600 }}
+            />
           </Stack>
           {payment.notes && (
             <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>

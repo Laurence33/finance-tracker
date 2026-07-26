@@ -1,4 +1,5 @@
 import { AppContext } from '@/context/AppContext';
+import { formatMoney } from '@/utils/money';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
   Autocomplete,
@@ -175,7 +176,7 @@ export default function LendingForm({
           >
             {fundSources.map((fs) => (
               <MenuItem key={fs.name} value={fs.name}>
-                {fs.displayText} (₱{fs.balance.toLocaleString()})
+                {fs.displayText} ({formatMoney(fs.balance)})
               </MenuItem>
             ))}
           </TextField>

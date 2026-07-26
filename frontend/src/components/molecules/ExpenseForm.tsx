@@ -1,4 +1,5 @@
 import { AppContext } from '@/context/AppContext';
+import { formatMoney } from '@/utils/money';
 import { currentTimestampForInput } from '@/utils/date-functions';
 import { HttpClient } from '@/utils/httpClient';
 import {
@@ -171,7 +172,7 @@ export default function ExpenseForm() {
               </MenuItem>
               {buckets.map((bucket) => (
                 <MenuItem key={bucket.key} value={bucket.key}>
-                  {bucket.displayLabel} ({`₱${bucket.balance.toLocaleString()}`} left)
+                  {bucket.displayLabel} ({formatMoney(bucket.balance)} left)
                 </MenuItem>
               ))}
             </Select>

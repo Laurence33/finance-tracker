@@ -1,4 +1,5 @@
 import { AppContext } from '@/context/AppContext';
+import { formatMoney } from '@/utils/money';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
   Box,
@@ -92,7 +93,7 @@ export default function LendingPaymentForm({
       <Box sx={{ pt: 1 }}>
         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Lending to <strong>{lending.borrower}</strong> · Remaining: <strong>₱{remaining.toLocaleString()}</strong>
+            Lending to <strong>{lending.borrower}</strong> · Remaining: <strong>{formatMoney(remaining)}</strong>
           </Typography>
         </Box>
         <Box sx={{ mb: 2.5 }}>
@@ -106,7 +107,7 @@ export default function LendingPaymentForm({
             value={formData.amount || ''}
             onChange={(e) => onChangeHandler(e.target.value, 'amount')}
             error={!!fieldErrors.amount}
-            helperText={getError('amount') || `Max: ₱${remaining.toLocaleString()}`}
+            helperText={getError('amount') || `Max: ${formatMoney(remaining)}`}
             slotProps={{
               input: {
                 startAdornment: (
@@ -137,7 +138,7 @@ export default function LendingPaymentForm({
           >
             {fundSources.map((fs) => (
               <MenuItem key={fs.name} value={fs.name}>
-                {fs.displayText} (₱{fs.balance.toLocaleString()})
+                {fs.displayText} ({formatMoney(fs.balance)})
               </MenuItem>
             ))}
           </TextField>

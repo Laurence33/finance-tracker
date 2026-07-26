@@ -1,4 +1,5 @@
 import { AppContext } from '@/context/AppContext';
+import { formatMoney, formatMoneyValue } from '@/utils/money';
 import { currentTimestampForInput } from '@/utils/date-functions';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
@@ -244,8 +245,8 @@ export default function IncomeForm() {
                 sx={{ fontWeight: 600 }}
                 color={allocationsValid ? 'text.primary' : 'error'}
               >
-                ₱{allocationTotal.toLocaleString()} / ₱
-                {(Number(formData.amount) || 0).toLocaleString()}
+                {formatMoney(allocationTotal)} /{' '}
+                {formatMoneyValue(Number(formData.amount) || 0)}
               </Typography>
             </Stack>
           </Box>
