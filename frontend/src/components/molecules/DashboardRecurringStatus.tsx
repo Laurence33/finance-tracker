@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import {
+  Box,
   Card,
   CardActionArea,
   CardContent,
@@ -7,7 +8,9 @@ import {
   Typography,
 } from '@mui/material';
 import RepeatIcon from '@mui/icons-material/Repeat';
+import Money from '@/components/atoms/Money';
 import { RecurringExpense } from '@/types/RecurringExpense';
+import { getRecurringAmount } from '@/utils/recurring-helpers';
 
 const FREQUENCY_LABEL: Record<RecurringExpense['frequency'], string> = {
   weekly: 'Weekly',
@@ -15,6 +18,8 @@ const FREQUENCY_LABEL: Record<RecurringExpense['frequency'], string> = {
   yearly: 'Yearly',
   as_needed: 'As needed',
 };
+
+const PREVIEW_LIMIT = 3;
 
 export default function DashboardRecurringStatus({
   recurringExpenses,
@@ -52,40 +57,62 @@ export default function DashboardRecurringStatus({
               >
                 {active.length === 1 ? 'active commitment' : 'active commitments'}
               </Typography>
-              <Stack spacing={0.5} sx={{ mt: 1 }}>
-                {active.slice(0, 3).map((re) => (
+              {/*
+                A widget mini-list, not a ledger group (§2): it borrows the row's
+                name-left / value-right alignment and its tabular figures, but
+                keeps the widget's own density and carries no group header or
+                count. The frequency moved off the value rail and under the name
+                so the rail holds a figure, which is what makes the three amounts
+                line up as a column.
+              */}
+              <Stack spacing={0.75} sx={{ mt: 1 }}>
+                {active.slice(0, PREVIEW_LIMIT).map((re) => (
                   <Stack
                     key={re.name}
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
+                    alignItems="flex-start"
+                    spacing={1.5}
                   >
-                    <Typography
-                      variant="body2"
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          lineHeight: 1.3,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {re.displayName}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: '0.75rem',
+                          color: 'text.secondary',
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        {FREQUENCY_LABEL[re.frequency]}
+                      </Typography>
+                    </Box>
+                    <Money
+                      amount={getRecurringAmount(re)}
                       sx={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        flex: 1,
-                        mr: 1,
+                        flexShrink: 0,
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                        lineHeight: 1.3,
                       }}
-                    >
-                      {re.displayName}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{ color: 'text.secondary', flexShrink: 0 }}
-                    >
-                      {FREQUENCY_LABEL[re.frequency]}
-                    </Typography>
+                    />
                   </Stack>
                 ))}
-                {active.length > 3 && (
+                {active.length > PREVIEW_LIMIT && (
                   <Typography
                     variant="caption"
                     sx={{ color: 'text.disabled' }}
                   >
-                    +{active.length - 3} more
+                    +{active.length - PREVIEW_LIMIT} more
                   </Typography>
                 )}
               </Stack>

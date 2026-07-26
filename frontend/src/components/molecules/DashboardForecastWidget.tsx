@@ -7,10 +7,47 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import Money from '@/components/atoms/Money';
 import { FundSource } from '@/types/FundSource';
 import { RecurringExpense } from '@/types/RecurringExpense';
 import { Lending } from '@/types/Lending';
 import { generateForecast } from '@/utils/forecast-helpers';
+
+/**
+ * One projection row of the widget's mini-list: label left, figure right, so the
+ * three horizons read as a column (§2's alignment, §3's tabular numerals). Not a
+ * ledger group — no header, no count, and the widget keeps its own density.
+ *
+ * A projected balance can go negative, and §3 forbids `₱-7,350`: the sign goes
+ * ahead of the glyph and the magnitude stays positive. The digits are
+ * semantically coloured, so the glyph follows them (`surface="inherit"`).
+ */
+function ForecastRow({ label, value }: { label: string; value: number }) {
+  const rounded = Math.round(value);
+  return (
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      alignItems="baseline"
+      spacing={1.5}
+    >
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        {label}
+      </Typography>
+      <Money
+        surface="inherit"
+        amount={Math.abs(rounded)}
+        sign={rounded < 0 ? '-' : undefined}
+        sx={{
+          flexShrink: 0,
+          fontSize: '0.875rem',
+          fontWeight: 600,
+          color: rounded >= 0 ? 'success.main' : 'error.main',
+        }}
+      />
+    </Stack>
+  );
+}
 
 export default function DashboardForecastWidget({
   fundSources,
@@ -43,9 +80,6 @@ export default function DashboardForecastWidget({
     return { at30, at60, at90 };
   }, [fundSources, recurringExpenses, lendings, totalIncome]);
 
-  const colorFor = (value: number) =>
-    value >= 0 ? 'success.main' : 'error.main';
-
   return (
     <Card>
       <CardActionArea onClick={() => router.push('/forecast')}>
@@ -54,39 +88,9 @@ export default function DashboardForecastWidget({
             Cash Flow Forecast
           </Typography>
           <Stack spacing={0.75}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                In 30 days
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: colorFor(projections.at30) }}
-              >
-                ₱{Math.round(projections.at30).toLocaleString()}
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                In 60 days
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: colorFor(projections.at60) }}
-              >
-                ₱{Math.round(projections.at60).toLocaleString()}
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                In 90 days
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: colorFor(projections.at90) }}
-              >
-                ₱{Math.round(projections.at90).toLocaleString()}
-              </Typography>
-            </Stack>
+            <ForecastRow label="In 30 days" value={projections.at30} />
+            <ForecastRow label="In 60 days" value={projections.at60} />
+            <ForecastRow label="In 90 days" value={projections.at90} />
             <Typography
               variant="caption"
               sx={{ color: 'text.disabled', mt: 0.5 }}
