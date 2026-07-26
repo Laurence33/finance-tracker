@@ -207,8 +207,10 @@ These rules apply everywhere numbers appear, not just in ledger rows.
 - **Negative amounts take a sign, not a negative number.** `Money` formats with `toLocaleString()`,
   so `amount={-7350}` renders `₱-7,350` with the glyph ahead of the minus. Pass
   `amount={Math.abs(x)} sign="-"` and let the caller colour it.
-- **Rounding is the caller's job.** `toLocaleString()` emits up to three fraction digits;
-  `Money` does not round. A derived total needs `Math.round` at the call site.
+- **Rounding is the caller's job.** `Money` does not round; a derived total needs `Math.round` at the
+  call site. What the formatter *does* guarantee is **no decimals or exactly two, never one** — a
+  `4820.50` payment would otherwise render `₱4,820.5`, which reads as a truncated number rather than
+  an amount. Whole values stay whole.
 - **Label derived aggregates honestly.** A total that resolves ranges to `amountMax` and skips
   as-needed items is not "the" total — say so in a `0.6875rem` caption: `upper bound · excludes
   as-needed`. Never put a derived total in a group header where it sits directly above the rows it

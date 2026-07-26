@@ -21,15 +21,32 @@ export function isMoneyRange(
 }
 
 /**
+ * Money is written with either no decimals or exactly two — never one.
+ * `toLocaleString()` alone drops a trailing zero, so a `4820.50` payment renders
+ * as `4,820.5`, which reads as a truncated number rather than an amount. A whole
+ * value stays whole; a fractional one gets both places.
+ *
+ * This only shapes a value that *arrives* fractional. Rounding a derived
+ * aggregate is still the caller's job (§3) — `Money` never rounds for you.
+ */
+function formatNumber(value: number): string {
+  const fractionDigits = Number.isInteger(value) ? 0 : 2;
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+}
+
+/**
  * The digits only, with no currency glyph. Ranges collapse to a single en dash
  * with no spaces (`2,000–6,000`). Used where the glyph is rendered separately
  * so it can be styled down.
  */
 export function formatMoneyValue(amount: MoneyAmount): string {
   if (!isMoneyRange(amount)) {
-    return amount.toLocaleString();
+    return formatNumber(amount);
   }
-  return `${amount.min.toLocaleString()}–${amount.max.toLocaleString()}`;
+  return `${formatNumber(amount.min)}–${formatNumber(amount.max)}`;
 }
 
 /**
@@ -47,7 +64,7 @@ export function formatMoney(amount: MoneyAmount): string {
  */
 export function formatMoneyLong(amount: MoneyAmount): string {
   if (!isMoneyRange(amount)) {
-    return `${CURRENCY_GLYPH}${amount.toLocaleString()}`;
+    return `${CURRENCY_GLYPH}${formatNumber(amount)}`;
   }
-  return `${CURRENCY_GLYPH}${amount.min.toLocaleString()} - ${CURRENCY_GLYPH}${amount.max.toLocaleString()}`;
+  return `${CURRENCY_GLYPH}${formatNumber(amount.min)} - ${CURRENCY_GLYPH}${formatNumber(amount.max)}`;
 }
