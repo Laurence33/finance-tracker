@@ -8,6 +8,7 @@ import {
   alpha,
 } from '@mui/material';
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
+import Money from '@/components/atoms/Money';
 
 export default function DashboardRunwayWidget({
   totalBalance,
@@ -63,9 +64,26 @@ export default function DashboardRunwayWidget({
               Runway
             </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              {avgMonthlySpend > 0
-                ? `At ₱${Math.round(avgMonthlySpend).toLocaleString()}/mo avg spend`
-                : 'No spend data in this period'}
+              {avgMonthlySpend > 0 ? (
+                <>
+                  {/*
+                    A figure inside prose. `Money` still owns the glyph and the
+                    tabular numerals; `component="span"` keeps it inline and
+                    `fontSize: 'inherit'` lets the caption set the size (§3 —
+                    every figure goes through `Money`, including this one).
+                  */}
+                  At{' '}
+                  <Money
+                    component="span"
+                    surface="inherit"
+                    amount={Math.round(avgMonthlySpend)}
+                    sx={{ fontSize: 'inherit', fontWeight: 600 }}
+                  />
+                  /mo avg spend
+                </>
+              ) : (
+                'No spend data in this period'
+              )}
             </Typography>
           </Box>
           <Typography

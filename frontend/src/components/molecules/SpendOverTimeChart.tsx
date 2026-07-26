@@ -6,6 +6,7 @@ import { format, startOfWeek } from 'date-fns';
 import { Expense } from '@/types/Expense';
 import { Income } from '@/types/Income';
 import { DashboardRange } from '@/utils/dashboard-helpers';
+import { formatMoney } from '@/utils/money';
 
 type Bucket = { label: string; expense: number };
 
@@ -41,14 +42,21 @@ const ChartContent = dynamic(
                 tick={{ fontSize: 10 }}
                 interval="preserveStartEnd"
               />
+              {/*
+                Axis ticks stay abbreviated and glyph-less (`12k`). An axis is a
+                scale, not a figure — spelling it `₱12,000` five times over
+                would spend the plot's width on chrome (§3's glyph rule, applied
+                to a repeating column of ticks).
+              */}
               <YAxis
                 tick={{ fontSize: 10 }}
                 tickFormatter={(v) =>
                   v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`
                 }
               />
+              {/* Recharts wants a string back, so the tooltip uses the formatter. */}
               <Tooltip
-                formatter={(v) => `₱${Number(v).toLocaleString()}`}
+                formatter={(v) => formatMoney(Math.round(Number(v)))}
                 contentStyle={{
                   fontSize: 12,
                   borderRadius: 8,

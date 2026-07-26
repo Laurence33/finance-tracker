@@ -1,15 +1,6 @@
 import { useMemo } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Stack,
-  Typography,
-  useTheme,
-  alpha,
-} from '@mui/material';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
+import Money from '@/components/atoms/Money';
 import { Expense } from '@/types/Expense';
 import { Income } from '@/types/Income';
 
@@ -30,8 +21,6 @@ export default function RecentActivityFeed({
   expenses: Expense[];
   incomes: Income[];
 }) {
-  const theme = useTheme();
-
   const entries: Entry[] = useMemo(() => {
     const combined: Entry[] = [
       ...expenses.map((e) => ({
@@ -68,43 +57,31 @@ export default function RecentActivityFeed({
             No activity in this period
           </Typography>
         ) : (
+          /*
+            A widget mini-list (§2's alignment and tabular figures, no group
+            header or count). Expenses are the majority direction here, so per §4
+            they take no sign and no colour; income takes the leading `+` and
+            `success.main`. That is the same convention the transactions ledger
+            uses, and it is why the per-row direction arrow is gone — a red
+            down-arrow on every expense row was a badge on the majority state
+            paying ~48px of the name's width for a fact the sign already carries.
+          */
           <Stack spacing={1.25}>
             {entries.map((entry) => {
-              const color =
-                entry.kind === 'income'
-                  ? theme.palette.success.main
-                  : theme.palette.error.main;
+              const isIncome = entry.kind === 'income';
               return (
                 <Stack
                   key={`${entry.kind}-${entry.timestamp}`}
                   direction="row"
-                  alignItems="center"
+                  alignItems="flex-start"
                   spacing={1.5}
                 >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 1.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: alpha(color, 0.1),
-                      color,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {entry.kind === 'income' ? (
-                      <ArrowUpwardIcon sx={{ fontSize: 18 }} />
-                    ) : (
-                      <ArrowDownwardIcon sx={{ fontSize: 18 }} />
-                    )}
-                  </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
-                      variant="body2"
                       sx={{
-                        fontWeight: 500,
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        lineHeight: 1.3,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -113,19 +90,31 @@ export default function RecentActivityFeed({
                       {entry.label}
                     </Typography>
                     <Typography
-                      variant="caption"
-                      sx={{ color: 'text.secondary' }}
+                      sx={{
+                        fontSize: '0.75rem',
+                        color: 'text.secondary',
+                        lineHeight: 1.3,
+                        display: 'block',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
                     >
                       {entry.fundSource} · {formatTimestamp(entry.timestamp)}
                     </Typography>
                   </Box>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 600, color, flexShrink: 0 }}
-                  >
-                    {entry.kind === 'income' ? '+' : '-'}₱
-                    {entry.amount.toLocaleString()}
-                  </Typography>
+                  <Money
+                    surface={isIncome ? 'inherit' : 'default'}
+                    amount={Math.round(entry.amount)}
+                    sign={isIncome ? '+' : undefined}
+                    sx={{
+                      flexShrink: 0,
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      lineHeight: 1.3,
+                      ...(isIncome ? { color: 'success.main' } : null),
+                    }}
+                  />
                 </Stack>
               );
             })}

@@ -12,7 +12,12 @@ import {
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { AppContext } from '@/context/AppContext';
+import Money from '@/components/atoms/Money';
+import SummaryHeroCard, {
+  SummaryHeroStat,
+} from '@/components/molecules/SummaryHeroCard';
 import FundBalancesChart from '@/components/molecules/FundBalancesChart';
 import ExpensesByTagChart from '@/components/molecules/ExpensesByTagChart';
 import DashboardForecastWidget from '@/components/molecules/DashboardForecastWidget';
@@ -24,6 +29,7 @@ import SpendOverTimeChart from '@/components/molecules/SpendOverTimeChart';
 import DashboardRunwayWidget from '@/components/molecules/DashboardRunwayWidget';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { DashboardRange } from '@/utils/dashboard-helpers';
+import { isLendingOverdue } from '@/utils/lending-helpers';
 
 const sumAmount = (items: { amount: number }[]) =>
   items.reduce((sum, i) => sum + Number(i.amount), 0);
@@ -77,6 +83,26 @@ export default function DashboardPage() {
   const net = currentTotalIncome - currentTotalExpenses;
   const previousNet = previousTotalIncome - previousTotalExpenses;
 
+  // Two stats, not three. `Sources` is the denominator of the headline figure,
+  // which is what makes the total honest without a caption; `Overdue` is a §5
+  // conditional stat. A third — active recurring, say — would restate a count
+  // the widget below already carries as its own headline (§8.8).
+  const stats: SummaryHeroStat[] = useMemo(() => {
+    const overdueCount = lendings.filter(isLendingOverdue).length;
+    return [
+      { value: fundSources.length, label: 'Sources' },
+      ...(overdueCount > 0
+        ? [
+            {
+              value: overdueCount,
+              label: 'Overdue',
+              icon: <WarningAmberIcon />,
+            },
+          ]
+        : []),
+    ];
+  }, [fundSources, lendings]);
+
   const netDelta = formatDelta(net, previousNet);
   const incomeDelta = formatDelta(currentTotalIncome, previousTotalIncome);
   // For expenses, "good" is going down — flip the positive sign
@@ -90,40 +116,17 @@ export default function DashboardPage() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 3 }}>
-      <Card
-        sx={{
-          mb: 2.5,
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: 'white',
-        }}
-      >
-        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-          <Stack alignItems="center" spacing={1}>
-            <Box
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: alpha('#ffffff', 0.2),
-              }}
-            >
-              <AccountBalanceWalletIcon sx={{ fontSize: 28 }} />
-            </Box>
-            <Typography
-              variant="caption"
-              sx={{ opacity: 0.85, fontWeight: 500 }}
-            >
-              Total Balance
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              ₱{totalBalance.toLocaleString()}
-            </Typography>
-          </Stack>
-        </CardContent>
-      </Card>
+      <SummaryHeroCard
+        hue="primary"
+        icon={<AccountBalanceWalletIcon />}
+        eyebrow="Dashboard"
+        label="Total balance"
+        // Rounded here, not in the hero — §3 leaves rounding to the caller.
+        amount={Math.round(totalBalance)}
+        // No caption: this is the exact sum of the fund sources charted below,
+        // not a derived aggregate, and §3's honesty caption is for the latter.
+        stats={stats}
+      />
 
       <DashboardTimeRangeSelector range={range} onChange={setRange} />
 
@@ -137,7 +140,10 @@ export default function DashboardPage() {
       >
         <SummaryStat
           title="Net"
-          value={`${net >= 0 ? '+' : ''}₱${net.toLocaleString()}`}
+          // §3: a negative takes a sign, never a negative number behind the
+          // glyph, and the caller rounds.
+          amount={Math.abs(Math.round(net))}
+          sign={net < 0 ? '-' : '+'}
           color={
             net >= 0 ? theme.palette.success.main : theme.palette.error.main
           }
@@ -147,7 +153,7 @@ export default function DashboardPage() {
         />
         <SummaryStat
           title="Income"
-          value={`₱${currentTotalIncome.toLocaleString()}`}
+          amount={Math.round(currentTotalIncome)}
           color={theme.palette.success.main}
           icon={<TrendingUpIcon />}
           delta={incomeDelta}
@@ -155,7 +161,7 @@ export default function DashboardPage() {
         />
         <SummaryStat
           title="Expenses"
-          value={`₱${currentTotalExpenses.toLocaleString()}`}
+          amount={Math.round(currentTotalExpenses)}
           color={theme.palette.error.main}
           icon={<TrendingDownIcon />}
           delta={expenseDelta}
@@ -193,16 +199,24 @@ export default function DashboardPage() {
   );
 }
 
+/**
+ * One tile of the flow stat grid that sits below the hero — §5 sends a screen's
+ * fourth-and-beyond figure here rather than into the hero's stat rail. Three
+ * money figures would not fit inside the hero at 390px, and these carry a
+ * period-over-period delta the hero's stat shape has no room for.
+ */
 function SummaryStat({
   title,
-  value,
+  amount,
+  sign,
   color,
   icon,
   delta,
   loading,
 }: {
   title: string;
-  value: string;
+  amount: number;
+  sign?: '+' | '-';
   color: string;
   icon: React.ReactNode;
   delta: { text: string; positive: boolean } | null;
@@ -243,12 +257,11 @@ function SummaryStat({
         >
           {title}
         </Typography>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 700, fontSize: '0.9rem' }}
-        >
-          {value}
-        </Typography>
+        <Money
+          amount={amount}
+          sign={sign}
+          sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}
+        />
         {delta && (
           <Typography
             variant="caption"

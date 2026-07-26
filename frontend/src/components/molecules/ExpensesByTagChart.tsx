@@ -4,6 +4,7 @@ import { Card, CardContent, Typography, Box } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Expense } from '@/types/Expense';
 import { getSpentByTag } from '@/utils/budget-helpers';
+import { formatMoney } from '@/utils/money';
 
 type Slice = { name: string; value: number };
 
@@ -35,10 +36,12 @@ const ChartContent = dynamic(
                   <Cell key={i} fill={colors[i % colors.length]} />
                 ))}
               </Pie>
+              {/*
+                Recharts wants a string back, so this is the one place §3 sends
+                you to the formatter rather than the `Money` component.
+              */}
               <Tooltip
-                formatter={(value) =>
-                  `₱${Number(value).toLocaleString()}`
-                }
+                formatter={(value) => formatMoney(Math.round(Number(value)))}
                 contentStyle={{
                   fontSize: 12,
                   borderRadius: 8,
