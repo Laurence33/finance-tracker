@@ -69,7 +69,7 @@ export default function TagItem({
       // the one row on the screen the user needs to look at.
       exception={
         status.isOver
-          ? { label: 'Over budget', color: 'error.main' }
+          ? { label: 'Over', color: 'error.main' }
           : undefined
       }
       // No budget means no meter and no placeholder track. Omitting `footer`

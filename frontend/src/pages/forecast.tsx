@@ -96,7 +96,7 @@ export default function ForecastPage() {
   ).length;
 
   return (
-    <Container maxWidth="sm" sx={{ py: 3 }}>
+    <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
         Cash Flow Forecast
       </Typography>

@@ -1,12 +1,10 @@
 import { use, useState } from 'react';
-import { MdDelete, MdEdit } from 'react-icons/md';
+import RowActions from './RowActions';
 import {
   Button,
   DialogActions,
   DialogContent,
   DialogContentText,
-  IconButton,
-  Stack,
   Dialog,
   DialogTitle,
 } from '@mui/material';
@@ -116,32 +114,12 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
         meta={meta}
         amount={expense.amount}
         trailing={
-          <Stack direction="row" sx={{ flexShrink: 0 }}>
-            <IconButton
-              size="small"
-              onClick={editClickHandler}
-              aria-label="Edit expense"
-              sx={{
-                p: 0.5,
-                color: 'text.secondary',
-                '&:hover': { color: 'primary.main' },
-              }}
-            >
-              <MdEdit fontSize="1.1rem" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={deleteClickHandler}
-              aria-label="Delete expense"
-              sx={{
-                p: 0.5,
-                color: 'text.secondary',
-                '&:hover': { color: 'error.main' },
-              }}
-            >
-              <MdDelete fontSize="1.1rem" />
-            </IconButton>
-          </Stack>
+          <RowActions
+            onEdit={editClickHandler}
+            onDelete={deleteClickHandler}
+            editLabel="Edit expense"
+            deleteLabel="Delete expense"
+          />
         }
       />
     </>

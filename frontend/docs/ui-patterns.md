@@ -302,8 +302,12 @@ which overrides `Money`'s default tracking. Building to the prose below alone wi
   figure size.
 - Secondary stats go right, as a `Stack direction="row"` with a
   `<Divider orientation="vertical" flexItem>` at `alpha('#ffffff', 0.25)` — value above
-  `0.625rem` uppercase label. **0 to 3**: zero is legitimate, and a stat may be conditional (an
-  overdue count that only appears when non-zero). Four does not fit at 390px.
+  `0.625rem` uppercase label. **0 to 3.** This said "two or three, never more" until two pages needed
+  otherwise: budget has no stat worth showing beside its total, and lendings' overdue count is
+  meaningful only when non-zero, so a conditional single stat is legitimate. Four does not fit at
+  390px — measured, a 10-character label runs ~70px, so three plus dividers already spend ~150px of
+  the hero's ~318px. Stats are bottom-aligned so a mix of icon-bearing and plain stats shares a
+  baseline.
 - The hero carries the screen's title in its eyebrow, which removes the need for a separate page
   heading above the list.
 - The hero owns its own `mb: 2.5`. Pages currently using `mb: 3` will tighten on adoption; that's §6

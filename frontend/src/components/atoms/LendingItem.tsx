@@ -1,25 +1,21 @@
 import { Box } from '@mui/material';
 import { Lending } from '@/types/Lending';
-import { LendingGroup, getLendingGroup } from '@/utils/lending-helpers';
+import { getLendingGroup } from '@/utils/lending-helpers';
 import LedgerRow from '@/components/atoms/LedgerRow';
 import Money from '@/components/atoms/Money';
 
 /**
- * Exception labels, deliberately short. They sit in the row's value rail, which
- * is `flexShrink: 0` — its widest child sets the rail's width, so every extra
- * character here is taken straight out of the borrower's name. `PARTIALLY PAID`
- * would cost ~87px against `PARTIAL`'s ~48px.
+ * No per-row state label at all. Every lending renders inside a group card whose
+ * header already names its state, and `LENDING_GROUPS` is exhaustive over
+ * `LendingGroup`, so a row can never appear outside its own group — which is
+ * precisely the case §4 says drop the label: "the same fact twice, paid for in
+ * name width".
  *
- * `active` is absent on purpose: it is the majority state, so it gets no badge
- * at all (§4). The group header already names it.
+ * What survives is the part the header cannot carry: a settled or partly-settled
+ * lending recedes (`muted`), and an overdue one puts the urgency in its amount's
+ * colour. Colour is free; a label costs the borrower's name up to ~87px.
  */
-const EXCEPTION: Partial<
-  Record<LendingGroup, { label: string; color: string }>
-> = {
-  overdue: { label: 'Overdue', color: 'error.main' },
-  partially_paid: { label: 'Partial', color: 'text.disabled' },
-  paid: { label: 'Paid', color: 'text.disabled' },
-};
+const OVERDUE_AMOUNT_COLOR = 'error.main';
 
 /**
  * Binds a lending to the shared ledger row. All the vocabulary — which state is
@@ -49,8 +45,9 @@ export default function LendingItem({
       meta={`Due ${new Date(lending.promisedDate).toLocaleDateString()} · ${lending.fundSource}`}
       muted={muted}
       amount={lending.amount}
-      // Suppressed once settled: the amount and the `PAID` label already say it,
-      // and dropping it keeps the value rail narrower.
+      amountColor={group === 'overdue' ? OVERDUE_AMOUNT_COLOR : undefined}
+      // Suppressed once settled: the Paid group header already says it, and
+      // dropping it keeps the value rail narrower.
       secondaryValue={
         lending.totalPaid > 0 && !settled ? (
           <Box component="span" sx={{ color: 'success.main', fontWeight: 600 }}>
@@ -59,7 +56,6 @@ export default function LendingItem({
           </Box>
         ) : undefined
       }
-      exception={EXCEPTION[group]}
       onTap={() => onTap(lending)}
     />
   );

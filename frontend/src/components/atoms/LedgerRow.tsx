@@ -4,15 +4,26 @@ import Money from '@/components/atoms/Money';
 import { MoneyAmount } from '@/utils/money';
 
 /**
- * A short right-aligned label marking a record as an exception — see §4 of
- * `docs/ui-patterns.md`. The colour is the caller's, because only the caller
- * knows whether the exception is destructive (`error.main`) or benign
- * (`text.disabled`).
+ * The theme colour tokens a row may use. A closed union rather than `string`:
+ * these are palette paths, and a typo in one fails silently at runtime by
+ * rendering the text unstyled. Widen it deliberately if a row needs another.
+ */
+export type LedgerRowColor =
+  | 'text.primary'
+  | 'text.secondary'
+  | 'text.disabled'
+  | 'error.main'
+  | 'warning.main'
+  | 'success.main'
+  | 'primary.main';
+
+/**
+ * A short right-aligned label marking a record as an exception (§4). The colour
+ * is the caller's: only it knows whether the exception is destructive or benign.
  */
 export type LedgerRowException = {
   label: ReactNode;
-  /** Any sx colour token, e.g. `'error.main'` or `'text.disabled'`. */
-  color: string;
+  color: LedgerRowColor;
 };
 
 export type LedgerRowProps = {
@@ -74,7 +85,7 @@ export type LedgerRowProps = {
    * meaning — `success.main` for an inflow in a mixed ledger, `error.main` for
    * a negative balance. The glyph follows it. Overrides the `muted` colour.
    */
-  amountColor?: string;
+  amountColor?: LedgerRowColor;
   /** Optional. Without it the row renders as inert, non-focusable content. */
   onTap?: () => void;
   sx?: SxProps<Theme>;

@@ -115,7 +115,7 @@ export default function DashboardPage() {
     : null;
 
   return (
-    <Container maxWidth="sm" sx={{ py: 3 }}>
+    <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
       <SummaryHeroCard
         hue="primary"
         icon={<AccountBalanceWalletIcon />}

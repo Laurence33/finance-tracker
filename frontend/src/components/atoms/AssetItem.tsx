@@ -1,5 +1,4 @@
-import { IconButton, Stack } from '@mui/material';
-import { MdEdit, MdDelete } from 'react-icons/md';
+import RowActions from './RowActions';
 import { use } from 'react';
 import { Asset } from '@/types/Asset';
 import { AppContext } from '@/context/AppContext';
@@ -56,36 +55,12 @@ export default function AssetItem({
       meta={meta}
       amount={asset.value}
       trailing={
-        <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
-          <IconButton
-            size="small"
-            aria-label={`Edit ${asset.name}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onEdit(asset);
-            }}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <MdEdit fontSize="1.1rem" />
-          </IconButton>
-          <IconButton
-            size="small"
-            aria-label={`Delete ${asset.name}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete(asset);
-            }}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': { color: 'error.main' },
-            }}
-          >
-            <MdDelete fontSize="1.1rem" />
-          </IconButton>
-        </Stack>
+        <RowActions
+          onEdit={() => onEdit(asset)}
+          onDelete={() => onDelete(asset)}
+          editLabel={`Edit ${asset.name}`}
+          deleteLabel={`Delete ${asset.name}`}
+        />
       }
     />
   );

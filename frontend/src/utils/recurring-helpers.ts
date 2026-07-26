@@ -1,9 +1,5 @@
 import { RecurringExpense } from '@/types/RecurringExpense';
-import {
-  MoneyAmount,
-  formatMoneyLong,
-  formatMoneyValue,
-} from '@/utils/money';
+import { MoneyAmount, formatMoneyLong } from '@/utils/money';
 
 export function getCurrentPeriodKey(
   frequency: 'weekly' | 'monthly' | 'yearly' | 'as_needed',
@@ -78,17 +74,6 @@ export function getRecurringAmount(re: RecurringExpense): MoneyAmount {
 /** Long form (`₱2,000 - ₱6,000`) for dialogs and forms. */
 export function getAmountDisplay(re: RecurringExpense): string {
   return formatMoneyLong(getRecurringAmount(re));
-}
-
-/**
- * Amount without the currency symbol, ranges collapsed to a single en dash
- * (`2,000–6,000`).
- *
- * @deprecated Render `<Money amount={getRecurringAmount(re)} />` instead — it
- * styles the glyph for you. Kept so the string form stays available.
- */
-export function getAmountValueDisplay(re: RecurringExpense): string {
-  return formatMoneyValue(getRecurringAmount(re));
 }
 
 export function getFrequencyLabel(frequency: string): string {

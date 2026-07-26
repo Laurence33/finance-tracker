@@ -30,7 +30,6 @@ export type LedgerGroupCardProps = {
    * other than a count. The caller owns its typography — the node is rendered
    * as given, so it may be a `Typography` or a `Money` of its own.
    */
-  countLabel?: ReactNode;
   /**
    * Position in the list of groups; drives the entrance stagger (70ms each).
    * @default 0
@@ -51,7 +50,6 @@ export type LedgerGroupCardProps = {
 export default function LedgerGroupCard({
   label,
   count,
-  countLabel,
   index = 0,
   children,
   sx,
@@ -97,19 +95,18 @@ export default function LedgerGroupCard({
         >
           {label}
         </Typography>
-        {countLabel ??
-          (countText === null ? null : (
-            <Typography
-              sx={{
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                color: 'text.secondary',
-              }}
-            >
-              {countText}
-            </Typography>
-          ))}
+        {countText === null ? null : (
+          <Typography
+            sx={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              color: 'text.secondary',
+            }}
+          >
+            {countText}
+          </Typography>
+        )}
       </Stack>
 
       <Stack divider={<Divider />}>{children}</Stack>
