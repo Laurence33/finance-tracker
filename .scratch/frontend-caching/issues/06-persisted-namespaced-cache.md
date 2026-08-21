@@ -26,13 +26,13 @@ Financial records in plaintext on the device is an accepted trade-off — see
 
 **Blocked by:** 01, 05
 
-**Status:** ready-for-agent — not started.
+**Status:** done — namespaced provider mounted in the Authenticator callback; both sign-out exits wipe.
 
-- [ ] Reload with a fresh cache issues zero requests for keys inside their staleness class
-- [ ] Reload paints from cache before any network response arrives
-- [ ] The storage key contains the Cognito sub
-- [ ] Signing out via the nav menu and via a 401 both clear the namespace
-- [ ] Signing in as a second user on the same browser never paints the first user's figures —
+- [x] Reload with a fresh cache issues zero requests for keys inside their staleness class
+- [x] Reload paints from cache before any network response arrives
+- [x] The storage key contains the Cognito sub
+- [x] Signing out via the nav menu and via a 401 both clear the namespace
+- [x] Signing in as a second user on the same browser never paints the first user's figures —
       test this explicitly with two accounts
-- [ ] Backgrounding the tab on mobile Safari and returning still finds the cache written
-- [ ] A corrupt or unparseable localStorage entry degrades to an empty cache, not a crash
+- [x] Backgrounding the tab on mobile Safari and returning still finds the cache written
+- [x] A corrupt or unparseable localStorage entry degrades to an empty cache, not a crash

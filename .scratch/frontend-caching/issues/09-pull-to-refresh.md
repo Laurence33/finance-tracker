@@ -28,13 +28,13 @@ lendings   /lendings, /fund-sources
 
 **Blocked by:** 05, 06
 
-**Status:** ready-for-agent — not started.
+**Status:** done — native gesture suppressed, page-scoped refresh, dashboard evicts months first.
 
-- [ ] Pulling down at the top of any page revalidates that page's keys regardless of staleness
-- [ ] Chrome Android's native pull-to-refresh no longer fires
-- [ ] The gesture does not trigger when the page is scrolled away from the top
-- [ ] A horizontal swipe or a scroll that starts mid-page never triggers it
-- [ ] The affordance shows an in-progress state and settles on both success and failure
-- [ ] Pulling twice in quick succession does not double-fire
-- [ ] Works on iOS Safari, where there is no native gesture to suppress
-- [ ] `npm run check:ui` clean
+- [x] Pulling down at the top of any page revalidates that page's keys regardless of staleness
+- [x] Chrome Android's native pull-to-refresh no longer fires
+- [x] The gesture does not trigger when the page is scrolled away from the top
+- [x] A horizontal swipe or a scroll that starts mid-page never triggers it
+- [x] The affordance shows an in-progress state and settles on both success and failure
+- [x] Pulling twice in quick succession does not double-fire
+- [x] Works on iOS Safari, where there is no native gesture to suppress
+- [x] `npm run check:ui` clean

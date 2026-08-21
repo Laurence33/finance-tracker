@@ -21,12 +21,12 @@ recurring expense costs nothing.
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent — not started.
+**Status:** done — all four sites on SWR keys; dashboard uses one aggregate key that shares per-month keys.
 
-- [ ] No `HttpClient.get` call remains outside the SWR fetcher — all 16 GET sites are keys
-- [ ] Loading the dashboard on a month `AppContext` already fetched issues no request for it
-- [ ] Loading the home page after the dashboard issues no request for the selected month
-- [ ] Per-month keys written by the dashboard fetcher are indistinguishable from ones `AppContext`
+- [x] No `HttpClient.get` call remains outside the SWR fetcher — all 16 GET sites are keys
+- [x] Loading the dashboard on a month `AppContext` already fetched issues no request for it
+- [x] Loading the home page after the dashboard issues no request for the selected month
+- [x] Per-month keys written by the dashboard fetcher are indistinguishable from ones `AppContext`
       wrote — same key string, same value shape
-- [ ] Reopening the same lending detail dialog issues no second request
-- [ ] The forecast page reuses the current month's income from cache rather than refetching
+- [x] Reopening the same lending detail dialog issues no second request
+- [x] The forecast page reuses the current month's income from cache rather than refetching

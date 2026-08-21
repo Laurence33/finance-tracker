@@ -31,11 +31,11 @@ Config that is not negotiable, and why:
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent — not started.
+**Status:** done — facade landed; fetchX later removed by 08 once every consumer had moved.
 
-- [ ] `AppContext`'s exported interface is unchanged — no consumer component is edited
-- [ ] All ten fetches go through `useSWR`; no `HttpClient.get` call remains in `AppContext`
-- [ ] Each key's staleness class is declared in one table, not scattered across call sites
-- [ ] Changing `selectedMonth` and changing back issues no second request within the class lifetime
-- [ ] A GET failure still raises the error snackbar it does today
-- [ ] `npm run check:ui`, `npx tsc --noEmit` and `npm run build` clean
+- [x] `AppContext`'s exported interface is unchanged — no consumer component is edited
+- [x] All ten fetches go through `useSWR`; no `HttpClient.get` call remains in `AppContext`
+- [x] Each key's staleness class is declared in one table, not scattered across call sites
+- [x] Changing `selectedMonth` and changing back issues no second request within the class lifetime
+- [x] A GET failure still raises the error snackbar it does today
+- [x] `npm run check:ui`, `npx tsc --noEmit` and `npm run build` clean

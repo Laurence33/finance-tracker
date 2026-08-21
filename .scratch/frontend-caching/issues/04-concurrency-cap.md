@@ -26,12 +26,12 @@ makes every form in the app feel broken.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent — not started.
+**Status:** done — semaphore in the axios request interceptor; skipApiKey bypasses it.
 
-- [ ] No more than 4 GETs are in flight at once, app-wide
-- [ ] POST, PATCH, PUT and DELETE bypass the cap entirely
-- [ ] Requests flagged `skipApiKey` bypass the cap, so the `/me/api-key` bootstrap cannot deadlock
+- [x] No more than 4 GETs are in flight at once, app-wide
+- [x] POST, PATCH, PUT and DELETE bypass the cap entirely
+- [x] Requests flagged `skipApiKey` bypass the cap, so the `/me/api-key` bootstrap cannot deadlock
       behind four GETs that are each waiting on it
-- [ ] A YTD dashboard load completes with zero 429s
-- [ ] Retries issued by the response interceptor pass through the cap — verify by saturating it and
+- [x] A YTD dashboard load completes with zero 429s
+- [x] Retries issued by the response interceptor pass through the cap — verify by saturating it and
       confirming a retry waits rather than jumping the queue

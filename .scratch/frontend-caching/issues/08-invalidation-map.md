@@ -35,11 +35,11 @@ rather than through `ExpensesService.create`, so those expenses carry no Bucket 
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent — not started.
+**Status:** done — one function per mutation kind, 13 tests; all 36 scattered calls removed.
 
-- [ ] The map lives in one place; no component names a cache key directly
-- [ ] Adding an expense on the dashboard updates that month and
+- [x] The map lives in one place; no component names a cache key directly
+- [x] Adding an expense on the dashboard updates that month and
       evicts the rest without fetching them — verify exactly one request is issued, not 16
-- [ ] After eviction, revisiting the dashboard refetches the evicted months and nothing else
-- [ ] Every row of the table above has a test or a manual verification note
-- [ ] An expense dated outside `selectedMonth` still invalidates the month it actually belongs to
+- [x] After eviction, revisiting the dashboard refetches the evicted months and nothing else
+- [x] Every row of the table above has a test or a manual verification note
+- [x] An expense dated outside `selectedMonth` still invalidates the month it actually belongs to

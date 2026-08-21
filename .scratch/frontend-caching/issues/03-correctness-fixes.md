@@ -34,11 +34,11 @@ fetched expenses twice on every load.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent — not started.
+**Status:** done — both delete paths, the dashboard .catch, and the duplicate home-page fetch.
 
-- [ ] A failed month request leaves the dashboard in a visible error state, never a silent empty one
-- [ ] No unhandled rejection reaches the console when a dashboard request fails
-- [ ] Deleting an expense with a Bucket updates the budget screen without a manual reload
-- [ ] Deleting an income with allocations updates the budget screen without a manual reload
-- [ ] The home page issues one `/expenses?month=` request per load, not two
-- [ ] `npm run check:ui`, `npx tsc --noEmit` and `npm run build` clean
+- [x] A failed month request leaves the dashboard in a visible error state, never a silent empty one
+- [x] No unhandled rejection reaches the console when a dashboard request fails
+- [x] Deleting an expense with a Bucket updates the budget screen without a manual reload
+- [x] Deleting an income with allocations updates the budget screen without a manual reload
+- [x] The home page issues one `/expenses?month=` request per load, not two
+- [x] `npm run check:ui`, `npx tsc --noEmit` and `npm run build` clean
