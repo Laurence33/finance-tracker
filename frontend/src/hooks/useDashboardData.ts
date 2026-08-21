@@ -19,6 +19,7 @@ async function fetchMonth(month: string): Promise<MonthBundle> {
 
 export type DashboardData = {
   loading: boolean;
+  error: string | null;
   currentExpenses: Expense[];
   currentIncomes: Income[];
   previousExpenses: Expense[];
@@ -26,19 +27,23 @@ export type DashboardData = {
   currentMonths: string[];
 };
 
+const EMPTY = {
+  currentExpenses: [],
+  currentIncomes: [],
+  previousExpenses: [],
+  previousIncomes: [],
+  currentMonths: [],
+};
+
 export function useDashboardData(range: DashboardRange): DashboardData {
-  const [data, setData] = useState<Omit<DashboardData, 'loading'>>({
-    currentExpenses: [],
-    currentIncomes: [],
-    previousExpenses: [],
-    previousIncomes: [],
-    currentMonths: [],
-  });
+  const [data, setData] = useState<Omit<DashboardData, 'loading' | 'error'>>(EMPTY);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
     const { current, previous } = getRangeMonths(range);
     const allMonths = [...previous, ...current];
 
@@ -55,6 +60,18 @@ export function useDashboardData(range: DashboardRange): DashboardData {
           currentMonths: current,
         });
       })
+      // Without this the rejection was unhandled and the screen rendered a
+      // dashboard of zeros: `loading` flips false either way, so a partial
+      // failure was indistinguishable from a month with no activity.
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setData(EMPTY);
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Could not load dashboard data.',
+        );
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -64,5 +81,5 @@ export function useDashboardData(range: DashboardRange): DashboardData {
     };
   }, [range]);
 
-  return { ...data, loading };
+  return { ...data, loading, error };
 }

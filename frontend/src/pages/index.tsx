@@ -1,4 +1,4 @@
-import React, { useEffect, use, useMemo, useState } from 'react';
+import React, { use, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -116,7 +116,6 @@ export default function ExpensesPage() {
   const {
     expenses,
     incomes,
-    fetchExpenses,
     setExpenseFormOpen,
     setFormAction,
     totalExpenses,
@@ -136,11 +135,6 @@ export default function ExpensesPage() {
       return next;
     });
   };
-
-  useEffect(() => {
-    fetchExpenses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const addExpenseClickHandler = () => {
     setExpenseFormOpen(true);

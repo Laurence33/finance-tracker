@@ -1,5 +1,6 @@
 import { use, useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
   Card,
   CardContent,
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const [range, setRange] = useState<DashboardRange>('1M');
   const {
     loading,
+    error,
     currentExpenses,
     currentIncomes,
     previousExpenses,
@@ -129,6 +131,12 @@ export default function DashboardPage() {
       />
 
       <DashboardTimeRangeSelector range={range} onChange={setRange} />
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2.5 }}>
+          {error}
+        </Alert>
+      )}
 
       <Box
         sx={{

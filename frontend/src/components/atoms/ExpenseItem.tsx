@@ -26,6 +26,8 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
   const {
     fetchExpenses,
     fetchFundSources,
+    fetchBudget,
+    budgetEnabled,
     showSuccessSnackBar,
     showErrorSnackBar,
     setSelectedExpense,
@@ -53,6 +55,8 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
       showSuccessSnackBar('Expense deleted successfully');
       fetchExpenses();
       fetchFundSources();
+      // The delete refunds the expense's bucket, so the budget is stale too.
+      if (budgetEnabled) fetchBudget();
     } catch (error: any) {
       console.error('Error deleting expense:', error);
       showErrorSnackBar(error.message);

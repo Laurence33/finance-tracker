@@ -25,6 +25,8 @@ export default function IncomeItem({ income }: { income: Income }) {
   const {
     fetchIncomes,
     fetchFundSources,
+    fetchBudget,
+    budgetEnabled,
     showSuccessSnackBar,
     showErrorSnackBar,
     setSelectedIncome,
@@ -40,6 +42,8 @@ export default function IncomeItem({ income }: { income: Income }) {
       showSuccessSnackBar('Income deleted successfully');
       fetchIncomes();
       fetchFundSources();
+      // The delete unwinds this income's bucket allocations, so the budget is stale too.
+      if (budgetEnabled) fetchBudget();
     } catch (error: any) {
       console.error('Error deleting income:', error);
       showErrorSnackBar(error.message);
