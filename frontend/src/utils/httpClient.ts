@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 import { createRequestQueue } from './requestQueue';
+import { clearAllCacheNamespaces } from './swr-cache';
 
 const MAX_RETRIES = 3;
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
@@ -158,6 +159,7 @@ function handleHttpException(error: any): void {
     }
     if (error.response.status === 401) {
       resetApiKey();
+      clearAllCacheNamespaces();
       signOut().catch(() => {});
       throw new HttpError('Session expired. Please sign in again.');
     }

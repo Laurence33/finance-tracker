@@ -9,15 +9,17 @@ import { SnackBarState } from '@/types/SnackBarState';
 import { Tags } from '@/types/Tags';
 import { Transfer } from '@/types/Transfer';
 import { HttpClient } from '@/utils/httpClient';
+import { KEYS } from '@/utils/swr-keys';
+import { buildInvalidators, Invalidators } from '@/utils/invalidation';
 import { TZDate } from '@date-fns/tz';
 import { Alert, Snackbar } from '@mui/material';
 import { format } from 'date-fns';
-import { createContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useMemo, useRef, useState } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 
 interface AppContextType {
   expenses: Expense[];
   totalExpenses: number;
-  setTotalExpenses: (total: number) => void;
   selectedExpense: Expense | null;
   setSelectedExpense: (expense: Expense | null) => void;
   fetchExpenses: () => Promise<void>;
@@ -32,12 +34,10 @@ interface AppContextType {
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
   fundSources: FundSource[];
-  setFundSources: (fundSources: FundSource[]) => void;
   fetchFundSources: () => Promise<void>;
   transfers: Transfer[];
   fetchTransfers: () => Promise<void>;
   tags: Tags[];
-  setTags: (tags: Tags[]) => void;
   fetchTags: () => Promise<void>;
   incomes: Income[];
   totalIncome: number;
@@ -60,20 +60,38 @@ interface AppContextType {
   buckets: Bucket[];
   fetchBudget: () => Promise<void>;
   frameworks: FrameworkDefinition[];
+  /**
+   * What each mutation makes stale, in one place. Prefer these over calling
+   * several `fetchX` in a row: the map is derived from what the backend writes
+   * in one transaction, and getting that wrong is how both stale-budget bugs
+   * happened. See `@/utils/invalidation`.
+   */
+  invalidate: Invalidators;
 }
 
+// Stable identities, so a consumer's useMemo doesn't re-run on every render
+// while a request is still in flight.
+const NO_EXPENSES: Expense[] = [];
+const NO_INCOMES: Income[] = [];
+const NO_FUND_SOURCES: FundSource[] = [];
+const NO_TRANSFERS: Transfer[] = [];
+const NO_TAGS: Tags[] = [];
+const NO_LENDINGS: Lending[] = [];
+const NO_BORROWERS: string[] = [];
+const NO_RECURRING: RecurringExpense[] = [];
+const NO_ASSETS: Asset[] = [];
+const NO_BUCKETS: Bucket[] = [];
+const NO_FRAMEWORKS: FrameworkDefinition[] = [];
+
+const noop = async () => {};
+
 export const AppContext = createContext<AppContextType>({
-  expenses: [],
+  expenses: NO_EXPENSES,
   totalExpenses: 0,
-  setTotalExpenses: () => {},
   selectedExpense: null,
   setSelectedExpense: () => {},
-  fetchExpenses: async () => {},
-  snackBarState: {
-    open: false,
-    message: '',
-    severity: 'success',
-  },
+  fetchExpenses: noop,
+  snackBarState: { open: false, message: '', severity: 'success' },
   showSuccessSnackBar: () => {},
   showErrorSnackBar: () => {},
   handleSnackBarClose: () => {},
@@ -83,252 +101,152 @@ export const AppContext = createContext<AppContextType>({
   setExpenseFormOpen: () => {},
   selectedMonth: format(TZDate.tz('asia/singapore'), 'yyyy-MM'),
   setSelectedMonth: () => {},
-  fundSources: [],
-  setFundSources: () => {},
-  fetchFundSources: async () => {},
-  transfers: [],
-  fetchTransfers: async () => {},
-  tags: [],
-  setTags: () => {},
-  fetchTags: async () => {},
-  incomes: [],
+  fundSources: NO_FUND_SOURCES,
+  fetchFundSources: noop,
+  transfers: NO_TRANSFERS,
+  fetchTransfers: noop,
+  tags: NO_TAGS,
+  fetchTags: noop,
+  incomes: NO_INCOMES,
   totalIncome: 0,
   selectedIncome: null,
   setSelectedIncome: () => {},
-  fetchIncomes: async () => {},
+  fetchIncomes: noop,
   incomeFormOpen: false,
   setIncomeFormOpen: () => {},
   incomeFormAction: 'create',
   setIncomeFormAction: () => {},
-  lendings: [],
-  borrowers: [],
-  fetchLendings: async () => {},
-  recurringExpenses: [],
-  fetchRecurringExpenses: async () => {},
-  assets: [],
-  fetchAssets: async () => {},
+  lendings: NO_LENDINGS,
+  borrowers: NO_BORROWERS,
+  fetchLendings: noop,
+  recurringExpenses: NO_RECURRING,
+  fetchRecurringExpenses: noop,
+  assets: NO_ASSETS,
+  fetchAssets: noop,
   budgetEnabled: false,
   budgetFramework: null,
-  buckets: [],
-  fetchBudget: async () => {},
-  frameworks: [],
+  buckets: NO_BUCKETS,
+  fetchBudget: noop,
+  frameworks: NO_FRAMEWORKS,
+  invalidate: {} as Invalidators,
 });
+
+export const swrFetcher = (url: string) => HttpClient.get<any>(url);
 
 export default function AppContextProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [totalExpenses, setTotalExpenses] = useState<number>(0);
+  const { mutate } = useSWRConfig();
+
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formAction, setFormAction] = useState<'create' | 'update'>('create');
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>(
     format(TZDate.tz('asia/singapore'), 'yyyy-MM')
   );
-  const [fundSources, setFundSources] = useState<FundSource[]>([]);
-  const [transfers, setTransfers] = useState<Transfer[]>([]);
-  const [tags, setTags] = useState<Tags[]>([]);
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [totalIncome, setTotalIncome] = useState<number>(0);
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
   const [incomeFormOpen, setIncomeFormOpen] = useState(false);
   const [incomeFormAction, setIncomeFormAction] = useState<'create' | 'update'>(
     'create'
   );
-  const [lendings, setLendings] = useState<Lending[]>([]);
-  const [borrowers, setBorrowers] = useState<string[]>([]);
-  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [budgetEnabled, setBudgetEnabled] = useState<boolean>(false);
-  const [budgetFramework, setBudgetFramework] = useState<FrameworkMeta | null>(null);
-  const [buckets, setBuckets] = useState<Bucket[]>([]);
-  const [frameworks, setFrameworks] = useState<FrameworkDefinition[]>([]);
-
   const [snackBarState, setSnackBarState] = useState<SnackBarState>({
     open: false,
     message: '',
     severity: 'success',
   });
 
-  useEffect(() => {
-    fetchFundSources();
-    fetchTransfers();
-    fetchTags();
-    fetchLendings();
-    fetchRecurringExpenses();
-    fetchAssets();
-    fetchBudget();
-    fetchFrameworks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const showSuccessSnackBar = useCallback((message: string) => {
+    setSnackBarState({ open: true, message, severity: 'success' });
   }, []);
 
-  useEffect(() => {
-    fetchExpenses();
-    fetchIncomes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMonth]);
+  const showErrorSnackBar = useCallback((message: string) => {
+    setSnackBarState({ open: true, message, severity: 'error' });
+  }, []);
 
-  async function fetchFundSources() {
-    try {
-      const response = await HttpClient.get<any>('/fund-sources');
-      if (response && response.data) {
-        setFundSources(response.data.fundSources || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching expenses:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  const handleSnackBarClose = useCallback(() => {
+    setSnackBarState((prev) => ({ ...prev, open: false }));
+  }, []);
 
-  async function fetchExpenses() {
-    try {
-      const response = await HttpClient.get<any>(
-        '/expenses?month=' + selectedMonth
-      );
-      if (response && response.data) {
-        setExpenses(response.data.expenses || []);
-        setTotalExpenses(response.data.totalExpenses || 0);
-      }
-    } catch (error: any) {
-      console.error('Error fetching expenses:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  const onError = useCallback(
+    (error: Error) => showErrorSnackBar(error.message),
+    [showErrorSnackBar]
+  );
+  const swrOptions = useMemo(() => ({ onError }), [onError]);
 
-  async function fetchTransfers() {
-    try {
-      const response = await HttpClient.get<any>('/transfers');
-      if (response && response.data) {
-        setTransfers(response.data.transfers || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching transfers:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  const expensesKey = KEYS.expenses(selectedMonth);
+  const incomesKey = KEYS.incomes(selectedMonth);
 
-  async function fetchTags() {
-    try {
-      const response = await HttpClient.get<any>('/tags');
-      if (response && response.data) {
-        setTags(response.data.tags || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching tags:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  const { data: expensesRes } = useSWR(expensesKey, swrFetcher, swrOptions);
+  const { data: incomesRes } = useSWR(incomesKey, swrFetcher, swrOptions);
+  const { data: fundSourcesRes } = useSWR(KEYS.fundSources, swrFetcher, swrOptions);
+  const { data: transfersRes } = useSWR(KEYS.transfers, swrFetcher, swrOptions);
+  const { data: tagsRes } = useSWR(KEYS.tags, swrFetcher, swrOptions);
+  const { data: lendingsRes } = useSWR(KEYS.lendings, swrFetcher, swrOptions);
+  const { data: recurringRes } = useSWR(KEYS.recurringExpenses, swrFetcher, swrOptions);
+  const { data: assetsRes } = useSWR(KEYS.assets, swrFetcher, swrOptions);
+  const { data: budgetRes } = useSWR(KEYS.budget, swrFetcher, swrOptions);
+  const { data: frameworksRes } = useSWR(KEYS.frameworks, swrFetcher, swrOptions);
 
-  async function fetchIncomes() {
-    try {
-      const response = await HttpClient.get<any>(
-        '/incomes?month=' + selectedMonth
-      );
-      if (response && response.data) {
-        setIncomes(response.data.incomes || []);
-        setTotalIncome(response.data.totalIncome || 0);
-      }
-    } catch (error: any) {
-      console.error('Error fetching incomes:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  const expenses = expensesRes?.data?.expenses ?? NO_EXPENSES;
+  const totalExpenses = expensesRes?.data?.totalExpenses ?? 0;
+  const incomes = incomesRes?.data?.incomes ?? NO_INCOMES;
+  const totalIncome = incomesRes?.data?.totalIncome ?? 0;
+  const fundSources = fundSourcesRes?.data?.fundSources ?? NO_FUND_SOURCES;
+  const transfers = transfersRes?.data?.transfers ?? NO_TRANSFERS;
+  const tags = tagsRes?.data?.tags ?? NO_TAGS;
+  const lendings = lendingsRes?.data?.lendings ?? NO_LENDINGS;
+  const borrowers = lendingsRes?.data?.borrowers ?? NO_BORROWERS;
+  const recurringExpenses = recurringRes?.data?.recurringExpenses ?? NO_RECURRING;
+  const assets = assetsRes?.data?.assets ?? NO_ASSETS;
+  const budgetEnabled = budgetRes?.data?.config?.enabled ?? false;
+  const budgetFramework = budgetRes?.data?.framework ?? null;
+  const buckets = budgetRes?.data?.buckets ?? NO_BUCKETS;
+  const frameworks = frameworksRes?.data?.frameworks ?? NO_FRAMEWORKS;
 
-  async function fetchLendings() {
-    try {
-      const response = await HttpClient.get<any>('/lendings');
-      if (response && response.data) {
-        setLendings(response.data.lendings || []);
-        setBorrowers(response.data.borrowers || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching lendings:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  // Read through a ref so the invalidators stay referentially stable across
+  // month changes while still targeting the month the user is looking at.
+  const monthRef = useRef(selectedMonth);
+  monthRef.current = selectedMonth;
+  const invalidate = useMemo(
+    () => buildInvalidators(mutate, () => monthRef.current),
+    [mutate]
+  );
 
-  async function fetchRecurringExpenses() {
-    try {
-      const response = await HttpClient.get<any>('/recurring-expenses');
-      if (response && response.data) {
-        setRecurringExpenses(response.data.recurringExpenses || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching recurring expenses:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
+  // The `fetchX` names predate SWR and are kept so no consumer had to change.
+  // Each is now "this key is stale, go get it".
+  const revalidate = useCallback(
+    async (key: string) => {
+      await mutate(key);
+    },
+    [mutate]
+  );
+  const fetchExpenses = useCallback(
+    () => revalidate(KEYS.expenses(monthRef.current)),
+    [revalidate]
+  );
+  const fetchIncomes = useCallback(
+    () => revalidate(KEYS.incomes(monthRef.current)),
+    [revalidate]
+  );
+  const fetchFundSources = useCallback(() => revalidate(KEYS.fundSources), [revalidate]);
+  const fetchTransfers = useCallback(() => revalidate(KEYS.transfers), [revalidate]);
+  const fetchTags = useCallback(() => revalidate(KEYS.tags), [revalidate]);
+  const fetchLendings = useCallback(() => revalidate(KEYS.lendings), [revalidate]);
+  const fetchRecurringExpenses = useCallback(
+    () => revalidate(KEYS.recurringExpenses),
+    [revalidate]
+  );
+  const fetchAssets = useCallback(() => revalidate(KEYS.assets), [revalidate]);
+  const fetchBudget = useCallback(() => revalidate(KEYS.budget), [revalidate]);
 
-  async function fetchAssets() {
-    try {
-      const response = await HttpClient.get<any>('/assets');
-      if (response && response.data) {
-        setAssets(response.data.assets || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching assets:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
-
-  async function fetchBudget() {
-    try {
-      const response = await HttpClient.get<any>('/budget');
-      if (response && response.data) {
-        setBudgetEnabled(response.data.config?.enabled ?? false);
-        setBudgetFramework(response.data.framework ?? null);
-        setBuckets(response.data.buckets ?? []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching budget:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
-
-  async function fetchFrameworks() {
-    try {
-      const response = await HttpClient.get<any>('/budget/frameworks');
-      if (response && response.data) {
-        setFrameworks(response.data.frameworks || []);
-      }
-    } catch (error: any) {
-      console.error('Error fetching frameworks:', error);
-      showErrorSnackBar(error.message);
-    }
-  }
-
-  function showSuccessSnackBar(message: string) {
-    setSnackBarState((prevState) => ({
-      ...prevState,
-      open: true,
-      message: message,
-      severity: 'success',
-    }));
-  }
-
-  function showErrorSnackBar(message: string) {
-    setSnackBarState((prevState) => ({
-      ...prevState,
-      open: true,
-      message: message,
-      severity: 'error',
-    }));
-  }
-
-  const handleSnackBarClose = () => {
-    setSnackBarState({ ...snackBarState, open: false });
-  };
-
-  const contextValue = {
+  const contextValue: AppContextType = {
     expenses,
     totalExpenses,
-    setTotalExpenses,
     selectedExpense,
     setSelectedExpense,
     fundSources,
-    setFundSources,
     fetchFundSources,
     transfers,
     fetchTransfers,
@@ -344,7 +262,6 @@ export default function AppContextProvider({
     selectedMonth,
     setSelectedMonth,
     tags,
-    setTags,
     fetchTags,
     incomes,
     totalIncome,
@@ -367,6 +284,7 @@ export default function AppContextProvider({
     buckets,
     fetchBudget,
     frameworks,
+    invalidate,
   };
 
   return (
@@ -378,7 +296,6 @@ export default function AppContextProvider({
         }}
         open={snackBarState.open}
         onClose={handleSnackBarClose}
-        // message={snackBarState.message}
         autoHideDuration={5000}
       >
         <Alert

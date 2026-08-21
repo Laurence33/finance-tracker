@@ -29,6 +29,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import SavingsIcon from '@mui/icons-material/Savings';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { signOut } from 'aws-amplify/auth';
+import { clearAllCacheNamespaces } from '@/utils/swr-cache';
 import { resetApiKey } from '@/utils/httpClient';
 
 const bottomNavItems = [
@@ -88,6 +89,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <IconButton
             onClick={() => {
               resetApiKey();
+              clearAllCacheNamespaces();
               signOut();
             }}
             sx={{ color: 'text.primary' }}

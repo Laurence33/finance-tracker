@@ -52,10 +52,24 @@ export function cacheNamespaceFor(userId: string): string {
   return `ft-cache:${userId}`;
 }
 
-/** Clears one user's persisted cache. Safe to call when nothing is stored. */
-export function clearCacheNamespace(namespace: string): void {
+export const CACHE_PREFIX = 'ft-cache:';
+
+/**
+ * Wipes every persisted cache on this device, not just the signed-in user's.
+ *
+ * Sign-out is the one moment we can be sure nobody is mid-session, and clearing
+ * by prefix means a namespace orphaned by an interrupted sign-out doesn't sit on
+ * the device forever. The namespace is still what *guarantees* one user cannot
+ * read another's entries; this is hygiene on top of it.
+ */
+export function clearAllCacheNamespaces(): void {
   try {
-    window.localStorage.removeItem(namespace);
+    const doomed: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith(CACHE_PREFIX)) doomed.push(key);
+    }
+    doomed.forEach((key) => window.localStorage.removeItem(key));
   } catch {
     // Storage unavailable (private mode, quota) — nothing to clear.
   }

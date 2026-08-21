@@ -169,3 +169,23 @@ describe('cache namespace', () => {
     await waitFor(() => expect(screen.getByTestId('out')).toHaveTextContent('recovered'));
   });
 });
+
+describe('clearAllCacheNamespaces', () => {
+  it('removes every user namespace, not just the current one', async () => {
+    const { clearAllCacheNamespaces } = await import('./swr-cache');
+    localStorage.setItem(cacheNamespaceFor('user-abc'), '{}');
+    localStorage.setItem(cacheNamespaceFor('user-def'), '{}');
+    localStorage.setItem('unrelated-app-key', 'keep me');
+
+    clearAllCacheNamespaces();
+
+    expect(localStorage.getItem(cacheNamespaceFor('user-abc'))).toBeNull();
+    expect(localStorage.getItem(cacheNamespaceFor('user-def'))).toBeNull();
+    expect(localStorage.getItem('unrelated-app-key')).toBe('keep me');
+  });
+
+  it('is safe when nothing is stored', async () => {
+    const { clearAllCacheNamespaces } = await import('./swr-cache');
+    expect(() => clearAllCacheNamespaces()).not.toThrow();
+  });
+});
