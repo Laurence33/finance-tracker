@@ -24,7 +24,6 @@ import { transactionTime } from '@/utils/transaction-display';
  */
 export default function ExpenseItem({ expense }: { expense: Expense }) {
   const {
-    budgetEnabled,
     showSuccessSnackBar,
     showErrorSnackBar,
     setSelectedExpense,

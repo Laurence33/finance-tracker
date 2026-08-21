@@ -46,6 +46,23 @@ describe('page-scoped refresh', () => {
     }
   });
 
+  it('budget refreshes the balances it displays alongside the buckets', async () => {
+    const h = harness('/budget');
+    await h.run();
+    expect(h.revalidated).toEqual([KEYS.budget, KEYS.fundSources]);
+  });
+
+  it('forecast refreshes three months, not every cached one', async () => {
+    const h = harness('/forecast');
+    await h.run();
+    expect(h.revalidated).toContain(KEYS.incomes('2026-08'));
+    expect(h.revalidated).toContain(KEYS.incomes('2026-07'));
+    expect(h.revalidated).toContain(KEYS.incomes('2026-06'));
+    expect(h.revalidated).not.toContain(KEYS.incomes('2026-01'));
+    // A prefix match would have swept in every cached month.
+    expect(h.refetchedByFilter(KEYS.incomes('2026-01'))).toBe(false);
+  });
+
   it('an unknown route refreshes nothing rather than guessing', async () => {
     const h = harness('/some/new/page');
     await h.run();

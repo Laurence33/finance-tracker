@@ -44,11 +44,18 @@ mobile — not by savings.
 - **Financial records sit in plaintext on the device.** Accepted knowingly. The mitigation is
   the cache namespace (keyed by Cognito sub, so one user cannot read another's entries) plus a
   wipe on every sign-out path. The namespace is the guarantee; the wipe is hygiene.
+  A wipe is only as good as its teardown: the provider registers `pagehide` and `visibilitychange`
+  listeners that close over the in-memory map, so clearing storage without disposing them lets the
+  next `pagehide` write the data straight back. `clearAllCacheNamespaces` disposes every live
+  provider before it touches storage.
 - **`no-store` goes on GET responses only.** `createSuccessResponse` is shared with the OPTIONS
   branch of every handler, and landing the header there would undermine the `Access-Control-Max-Age`
   that halves the app's request count.
-- **`AppContext` stays as a facade.** Its public shape is unchanged and its 26 consumers and 36
-  `fetchX()` call sites are untouched; each field is backed by `useSWR` internally. This keeps the
-  blast radius small at the cost of a context that is now a cache in disguise.
+- **`AppContext` became a facade, then shed its old surface.** Each field is backed by `useSWR`
+  internally, which is what kept the migration's blast radius small — its 26 consumers read the same
+  property names as before. The nine `fetchX()` functions were kept through that step so no consumer
+  had to change at once, and removed once all 36 call sites had moved to the invalidation map.
+  Leaving both would have meant two ways to decide what a write makes stale — exactly the drift that
+  produced the stale-budget bugs. `invalidate` is the one addition to the context's public shape.
 - **SWR's error retries are pinned off.** `httpClient` already retries 3× with backoff; SWR's
   default is unlimited, and the two would compound.

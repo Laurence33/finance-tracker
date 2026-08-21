@@ -23,7 +23,6 @@ import { transactionTime } from '@/utils/transaction-display';
  */
 export default function IncomeItem({ income }: { income: Income }) {
   const {
-    budgetEnabled,
     showSuccessSnackBar,
     showErrorSnackBar,
     setSelectedIncome,

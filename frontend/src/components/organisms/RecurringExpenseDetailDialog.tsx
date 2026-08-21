@@ -15,8 +15,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { RecurringExpense, RecurringExpensePayment } from '@/types/RecurringExpense';
-
-const EMPTY_PAYMENTS: RecurringExpensePayment[] = [];
 import useSWR from 'swr';
 import { swrFetcher } from '@/utils/httpClient';
 import { KEYS } from '@/utils/swr-keys';
@@ -27,6 +25,8 @@ import {
   getPeriodLabel,
 } from '@/utils/recurring-helpers';
 import RecurringPaymentsList from '../molecules/RecurringPaymentsList';
+
+const EMPTY_PAYMENTS: RecurringExpensePayment[] = [];
 
 export default function RecurringExpenseDetailDialog({
   open,

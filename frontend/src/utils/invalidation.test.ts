@@ -10,11 +10,12 @@ import { KEYS } from './swr-keys';
 function harness(month = '2026-08') {
   const revalidated: string[] = [];
   const evictors: Array<(key: string) => boolean> = [];
+  const refetchFilters: Array<(key: string) => boolean> = [];
 
   const mutate = vi.fn((target: any, _data?: any, opts?: any) => {
     if (typeof target === 'function') {
-      expect(opts).toMatchObject({ revalidate: false });
-      evictors.push(target);
+      if (opts?.revalidate === false) evictors.push(target);
+      else refetchFilters.push(target);
     } else {
       revalidated.push(target);
     }
@@ -25,6 +26,7 @@ function harness(month = '2026-08') {
     invalidators: buildInvalidators(mutate as any, () => month),
     revalidated,
     evicted: (key: string) => evictors.some((f) => f(key)),
+    refetchedByFilter: (key: string) => refetchFilters.some((f) => f(key)),
     mutate,
   };
 }
@@ -38,22 +40,23 @@ describe('expense writes', () => {
     );
   });
 
-  it('revalidates only the affected month and evicts the rest', () => {
+  it('leaves other months alone — a write to one month cannot make another wrong', () => {
     const h = harness('2026-08');
     h.invalidators.afterExpenseWrite();
 
     expect(h.revalidated).toContain(KEYS.expenses('2026-08'));
     // 16 cached months must not become 16 requests against a 10-burst limit.
     expect(h.revalidated).not.toContain(KEYS.expenses('2026-01'));
-    expect(h.evicted(KEYS.expenses('2026-01'))).toBe(true);
-    expect(h.evicted(KEYS.expenses('2026-08'))).toBe(false);
+    expect(h.evicted(KEYS.expenses('2026-01'))).toBe(false);
   });
 
-  it('targets a month other than the selected one when given', () => {
+  it('re-derives the dashboard, which cannot see a month refresh by itself', () => {
     const h = harness('2026-08');
-    h.invalidators.afterExpenseWrite('2026-03');
-    expect(h.revalidated).toContain(KEYS.expenses('2026-03'));
-    expect(h.evicted(KEYS.expenses('2026-08'))).toBe(true);
+    h.invalidators.afterExpenseWrite();
+    // Without this a mounted dashboard holding data never revalidates, because
+    // revalidateIfStale is false — so a new expense would not show up.
+    expect(h.refetchedByFilter('dashboard:1M')).toBe(true);
+    expect(h.refetchedByFilter('dashboard:YTD')).toBe(true);
   });
 
   it('does not evict unrelated collections', () => {
@@ -76,11 +79,10 @@ describe('income writes', () => {
     );
   });
 
-  it('evicts other income months but not expense months', () => {
+  it('re-derives the dashboard too', () => {
     const h = harness('2026-08');
     h.invalidators.afterIncomeWrite();
-    expect(h.evicted(KEYS.incomes('2026-01'))).toBe(true);
-    expect(h.evicted(KEYS.expenses('2026-01'))).toBe(false);
+    expect(h.refetchedByFilter('dashboard:6M')).toBe(true);
   });
 });
 
@@ -119,6 +121,23 @@ describe('writes that only touch their own collection and balances', () => {
       expect.arrayContaining([KEYS.lendings, KEYS.fundSources]),
     );
     expect(h.revalidated).not.toContain(KEYS.budget);
+  });
+
+  // A repayment writes a LendingPayment; the detail dialog caches that per
+  // record, so without eviction it shows stale history all session.
+  it('lending drops the cached payment history', () => {
+    const h = harness();
+    h.invalidators.afterLendingWrite();
+    expect(h.evicted(KEYS.lendingPayments('2026-08-01T00:00:00Z'))).toBe(true);
+    expect(h.evicted(KEYS.lendings)).toBe(false);
+  });
+
+  it('recurring payment drops the cached payment history', () => {
+    const h = harness();
+    h.invalidators.afterRecurringPaymentWrite();
+    expect(h.evicted(KEYS.recurringPayments('Netflix'))).toBe(true);
+    // The collection key itself must survive — it is being revalidated.
+    expect(h.evicted(KEYS.recurringExpenses)).toBe(false);
   });
 
   it('asset', () => {

@@ -189,3 +189,60 @@ describe('clearAllCacheNamespaces', () => {
     expect(() => clearAllCacheNamespaces()).not.toThrow();
   });
 });
+
+describe('teardown', () => {
+  it('does not write a wiped namespace back on the next pagehide', async () => {
+    const { createCacheProvider, clearAllCacheNamespaces } = await import('./swr-cache');
+    const provider = createCacheProvider(NS);
+    const cache = provider();
+    cache.set('/tags', { data: { tags: ['secret'] } });
+
+    // Sign-out.
+    clearAllCacheNamespaces();
+    expect(localStorage.getItem(NS)).toBeNull();
+
+    // Backgrounding the tab afterwards must not resurrect it.
+    window.dispatchEvent(new Event('pagehide'));
+    expect(localStorage.getItem(NS)).toBeNull();
+  });
+
+  it('stops persisting once disposed', async () => {
+    const { createCacheProvider } = await import('./swr-cache');
+    const provider = createCacheProvider(NS);
+    const cache = provider();
+    cache.set('/tags', { data: { tags: ['a'] } });
+
+    provider.dispose();
+    window.dispatchEvent(new Event('pagehide'));
+    expect(localStorage.getItem(NS)).toBeNull();
+  });
+
+  it('still persists while live', async () => {
+    const { createCacheProvider } = await import('./swr-cache');
+    const provider = createCacheProvider(NS);
+    const cache = provider();
+    cache.set('/tags', { data: { tags: ['a'] } });
+
+    window.dispatchEvent(new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem(NS)!)['/tags'].data).toEqual({ tags: ['a'] });
+  });
+
+  it('does not accumulate listeners across identities', async () => {
+    const { createCacheProvider } = await import('./swr-cache');
+    const added = vi.spyOn(window, 'addEventListener');
+    const removed = vi.spyOn(window, 'removeEventListener');
+
+    const p1 = createCacheProvider(cacheNamespaceFor('a'));
+    p1();
+    p1.dispose();
+    const p2 = createCacheProvider(cacheNamespaceFor('b'));
+    p2();
+    p2.dispose();
+
+    const pagehideAdds = added.mock.calls.filter((c) => c[0] === 'pagehide').length;
+    const pagehideRemoves = removed.mock.calls.filter((c) => c[0] === 'pagehide').length;
+    expect(pagehideRemoves).toBe(pagehideAdds);
+    added.mockRestore();
+    removed.mockRestore();
+  });
+});

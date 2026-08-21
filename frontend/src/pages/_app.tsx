@@ -7,7 +7,7 @@ import type { AppProps } from 'next/app';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { Authenticator } from '@aws-amplify/ui-react';
 import { SWRConfig } from 'swr';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import theme from '@/theme';
 import { cacheNamespaceFor, createCacheProvider } from '@/utils/swr-cache';
 
@@ -20,8 +20,29 @@ import { cacheNamespaceFor, createCacheProvider } from '@/utils/swr-cache';
  * unpartitioned cache would paint the previous user's balances to whoever signs
  * in next on this device.
  */
-function CachedApp({ userId, children }: { userId: string; children: React.ReactNode }) {
-  const provider = useMemo(() => createCacheProvider(cacheNamespaceFor(userId)), [userId]);
+function CachedApp({
+  userId,
+  children,
+}: {
+  userId: string | undefined;
+  children: React.ReactNode;
+}) {
+  // No identity means no namespace to partition by, and a shared fallback
+  // namespace would be exactly the hole the partitioning exists to close. Fall
+  // back to an in-memory cache instead: the session still dedupes, nothing is
+  // written to the device.
+  const provider = useMemo(
+    () => (userId ? createCacheProvider(cacheNamespaceFor(userId)) : () => new Map()),
+    [userId],
+  );
+
+  // Detach the provider's persistence listeners when the identity changes, so a
+  // previous user's cache cannot be written back by a later `pagehide`.
+  useEffect(() => {
+    return () => {
+      if ('dispose' in provider) provider.dispose();
+    };
+  }, [provider]);
 
   return (
     <SWRConfig
@@ -52,7 +73,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {({ user }) => (
           // Keyed on the identity so a different user gets a fresh provider
           // rather than inheriting the previous one's hydrated cache.
-          <CachedApp key={user?.userId ?? 'anonymous'} userId={user?.userId ?? 'anonymous'}>
+          <CachedApp key={user?.userId ?? 'anonymous'} userId={user?.userId}>
             <AppContextProvider>
               <Layout>
                 <Component {...pageProps} />

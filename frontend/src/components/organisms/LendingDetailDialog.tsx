@@ -16,8 +16,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PaymentIcon from '@mui/icons-material/Payment';
 import { Lending, LendingPayment } from '@/types/Lending';
-
-const EMPTY_PAYMENTS: LendingPayment[] = [];
 import useSWR from 'swr';
 import { swrFetcher } from '@/utils/httpClient';
 import { KEYS } from '@/utils/swr-keys';
@@ -27,6 +25,8 @@ import {
 } from '@/utils/lending-helpers';
 import Money from '@/components/atoms/Money';
 import LendingPaymentsList from '../molecules/LendingPaymentsList';
+
+const EMPTY_PAYMENTS: LendingPayment[] = [];
 
 /**
  * The detail view, and the only home for this record's actions. Pay, edit and

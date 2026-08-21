@@ -1,6 +1,6 @@
 import { Box, CircularProgress } from '@mui/material';
 import { useRouter } from 'next/router';
-import { use, useCallback, useMemo } from 'react';
+import { use, useMemo } from 'react';
 import { useSWRConfig } from 'swr';
 import { AppContext } from '@/context/AppContext';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -21,11 +21,7 @@ export default function PullToRefresh() {
     [mutate, router.pathname, selectedMonth],
   );
 
-  const onRefresh = useCallback(async () => {
-    await refresh();
-  }, [refresh]);
-
-  const { distance, refreshing, armed } = usePullToRefresh({ onRefresh });
+  const { distance, refreshing, armed } = usePullToRefresh({ onRefresh: refresh });
 
   const visible = distance > 0 || refreshing;
   if (!visible) return null;

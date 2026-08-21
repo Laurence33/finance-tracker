@@ -1,5 +1,6 @@
 import type { ScopedMutator } from 'swr';
-import { EXPENSES_PREFIX, INCOMES_PREFIX, KEYS } from './swr-keys';
+import { DERIVED_PREFIX, EXPENSES_PREFIX, INCOMES_PREFIX, KEYS } from './swr-keys';
+import { format, subMonths } from 'date-fns';
 
 /**
  * What a pull-to-refresh on each screen should actually re-fetch.
@@ -18,6 +19,13 @@ export function buildPageRefresh(
   pathname: string,
   month: string,
 ): () => Promise<void> {
+  // The current month and the two before it, which the forecast averages.
+  const forecastMonths = () => {
+    const [year, m] = month.split('-').map(Number);
+    const anchor = new Date(year, m - 1, 1);
+    return [0, 1, 2].map((back) => format(subMonths(anchor, back), 'yyyy-MM'));
+  };
+
   const revalidate = (keys: string[]) => Promise.all(keys.map((key) => mutate(key)));
 
   switch (pathname) {
@@ -33,7 +41,8 @@ export function buildPageRefresh(
 
     case '/budget':
       return async () => {
-        await revalidate([KEYS.budget]);
+        // The page shows fund sources alongside the buckets.
+        await revalidate([KEYS.budget, KEYS.fundSources]);
       };
 
     case '/lendings':
@@ -68,16 +77,21 @@ export function buildPageRefresh(
           undefined,
           { revalidate: false },
         );
-        await mutate((key) => typeof key === 'string' && key.startsWith('dashboard:'));
+        await mutate((key) => typeof key === 'string' && key.startsWith(DERIVED_PREFIX));
         await revalidate([KEYS.fundSources, KEYS.recurringExpenses, KEYS.lendings]);
       };
 
     case '/forecast':
       return async () => {
-        await mutate(
-          (key) => typeof key === 'string' && key.startsWith(INCOMES_PREFIX),
-        );
-        await revalidate([KEYS.fundSources, KEYS.recurringExpenses, KEYS.lendings]);
+        // The page averages the current month and the two before it. Matching a
+        // prefix here would revalidate every cached income month — 16 of them
+        // after a dashboard visit — on a screen that shows three.
+        await revalidate([
+          ...forecastMonths().map((m) => KEYS.incomes(m)),
+          KEYS.fundSources,
+          KEYS.recurringExpenses,
+          KEYS.lendings,
+        ]);
       };
 
     default:

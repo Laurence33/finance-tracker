@@ -1,4 +1,5 @@
 import type { Cache, State } from 'swr';
+import { DERIVED_PREFIX } from './swr-keys';
 
 /**
  * How long a cached response stays usable, by data class.
@@ -55,6 +56,16 @@ export function cacheNamespaceFor(userId: string): string {
 export const CACHE_PREFIX = 'ft-cache:';
 
 /**
+ * Every provider that still has listeners attached.
+ *
+ * A wiped namespace must stay wiped: the provider closure outlives the wipe and
+ * would otherwise write its in-memory copy straight back on the next `pagehide`,
+ * undoing the sign-out. Disposing before clearing storage is what makes the wipe
+ * stick.
+ */
+const livePersisters = new Set<{ dispose: () => void }>();
+
+/**
  * Wipes every persisted cache on this device, not just the signed-in user's.
  *
  * Sign-out is the one moment we can be sure nobody is mid-session, and clearing
@@ -63,6 +74,7 @@ export const CACHE_PREFIX = 'ft-cache:';
  * read another's entries; this is hygiene on top of it.
  */
 export function clearAllCacheNamespaces(): void {
+  livePersisters.forEach((persister) => persister.dispose());
   try {
     const doomed: string[] = [];
     for (let i = 0; i < window.localStorage.length; i += 1) {
@@ -83,7 +95,7 @@ type Persisted = Record<string, { data: unknown; ts: number }>;
  * reload re-runs the derivation against an already-hydrated cache and makes no
  * requests at all.
  */
-const DERIVED_PREFIXES = ['dashboard:'];
+const DERIVED_PREFIXES = [DERIVED_PREFIX];
 
 function isPersistable(key: string): boolean {
   return !DERIVED_PREFIXES.some((prefix) => key.startsWith(prefix));
@@ -115,8 +127,13 @@ function readNamespace(namespace: string): Persisted {
  * Consequence worth not "fixing": a tab left open all day never refreshes itself.
  * That is why `revalidateOnFocus` is off and pull-to-refresh exists.
  */
-export function createCacheProvider(namespace: string): () => Cache {
-  return () => {
+export type CacheProvider = (() => Cache) & { dispose: () => void };
+
+export function createCacheProvider(namespace: string): CacheProvider {
+  let disposed = false;
+  let detach = () => {};
+
+  const provider = () => {
     const stored = readNamespace(namespace);
     const now = Date.now();
 
@@ -132,6 +149,7 @@ export function createCacheProvider(namespace: string): () => Cache {
     }
 
     const persist = () => {
+      if (disposed) return;
       const out: Persisted = {};
       for (const [key, value] of map.entries()) {
         if (value?.data === undefined) continue;
@@ -148,10 +166,16 @@ export function createCacheProvider(namespace: string): () => Cache {
     if (typeof window !== 'undefined') {
       // `pagehide` and `visibilitychange` fire on mobile Safari where
       // `beforeunload` does not, and mobile is the target.
-      window.addEventListener('pagehide', persist);
-      document.addEventListener('visibilitychange', () => {
+      const onPageHide = () => persist();
+      const onVisibilityChange = () => {
         if (document.visibilityState === 'hidden') persist();
-      });
+      };
+      window.addEventListener('pagehide', onPageHide);
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      detach = () => {
+        window.removeEventListener('pagehide', onPageHide);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      };
     }
 
     return {
@@ -172,4 +196,15 @@ export function createCacheProvider(namespace: string): () => Cache {
       keys: () => map.keys(),
     } as Cache;
   };
+
+  provider.dispose = () => {
+    disposed = true;
+    detach();
+    livePersisters.delete(handle);
+  };
+
+  const handle = { dispose: provider.dispose };
+  livePersisters.add(handle);
+
+  return provider as CacheProvider;
 }

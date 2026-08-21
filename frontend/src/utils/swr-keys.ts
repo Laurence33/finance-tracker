@@ -25,11 +25,9 @@ export const KEYS = {
 
 export const EXPENSES_PREFIX = '/expenses?month=';
 export const INCOMES_PREFIX = '/incomes?month=';
+export const LENDING_PAYMENTS_PREFIX = '/lendings/payments';
+// The trailing slash is what separates a payment history from the collection.
+export const RECURRING_PAYMENTS_PREFIX = '/recurring-expenses/';
 
-/** The month a `/expenses?month=` or `/incomes?month=` key addresses. */
-export function monthOf(key: string): string | null {
-  for (const prefix of [EXPENSES_PREFIX, INCOMES_PREFIX]) {
-    if (key.startsWith(prefix)) return key.slice(prefix.length);
-  }
-  return null;
-}
+/** Keys assembled from other keys rather than fetched directly. */
+export const DERIVED_PREFIX = 'dashboard:';
