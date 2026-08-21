@@ -30,6 +30,7 @@ import SavingsIcon from '@mui/icons-material/Savings';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { signOut } from 'aws-amplify/auth';
 import { clearAllCacheNamespaces } from '@/utils/swr-cache';
+import PullToRefresh from '@/components/molecules/PullToRefresh';
 import { resetApiKey } from '@/utils/httpClient';
 
 const bottomNavItems = [
@@ -170,6 +171,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </List>
       </Drawer>
+
+      <PullToRefresh />
 
       <Box sx={{ pb: '80px' }}>{children}</Box>
 
