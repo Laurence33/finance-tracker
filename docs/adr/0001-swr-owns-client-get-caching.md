@@ -2,9 +2,8 @@
 status: accepted
 ---
 
-> The *decision* below is accepted. The hydration mechanism it depends on is not yet verified —
-> see `.scratch/frontend-caching/issues/01-spike-ttl-at-hydration.md`. If that spike disproves it,
-> the first consequence below is wrong and this ADR needs amending, not the code working around it.
+> Mechanism verified — see `.scratch/frontend-caching/issues/01-spike-ttl-at-hydration.md` and the
+> regression tests in `frontend/src/utils/swr-cache.test.tsx`.
 
 # SWR owns all client-side GET caching; HTTP caching is deliberately off
 
