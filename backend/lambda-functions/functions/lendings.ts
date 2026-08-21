@@ -11,6 +11,7 @@ import {
 } from 'ft-common-layer';
 import { getUserIdFromEvent } from 'utils/getUserId';
 import { requestIdMiddleware } from 'utils/requestIdMiddleware';
+import { cacheControlMiddleware } from 'utils/cacheControlMiddleware';
 
 const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -70,6 +71,8 @@ export const lambdaHandler = middy(handler)
             headers: 'Content-Type, Authorization, x-api-key',
             methods: 'GET, OPTIONS, POST, PATCH, DELETE',
             origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
+            maxAge: 86400,
         }),
     )
-    .use(requestIdMiddleware());
+    .use(requestIdMiddleware())
+    .use(cacheControlMiddleware());

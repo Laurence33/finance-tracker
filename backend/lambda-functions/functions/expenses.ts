@@ -12,6 +12,7 @@ import { CreateExpenseRequestBody } from '../types/Expense';
 import { ExpensesController } from 'controllers/ExpensesController';
 import { getUserIdFromEvent } from 'utils/getUserId';
 import { requestIdMiddleware } from 'utils/requestIdMiddleware';
+import { cacheControlMiddleware } from 'utils/cacheControlMiddleware';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -53,6 +54,8 @@ export const lambdaHandler = middy(handler)
             headers: 'Content-Type, Authorization, x-api-key',
             methods: 'POST, OPTIONS, DELETE, PATCH, GET',
             origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
+            maxAge: 86400,
         }),
     )
-    .use(requestIdMiddleware());
+    .use(requestIdMiddleware())
+    .use(cacheControlMiddleware());
