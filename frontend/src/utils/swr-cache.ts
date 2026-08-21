@@ -77,6 +77,18 @@ export function clearAllCacheNamespaces(): void {
 
 type Persisted = Record<string, { data: unknown; ts: number }>;
 
+/**
+ * Derived keys are rebuilt from the canonical ones they fan out to, so storing
+ * them would duplicate every month they cover. Excluding them also means a
+ * reload re-runs the derivation against an already-hydrated cache and makes no
+ * requests at all.
+ */
+const DERIVED_PREFIXES = ['dashboard:'];
+
+function isPersistable(key: string): boolean {
+  return !DERIVED_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 function readNamespace(namespace: string): Persisted {
   try {
     const raw = window.localStorage.getItem(namespace);
@@ -123,6 +135,7 @@ export function createCacheProvider(namespace: string): () => Cache {
       const out: Persisted = {};
       for (const [key, value] of map.entries()) {
         if (value?.data === undefined) continue;
+        if (!isPersistable(key)) continue;
         out[key] = { data: value.data, ts: stamps.get(key) ?? Date.now() };
       }
       try {

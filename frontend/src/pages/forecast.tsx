@@ -10,8 +10,10 @@ import {
 } from '@mui/material';
 import { format, subMonths } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
+import useSWR from 'swr';
 import { AppContext } from '@/context/AppContext';
-import { HttpClient } from '@/utils/httpClient';
+import { swrFetcher } from '@/utils/httpClient';
+import { KEYS } from '@/utils/swr-keys';
 import { generateForecast, computeAverageIncome } from '@/utils/forecast-helpers';
 import { formatMoney } from '@/utils/money';
 import { ForecastHorizon } from '@/types/Forecast';
@@ -32,43 +34,35 @@ export default function ForecastPage() {
   const [incomeMonthsUsed, setIncomeMonthsUsed] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  // Fetch prior 2 months of income to compute average
+  // The prior two months of income, keyed the same way AppContext and the
+  // dashboard key them, so all three share one fetch per month.
+  const priorMonths = useMemo(() => {
+    const now = TZDate.tz('asia/singapore');
+    return [1, 2].map((back) => format(subMonths(now, back), 'yyyy-MM'));
+  }, []);
+
+  const { data: prior1, error: error1 } = useSWR(KEYS.incomes(priorMonths[0]), swrFetcher);
+  const { data: prior2, error: error2 } = useSWR(KEYS.incomes(priorMonths[1]), swrFetcher);
+  const priorSettled = Boolean((prior1 || error1) && (prior2 || error2));
+
   useEffect(() => {
-    async function fetchHistoricalIncome() {
-      try {
-        const now = TZDate.tz('asia/singapore');
-        const month1 = format(subMonths(now, 1), 'yyyy-MM');
-        const month2 = format(subMonths(now, 2), 'yyyy-MM');
+    if (!priorSettled) return;
 
-        const [res1, res2] = await Promise.all([
-          HttpClient.get<any>(`/incomes?month=${month1}`),
-          HttpClient.get<any>(`/incomes?month=${month2}`),
-        ]);
+    // A failed month contributes nothing rather than poisoning the average —
+    // computeAverageIncome reports how many months it actually used.
+    const totals = [
+      totalIncome,
+      ...(error1 ? [] : [prior1?.data?.totalIncome || 0]),
+      ...(error2 ? [] : [prior2?.data?.totalIncome || 0]),
+    ];
 
-        const totals = [
-          totalIncome,
-          res1?.data?.totalIncome || 0,
-          res2?.data?.totalIncome || 0,
-        ];
-
-        const { average, monthsUsed } = computeAverageIncome(totals);
-        setAverageIncome(average);
-        setIncomeMonthsUsed(monthsUsed);
-        setIncomeOverride(Math.round(average).toString());
-      } catch {
-        // Fall back to current month's income — run through the same helper so
-        // the caption's month count stays true on this path too.
-        const { average, monthsUsed } = computeAverageIncome([totalIncome]);
-        setAverageIncome(average);
-        setIncomeMonthsUsed(monthsUsed);
-        setIncomeOverride(Math.round(average).toString());
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchHistoricalIncome();
-  }, [totalIncome]);
+    const { average, monthsUsed } = computeAverageIncome(totals);
+    setAverageIncome(average);
+    setIncomeMonthsUsed(monthsUsed);
+    setIncomeOverride(Math.round(average).toString());
+    setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priorSettled, totalIncome, prior1, prior2, error1, error2]);
 
   const effectiveIncome = incomeOverride !== ''
     ? Number(incomeOverride) || 0

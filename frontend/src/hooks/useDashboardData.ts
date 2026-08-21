@@ -1,21 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 import { HttpClient } from '@/utils/httpClient';
 import { Expense } from '@/types/Expense';
 import { Income } from '@/types/Income';
 import { DashboardRange, getRangeMonths } from '@/utils/dashboard-helpers';
+import { KEYS } from '@/utils/swr-keys';
 
 type MonthBundle = { expenses: Expense[]; incomes: Income[] };
-
-async function fetchMonth(month: string): Promise<MonthBundle> {
-  const [expensesRes, incomesRes] = await Promise.all([
-    HttpClient.get<any>(`/expenses?month=${month}`),
-    HttpClient.get<any>(`/incomes?month=${month}`),
-  ]);
-  return {
-    expenses: expensesRes?.data?.expenses || [],
-    incomes: incomesRes?.data?.incomes || [],
-  };
-}
 
 export type DashboardData = {
   loading: boolean;
@@ -35,51 +26,80 @@ const EMPTY = {
   currentMonths: [],
 };
 
+/** The aggregate key is deliberately not persisted — see `swr-cache.ts`. */
+export const dashboardKey = (range: DashboardRange) => `dashboard:${range}`;
+
 export function useDashboardData(range: DashboardRange): DashboardData {
-  const [data, setData] = useState<Omit<DashboardData, 'loading' | 'error'>>(EMPTY);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { cache, mutate } = useSWRConfig();
+  const { current, previous } = useMemo(() => getRangeMonths(range), [range]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    const { current, previous } = getRangeMonths(range);
-    const allMonths = [...previous, ...current];
+  /**
+   * One hook, not one per month.
+   *
+   * The month count varies with the range — 2 for 1M, 16 for YTD in August —
+   * and `useSWR` cannot be called in a loop whose length changes, because React
+   * requires a stable hook count. So a single aggregate key fans out inside its
+   * fetcher, reading and writing the canonical per-month keys on the way. That
+   * gives dedupe in both directions: the dashboard reuses months `AppContext`
+   * already fetched, and `AppContext` reuses months the dashboard fetched.
+   */
+  const { data, error, isLoading } = useSWR(
+    dashboardKey(range),
+    async () => {
+      const months = [...previous, ...current];
 
-    Promise.all(allMonths.map(fetchMonth))
-      .then((bundles) => {
-        if (cancelled) return;
-        const previousBundles = bundles.slice(0, previous.length);
-        const currentBundles = bundles.slice(previous.length);
-        setData({
-          currentExpenses: currentBundles.flatMap((b) => b.expenses),
-          currentIncomes: currentBundles.flatMap((b) => b.incomes),
-          previousExpenses: previousBundles.flatMap((b) => b.expenses),
-          previousIncomes: previousBundles.flatMap((b) => b.incomes),
-          currentMonths: current,
-        });
-      })
-      // Without this the rejection was unhandled and the screen rendered a
-      // dashboard of zeros: `loading` flips false either way, so a partial
-      // failure was indistinguishable from a month with no activity.
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setData(EMPTY);
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Could not load dashboard data.',
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      const readCached = (key: string) => (cache.get(key)?.data as any)?.data;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [range]);
+      const loadMonth = async (month: string): Promise<MonthBundle> => {
+        const expensesKey = KEYS.expenses(month);
+        const incomesKey = KEYS.incomes(month);
 
-  return { ...data, loading, error };
+        const cachedExpenses = readCached(expensesKey);
+        const cachedIncomes = readCached(incomesKey);
+
+        const [expensesRes, incomesRes] = await Promise.all([
+          cachedExpenses
+            ? Promise.resolve({ data: cachedExpenses })
+            : HttpClient.get<any>(expensesKey).then((res) => {
+                // Write it back under the canonical key so AppContext and any
+                // other consumer share this fetch rather than repeating it.
+                mutate(expensesKey, res, false);
+                return res;
+              }),
+          cachedIncomes
+            ? Promise.resolve({ data: cachedIncomes })
+            : HttpClient.get<any>(incomesKey).then((res) => {
+                mutate(incomesKey, res, false);
+                return res;
+              }),
+        ]);
+
+        return {
+          expenses: expensesRes?.data?.expenses || [],
+          incomes: incomesRes?.data?.incomes || [],
+        };
+      };
+
+      // Requests go through httpClient's concurrency cap, so a 16-month range
+      // stays inside the usage plan instead of bursting past it.
+      const bundles = await Promise.all(months.map(loadMonth));
+      const previousBundles = bundles.slice(0, previous.length);
+      const currentBundles = bundles.slice(previous.length);
+
+      return {
+        currentExpenses: currentBundles.flatMap((b) => b.expenses),
+        currentIncomes: currentBundles.flatMap((b) => b.incomes),
+        previousExpenses: previousBundles.flatMap((b) => b.expenses),
+        previousIncomes: previousBundles.flatMap((b) => b.incomes),
+        currentMonths: current,
+      };
+    },
+    { keepPreviousData: true },
+  );
+
+  return {
+    ...(data ?? EMPTY),
+    loading: isLoading,
+    error: error ? (error as Error).message ?? 'Could not load dashboard data.' : null,
+  };
 }

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -16,7 +15,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { RecurringExpense, RecurringExpensePayment } from '@/types/RecurringExpense';
-import { HttpClient } from '@/utils/httpClient';
+
+const EMPTY_PAYMENTS: RecurringExpensePayment[] = [];
+import useSWR from 'swr';
+import { swrFetcher } from '@/utils/httpClient';
+import { KEYS } from '@/utils/swr-keys';
 import {
   getAmountDisplay,
   getCurrentPeriodKey,
@@ -42,33 +45,14 @@ export default function RecurringExpenseDetailDialog({
   onEdit: (re: RecurringExpense) => void;
   onDelete: (re: RecurringExpense) => void;
 }) {
-  const [payments, setPayments] = useState<RecurringExpensePayment[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open && recurringExpense) {
-      fetchPayments();
-    } else {
-      setPayments([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, recurringExpense]);
-
-  const fetchPayments = async () => {
-    if (!recurringExpense) return;
-    setLoading(true);
-    try {
-      const response = await HttpClient.get<any>(
-        `/recurring-expenses/${encodeURIComponent(recurringExpense.name)}/payments`,
-      );
-      if (response && response.data) {
-        setPayments(response.data.payments || []);
-      }
-    } catch {
-      // silently fail
-    }
-    setLoading(false);
-  };
+  // Null key while closed, so opening is what triggers the fetch — and the
+  // result stays cached, making a second open of the same record free.
+  const { data, isLoading } = useSWR(
+    open && recurringExpense ? KEYS.recurringPayments(recurringExpense.name) : null,
+    swrFetcher,
+  );
+  const payments: RecurringExpensePayment[] = data?.data?.payments ?? EMPTY_PAYMENTS;
+  const loading = isLoading;
 
   if (!recurringExpense) return null;
 

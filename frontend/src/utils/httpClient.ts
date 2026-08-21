@@ -227,3 +227,6 @@ export class HttpClient {
     }
   }
 }
+
+/** Adapts the http client to SWR's fetcher signature. Keys are request URLs. */
+export const swrFetcher = (url: string) => HttpClient.get<any>(url);

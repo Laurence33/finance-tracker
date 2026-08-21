@@ -8,7 +8,7 @@ import { RecurringExpense } from '@/types/RecurringExpense';
 import { SnackBarState } from '@/types/SnackBarState';
 import { Tags } from '@/types/Tags';
 import { Transfer } from '@/types/Transfer';
-import { HttpClient } from '@/utils/httpClient';
+import { swrFetcher } from '@/utils/httpClient';
 import { KEYS } from '@/utils/swr-keys';
 import { buildInvalidators, Invalidators } from '@/utils/invalidation';
 import { TZDate } from '@date-fns/tz';
@@ -130,8 +130,6 @@ export const AppContext = createContext<AppContextType>({
   frameworks: NO_FRAMEWORKS,
   invalidate: {} as Invalidators,
 });
-
-export const swrFetcher = (url: string) => HttpClient.get<any>(url);
 
 export default function AppContextProvider({
   children,

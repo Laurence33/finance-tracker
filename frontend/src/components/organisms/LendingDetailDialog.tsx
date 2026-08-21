@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -17,7 +16,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PaymentIcon from '@mui/icons-material/Payment';
 import { Lending, LendingPayment } from '@/types/Lending';
-import { HttpClient } from '@/utils/httpClient';
+
+const EMPTY_PAYMENTS: LendingPayment[] = [];
+import useSWR from 'swr';
+import { swrFetcher } from '@/utils/httpClient';
+import { KEYS } from '@/utils/swr-keys';
 import {
   getLendingRemaining,
   isLendingOverdue,
@@ -48,33 +51,14 @@ export default function LendingDetailDialog({
   onEdit: (lending: Lending) => void;
   onDelete: (lending: Lending) => void;
 }) {
-  const [payments, setPayments] = useState<LendingPayment[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open && lending) {
-      fetchPayments();
-    } else {
-      setPayments([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, lending]);
-
-  const fetchPayments = async () => {
-    if (!lending) return;
-    setLoading(true);
-    try {
-      const response = await HttpClient.get<any>(
-        `/lendings/payments?lendingTimestamp=${encodeURIComponent(lending.timestamp)}`,
-      );
-      if (response && response.data) {
-        setPayments(response.data.payments || []);
-      }
-    } catch {
-      // silently fail
-    }
-    setLoading(false);
-  };
+  // Null key while closed, so opening is what triggers the fetch — and the
+  // result stays cached, making a second open of the same lending free.
+  const { data, isLoading } = useSWR(
+    open && lending ? KEYS.lendingPayments(lending.timestamp) : null,
+    swrFetcher,
+  );
+  const payments: LendingPayment[] = data?.data?.payments ?? EMPTY_PAYMENTS;
+  const loading = isLoading;
 
   if (!lending) return null;
 
