@@ -22,7 +22,6 @@ interface AppContextType {
   totalExpenses: number;
   selectedExpense: Expense | null;
   setSelectedExpense: (expense: Expense | null) => void;
-  fetchExpenses: () => Promise<void>;
   snackBarState: SnackBarState;
   showSuccessSnackBar: (message: string) => void;
   showErrorSnackBar: (message: string) => void;
@@ -34,37 +33,28 @@ interface AppContextType {
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
   fundSources: FundSource[];
-  fetchFundSources: () => Promise<void>;
   transfers: Transfer[];
-  fetchTransfers: () => Promise<void>;
   tags: Tags[];
-  fetchTags: () => Promise<void>;
   incomes: Income[];
   totalIncome: number;
   selectedIncome: Income | null;
   setSelectedIncome: (income: Income | null) => void;
-  fetchIncomes: () => Promise<void>;
   incomeFormOpen: boolean;
   setIncomeFormOpen: (open: boolean) => void;
   incomeFormAction: 'create' | 'update';
   setIncomeFormAction: (action: 'create' | 'update') => void;
   lendings: Lending[];
   borrowers: string[];
-  fetchLendings: () => Promise<void>;
   recurringExpenses: RecurringExpense[];
-  fetchRecurringExpenses: () => Promise<void>;
   assets: Asset[];
-  fetchAssets: () => Promise<void>;
   budgetEnabled: boolean;
   budgetFramework: FrameworkMeta | null;
   buckets: Bucket[];
-  fetchBudget: () => Promise<void>;
   frameworks: FrameworkDefinition[];
   /**
-   * What each mutation makes stale, in one place. Prefer these over calling
-   * several `fetchX` in a row: the map is derived from what the backend writes
-   * in one transaction, and getting that wrong is how both stale-budget bugs
-   * happened. See `@/utils/invalidation`.
+   * What each mutation makes stale, in one place. The map is derived from what
+   * the backend writes in one transaction, and getting that wrong is how both
+   * stale-budget bugs happened. See `@/utils/invalidation`.
    */
   invalidate: Invalidators;
 }
@@ -83,14 +73,11 @@ const NO_ASSETS: Asset[] = [];
 const NO_BUCKETS: Bucket[] = [];
 const NO_FRAMEWORKS: FrameworkDefinition[] = [];
 
-const noop = async () => {};
-
 export const AppContext = createContext<AppContextType>({
   expenses: NO_EXPENSES,
   totalExpenses: 0,
   selectedExpense: null,
   setSelectedExpense: () => {},
-  fetchExpenses: noop,
   snackBarState: { open: false, message: '', severity: 'success' },
   showSuccessSnackBar: () => {},
   showErrorSnackBar: () => {},
@@ -102,31 +89,23 @@ export const AppContext = createContext<AppContextType>({
   selectedMonth: format(TZDate.tz('asia/singapore'), 'yyyy-MM'),
   setSelectedMonth: () => {},
   fundSources: NO_FUND_SOURCES,
-  fetchFundSources: noop,
   transfers: NO_TRANSFERS,
-  fetchTransfers: noop,
   tags: NO_TAGS,
-  fetchTags: noop,
   incomes: NO_INCOMES,
   totalIncome: 0,
   selectedIncome: null,
   setSelectedIncome: () => {},
-  fetchIncomes: noop,
   incomeFormOpen: false,
   setIncomeFormOpen: () => {},
   incomeFormAction: 'create',
   setIncomeFormAction: () => {},
   lendings: NO_LENDINGS,
   borrowers: NO_BORROWERS,
-  fetchLendings: noop,
   recurringExpenses: NO_RECURRING,
-  fetchRecurringExpenses: noop,
   assets: NO_ASSETS,
-  fetchAssets: noop,
   budgetEnabled: false,
   budgetFramework: null,
   buckets: NO_BUCKETS,
-  fetchBudget: noop,
   frameworks: NO_FRAMEWORKS,
   invalidate: {} as Invalidators,
 });
@@ -212,32 +191,6 @@ export default function AppContextProvider({
     [mutate]
   );
 
-  // The `fetchX` names predate SWR and are kept so no consumer had to change.
-  // Each is now "this key is stale, go get it".
-  const revalidate = useCallback(
-    async (key: string) => {
-      await mutate(key);
-    },
-    [mutate]
-  );
-  const fetchExpenses = useCallback(
-    () => revalidate(KEYS.expenses(monthRef.current)),
-    [revalidate]
-  );
-  const fetchIncomes = useCallback(
-    () => revalidate(KEYS.incomes(monthRef.current)),
-    [revalidate]
-  );
-  const fetchFundSources = useCallback(() => revalidate(KEYS.fundSources), [revalidate]);
-  const fetchTransfers = useCallback(() => revalidate(KEYS.transfers), [revalidate]);
-  const fetchTags = useCallback(() => revalidate(KEYS.tags), [revalidate]);
-  const fetchLendings = useCallback(() => revalidate(KEYS.lendings), [revalidate]);
-  const fetchRecurringExpenses = useCallback(
-    () => revalidate(KEYS.recurringExpenses),
-    [revalidate]
-  );
-  const fetchAssets = useCallback(() => revalidate(KEYS.assets), [revalidate]);
-  const fetchBudget = useCallback(() => revalidate(KEYS.budget), [revalidate]);
 
   const contextValue: AppContextType = {
     expenses,
@@ -245,14 +198,11 @@ export default function AppContextProvider({
     selectedExpense,
     setSelectedExpense,
     fundSources,
-    fetchFundSources,
     transfers,
-    fetchTransfers,
     formAction,
     setFormAction,
     expenseFormOpen,
     setExpenseFormOpen,
-    fetchExpenses,
     snackBarState,
     showSuccessSnackBar,
     showErrorSnackBar,
@@ -260,27 +210,21 @@ export default function AppContextProvider({
     selectedMonth,
     setSelectedMonth,
     tags,
-    fetchTags,
     incomes,
     totalIncome,
     selectedIncome,
     setSelectedIncome,
-    fetchIncomes,
     incomeFormOpen,
     setIncomeFormOpen,
     incomeFormAction,
     setIncomeFormAction,
     lendings,
     borrowers,
-    fetchLendings,
     recurringExpenses,
-    fetchRecurringExpenses,
     assets,
-    fetchAssets,
     budgetEnabled,
     budgetFramework,
     buckets,
-    fetchBudget,
     frameworks,
     invalidate,
   };

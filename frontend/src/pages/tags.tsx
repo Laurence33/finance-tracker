@@ -25,9 +25,9 @@ export default function TagsPage() {
     tags,
     expenses,
     selectedMonth,
-    fetchTags,
     showSuccessSnackBar,
     showErrorSnackBar,
+    invalidate,
   } = use(AppContext);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,7 +88,7 @@ export default function TagsPage() {
     try {
       await HttpClient.delete(`/tags/${encodeURIComponent(deleteTarget.name)}`);
       showSuccessSnackBar('Tag deleted successfully');
-      fetchTags();
+      invalidate.afterTagWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message);
     }

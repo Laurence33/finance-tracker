@@ -20,7 +20,7 @@ import SummaryHeroCard from '@/components/molecules/SummaryHeroCard';
 import AssetDialog from '@/components/organisms/AssetDialog';
 
 export default function AssetsPage() {
-  const { assets, fetchAssets, showSuccessSnackBar, showErrorSnackBar } =
+  const { assets, invalidate, showSuccessSnackBar, showErrorSnackBar } =
     use(AppContext);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -56,7 +56,7 @@ export default function AssetsPage() {
         `/assets?timestamp=${encodeURIComponent(deleteTarget.timestamp)}`,
       );
       showSuccessSnackBar('Asset deleted successfully');
-      fetchAssets();
+      invalidate.afterAssetWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message);
     }

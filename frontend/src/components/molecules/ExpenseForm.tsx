@@ -39,8 +39,6 @@ export default function ExpenseForm() {
   const {
     showErrorSnackBar,
     showSuccessSnackBar,
-    fetchExpenses,
-    fetchFundSources,
     selectedExpense,
     setExpenseFormOpen,
     formAction,
@@ -49,7 +47,7 @@ export default function ExpenseForm() {
     budgetEnabled,
     budgetFramework,
     buckets,
-    fetchBudget,
+    invalidate,
   } = use(AppContext);
   const [formData, setFormData] = useState<ExpenseFormDataType>(
     formAction == 'update'
@@ -96,9 +94,7 @@ export default function ExpenseForm() {
         ...initialFormData,
         timestamp: currentTimestampForInput(),
       });
-      fetchExpenses();
-      fetchFundSources();
-      if (budgetEnabled) fetchBudget();
+      invalidate.afterExpenseWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to add expense.');
     }

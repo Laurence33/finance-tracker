@@ -39,12 +39,9 @@ const initialFormData: TransferFormData = {
 export default function TransferForm({ onClose }: { onClose: () => void }) {
   const {
     fundSources,
-    fetchFundSources,
-    fetchTransfers,
-    fetchExpenses,
-    fetchTags,
     showSuccessSnackBar,
     showErrorSnackBar,
+    invalidate,
   } = use(AppContext);
 
   const [formData, setFormData] = useState<TransferFormData>({
@@ -90,10 +87,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
     try {
       await HttpClient.post('/transfers', formData);
       showSuccessSnackBar('Transfer completed successfully!');
-      fetchFundSources();
-      fetchTransfers();
-      fetchExpenses();
-      if (formData.fee > 0) fetchTags();
+      invalidate.afterTransferWrite();
       onClose();
     } catch (error: any) {
       if (

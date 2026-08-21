@@ -37,7 +37,7 @@ export default function FundSourceForm({
   fundSource?: FundSource;
 }) {
   const isEdit = !!fundSource;
-  const { showErrorSnackBar, showSuccessSnackBar, fetchFundSources } =
+  const { showErrorSnackBar, showSuccessSnackBar, invalidate } =
     use(AppContext);
   const [formData, setFormData] = useState<FundSourceFormData>(
     isEdit ? fundSource : initialFormData,
@@ -76,7 +76,7 @@ export default function FundSourceForm({
         showSuccessSnackBar('Fund source created successfully!');
       }
       setFormData(initialFormData);
-      fetchFundSources();
+      invalidate.afterFundSourceWrite();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {

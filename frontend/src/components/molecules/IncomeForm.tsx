@@ -50,8 +50,6 @@ export default function IncomeForm() {
   const {
     showErrorSnackBar,
     showSuccessSnackBar,
-    fetchIncomes,
-    fetchFundSources,
     selectedIncome,
     setIncomeFormOpen,
     incomeFormAction,
@@ -60,7 +58,7 @@ export default function IncomeForm() {
     budgetEnabled,
     budgetFramework,
     buckets,
-    fetchBudget,
+    invalidate,
   } = use(AppContext);
 
   const [formData, setFormData] = useState<IncomeFormDataType>(() => {
@@ -136,9 +134,7 @@ export default function IncomeForm() {
         ...initialFormData,
         timestamp: currentTimestampForInput(),
       });
-      fetchIncomes();
-      fetchFundSources();
-      if (budgetEnabled) fetchBudget();
+      invalidate.afterIncomeWrite();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {
         setFieldErrors(error.fieldErrors);

@@ -13,7 +13,7 @@ export default function TagForm({
   tag?: Tags;
 }) {
   const isEdit = !!tag;
-  const { showErrorSnackBar, showSuccessSnackBar, fetchTags } = use(AppContext);
+  const { showErrorSnackBar, showSuccessSnackBar, invalidate } = use(AppContext);
   const [tagName, setTagName] = useState(isEdit ? tag.name : '');
   const [budget, setBudget] = useState<number>(isEdit ? tag.budget ?? 0 : 0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -60,7 +60,7 @@ export default function TagForm({
         await HttpClient.post('/tags', { name: tagName.trim(), budget });
         showSuccessSnackBar('Tag created successfully!');
       }
-      fetchTags();
+      invalidate.afterTagWrite();
       onClose();
     } catch (error: any) {
       if (

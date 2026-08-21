@@ -34,10 +34,8 @@ export default function RecurringPaymentForm({
   const {
     showErrorSnackBar,
     showSuccessSnackBar,
-    fetchRecurringExpenses,
-    fetchFundSources,
-    fetchExpenses,
     fundSources,
+    invalidate,
   } = use(AppContext);
 
   const currentPeriodKey = getCurrentPeriodKey(recurringExpense.frequency);
@@ -76,9 +74,7 @@ export default function RecurringPaymentForm({
         { ...formData, periodKey },
       );
       showSuccessSnackBar('Payment recorded successfully!');
-      fetchRecurringExpenses();
-      fetchFundSources();
-      fetchExpenses();
+      invalidate.afterRecurringPaymentWrite();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {

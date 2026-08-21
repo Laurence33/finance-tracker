@@ -37,9 +37,9 @@ const FREQUENCY_GROUPS: {
 export default function RecurringPage() {
   const {
     recurringExpenses,
-    fetchRecurringExpenses,
     showSuccessSnackBar,
     showErrorSnackBar,
+    invalidate,
   } = use(AppContext);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -94,7 +94,7 @@ export default function RecurringPage() {
         `/recurring-expenses/${encodeURIComponent(deleteTarget.name)}`,
       );
       showSuccessSnackBar('Recurring expense deleted successfully');
-      fetchRecurringExpenses();
+      invalidate.afterRecurringWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message);
     }
@@ -123,7 +123,7 @@ export default function RecurringPage() {
         { status },
       );
       showSuccessSnackBar(`Recurring expense ${status} successfully`);
-      fetchRecurringExpenses();
+      invalidate.afterRecurringWrite();
       setDetailExpense(null);
     } catch (error: any) {
       showErrorSnackBar(error.message);

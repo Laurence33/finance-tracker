@@ -23,9 +23,6 @@ import { transactionTime } from '@/utils/transaction-display';
  */
 export default function IncomeItem({ income }: { income: Income }) {
   const {
-    fetchIncomes,
-    fetchFundSources,
-    fetchBudget,
     budgetEnabled,
     showSuccessSnackBar,
     showErrorSnackBar,
@@ -33,6 +30,7 @@ export default function IncomeItem({ income }: { income: Income }) {
     setIncomeFormAction,
     setIncomeFormOpen,
     fundSources,
+    invalidate,
   } = use(AppContext);
   const [open, setOpen] = useState(false);
 
@@ -40,10 +38,7 @@ export default function IncomeItem({ income }: { income: Income }) {
     try {
       await HttpClient.delete(`/incomes?timestamp=${income.timestamp}`);
       showSuccessSnackBar('Income deleted successfully');
-      fetchIncomes();
-      fetchFundSources();
-      // The delete unwinds this income's bucket allocations, so the budget is stale too.
-      if (budgetEnabled) fetchBudget();
+      invalidate.afterIncomeWrite();
     } catch (error: any) {
       console.error('Error deleting income:', error);
       showErrorSnackBar(error.message);

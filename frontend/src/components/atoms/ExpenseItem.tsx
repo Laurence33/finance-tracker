@@ -24,9 +24,6 @@ import { transactionTime } from '@/utils/transaction-display';
  */
 export default function ExpenseItem({ expense }: { expense: Expense }) {
   const {
-    fetchExpenses,
-    fetchFundSources,
-    fetchBudget,
     budgetEnabled,
     showSuccessSnackBar,
     showErrorSnackBar,
@@ -34,6 +31,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
     setFormAction,
     setExpenseFormOpen,
     fundSources,
+    invalidate,
   } = use(AppContext);
   const [open, setOpen] = useState(false);
 
@@ -53,10 +51,7 @@ export default function ExpenseItem({ expense }: { expense: Expense }) {
     try {
       await HttpClient.delete(`/expenses?timestamp=${expense.timestamp}`);
       showSuccessSnackBar('Expense deleted successfully');
-      fetchExpenses();
-      fetchFundSources();
-      // The delete refunds the expense's bucket, so the budget is stale too.
-      if (budgetEnabled) fetchBudget();
+      invalidate.afterExpenseWrite();
     } catch (error: any) {
       console.error('Error deleting expense:', error);
       showErrorSnackBar(error.message);

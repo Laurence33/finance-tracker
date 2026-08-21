@@ -47,10 +47,9 @@ export default function LendingForm({
   const {
     showErrorSnackBar,
     showSuccessSnackBar,
-    fetchLendings,
-    fetchFundSources,
     fundSources,
     borrowers,
+    invalidate,
   } = use(AppContext);
 
   const [formData, setFormData] = useState<LendingFormData>(
@@ -96,8 +95,7 @@ export default function LendingForm({
         showSuccessSnackBar('Lending created successfully!');
       }
       setFormData(initialFormData);
-      fetchLendings();
-      fetchFundSources();
+      invalidate.afterLendingWrite();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {

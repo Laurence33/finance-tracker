@@ -42,7 +42,7 @@ export default function AssetForm({
   asset?: Asset;
 }) {
   const isEdit = !!asset;
-  const { showErrorSnackBar, showSuccessSnackBar, fetchAssets, fundSources, fetchFundSources } =
+  const { showErrorSnackBar, showSuccessSnackBar, fundSources, invalidate } =
     use(AppContext);
 
   const [formData, setFormData] = useState<AssetFormData>(
@@ -87,9 +87,7 @@ export default function AssetForm({
         showSuccessSnackBar('Asset created successfully!');
       }
       setFormData(initialFormData);
-      fetchAssets();
-      // A fund source deduction changes a balance — refresh so the UI reflects it.
-      if (!isEdit && formData.fundSource) fetchFundSources();
+      invalidate.afterAssetWrite();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {

@@ -25,7 +25,7 @@ import TransferDialog from '@/components/organisms/TransferDialog';
 import TransferHistory from '@/components/organisms/TransferHistory';
 
 export default function WalletPage() {
-  const { fundSources, fetchFundSources, showSuccessSnackBar, showErrorSnackBar } =
+  const { fundSources, invalidate, showSuccessSnackBar, showErrorSnackBar } =
     use(AppContext);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,7 +70,7 @@ export default function WalletPage() {
     try {
       await HttpClient.delete(`/fund-sources/${deleteTarget.name}`);
       showSuccessSnackBar('Fund source deleted successfully');
-      fetchFundSources();
+      invalidate.afterFundSourceWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message);
     }

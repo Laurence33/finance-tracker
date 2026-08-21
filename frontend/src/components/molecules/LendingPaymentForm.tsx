@@ -35,9 +35,8 @@ export default function LendingPaymentForm({
   const {
     showErrorSnackBar,
     showSuccessSnackBar,
-    fetchLendings,
-    fetchFundSources,
     fundSources,
+    invalidate,
   } = use(AppContext);
 
   const remaining = lending.amount - lending.totalPaid;
@@ -74,8 +73,7 @@ export default function LendingPaymentForm({
         addedToBalance: formData.addedToBalance,
       });
       showSuccessSnackBar('Payment recorded successfully!');
-      fetchLendings();
-      fetchFundSources();
+      invalidate.afterLendingWrite();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {

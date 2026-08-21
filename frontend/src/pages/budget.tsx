@@ -53,11 +53,11 @@ export default function BudgetPage() {
     budgetEnabled,
     budgetFramework,
     buckets,
-    fetchBudget,
     frameworks,
     fundSources,
     showSuccessSnackBar,
     showErrorSnackBar,
+    invalidate,
   } = use(AppContext);
 
   // ---- setup (disabled) state ----
@@ -136,7 +136,7 @@ export default function BudgetPage() {
       setSeedFromBalance(false);
       setResetBalances(false);
       setSeedAllocations({});
-      await fetchBudget();
+      await invalidate.afterBudgetWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to enable framework.');
     } finally {
@@ -150,7 +150,7 @@ export default function BudgetPage() {
       await HttpClient.put('/budget', { enabled: false });
       showSuccessSnackBar('Budgeting framework disabled.');
       setDisableConfirm(false);
-      await fetchBudget();
+      await invalidate.afterBudgetWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to disable framework.');
     } finally {
@@ -164,7 +164,7 @@ export default function BudgetPage() {
       await HttpClient.delete('/budget');
       showSuccessSnackBar('Budgeting framework deleted.');
       setDeleteConfirm(false);
-      await fetchBudget();
+      await invalidate.afterBudgetWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message || 'Failed to delete framework.');
     } finally {

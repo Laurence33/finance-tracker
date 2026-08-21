@@ -57,8 +57,8 @@ export default function RecurringExpenseForm({
   const {
     showErrorSnackBar,
     showSuccessSnackBar,
-    fetchRecurringExpenses,
     tags,
+    invalidate,
   } = use(AppContext);
 
   const [formData, setFormData] = useState<RecurringExpenseFormData>(
@@ -111,7 +111,7 @@ export default function RecurringExpenseForm({
         showSuccessSnackBar('Recurring expense created successfully!');
       }
       setFormData(initialFormData);
-      fetchRecurringExpenses();
+      invalidate.afterRecurringWrite();
       onClose();
     } catch (error: any) {
       if (error instanceof HttpError && Object.keys(error.fieldErrors).length > 0) {

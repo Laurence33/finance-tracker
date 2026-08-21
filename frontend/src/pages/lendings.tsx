@@ -26,7 +26,7 @@ import LendingPaymentDialog from '@/components/organisms/LendingPaymentDialog';
 import LendingDetailDialog from '@/components/organisms/LendingDetailDialog';
 
 export default function LendingsPage() {
-  const { lendings, fetchLendings, fetchFundSources, showSuccessSnackBar, showErrorSnackBar } =
+  const { lendings, invalidate, showSuccessSnackBar, showErrorSnackBar } =
     use(AppContext);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,8 +76,7 @@ export default function LendingsPage() {
         `/lendings?timestamp=${encodeURIComponent(deleteTarget.timestamp)}`,
       );
       showSuccessSnackBar('Lending deleted successfully');
-      fetchLendings();
-      fetchFundSources();
+      invalidate.afterLendingWrite();
     } catch (error: any) {
       showErrorSnackBar(error.message);
     }
