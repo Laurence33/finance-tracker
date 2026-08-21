@@ -1,8 +1,15 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { createRequestQueue } from './requestQueue';
 
 const MAX_RETRIES = 3;
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+// The usage plan allows 5rps / 10 burst per user. Capping GETs keeps fan-outs
+// like the dashboard's inside it. Mutations are never queued: a POST stuck
+// behind four slow GETs makes every form in the app feel broken.
+const MAX_CONCURRENT_GETS = 4;
+const getQueue = createRequestQueue(MAX_CONCURRENT_GETS);
 
 const httpClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -12,7 +19,10 @@ const httpClient = axios.create({
 });
 
 // Per-request flag so the api-key bootstrap call skips x-api-key injection (avoids recursion).
-type RequestConfig = Parameters<typeof httpClient.request>[0] & { skipApiKey?: boolean };
+type RequestConfig = Parameters<typeof httpClient.request>[0] & {
+  skipApiKey?: boolean;
+  __release?: () => void;
+};
 
 // The user's throttling key, fetched once from GET /me/api-key and memoized for the session.
 let apiKeyPromise: Promise<string | undefined> | null = null;
@@ -44,6 +54,14 @@ export function resetApiKey(): void {
 }
 
 httpClient.interceptors.request.use(async (config) => {
+  // `skipApiKey` marks the /me/api-key bootstrap, which is awaited *inside* this
+  // interceptor by every other request. Queueing it would let four GETs hold all
+  // four slots while each waits on a call that needs a fifth — a deadlock.
+  const queued = config.method?.toLowerCase() === 'get' && !(config as RequestConfig).skipApiKey;
+  if (queued) {
+    (config as RequestConfig).__release = await getQueue.acquire();
+  }
+
   try {
     const session = await fetchAuthSession();
     const token = session.tokens?.idToken?.toString();
@@ -67,6 +85,28 @@ httpClient.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Registered before the retry interceptor so the slot is freed *before* a retry
+// calls httpClient.request() again — otherwise a retry would queue behind the
+// slot its own original request is still holding.
+const releaseSlot = (config: AxiosRequestConfig | undefined) => {
+  const release = (config as RequestConfig | undefined)?.__release;
+  if (release) {
+    (config as RequestConfig).__release = undefined;
+    release();
+  }
+};
+
+httpClient.interceptors.response.use(
+  (response) => {
+    releaseSlot(response.config);
+    return response;
+  },
+  (error: AxiosError) => {
+    releaseSlot(error.config);
+    return Promise.reject(error);
+  },
+);
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
