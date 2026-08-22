@@ -18,6 +18,9 @@ function scrollOffset(): number {
 }
 
 const TRIGGER_DISTANCE = 70;
+// How far the finger must travel before the pull counts. Deliberately half the
+// nominal trigger: the resistance below moves the indicator at half speed.
+const ARM_DISTANCE = TRIGGER_DISTANCE * 0.5;
 const MAX_PULL = 110;
 // Below this the gesture is almost certainly a tap or a horizontal swipe.
 const START_SLOP = 8;
@@ -108,7 +111,7 @@ export function usePullToRefresh({ onRefresh, disabled = false }: Options) {
       const pulled = distanceRef.current;
       reset();
 
-      if (pulled < TRIGGER_DISTANCE * 0.5) return;
+      if (pulled < ARM_DISTANCE) return;
 
       busy.current = true;
       setRefreshing(true);
@@ -142,6 +145,9 @@ export function usePullToRefresh({ onRefresh, disabled = false }: Options) {
   return {
     distance,
     refreshing,
-    armed: distance >= TRIGGER_DISTANCE * 0.5,
+    armed: distance >= ARM_DISTANCE,
+    // 0 to 1 as the gesture arms, so a caller can drive an indicator without
+    // knowing the thresholds.
+    progress: Math.min(1, distance / ARM_DISTANCE),
   };
 }

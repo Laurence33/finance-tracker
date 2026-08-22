@@ -21,36 +21,46 @@ export default function PullToRefresh() {
     [mutate, router.pathname, selectedMonth],
   );
 
-  const { distance, refreshing, armed } = usePullToRefresh({ onRefresh: refresh });
+  const { distance, refreshing, armed, progress } = usePullToRefresh({ onRefresh: refresh });
 
   const visible = distance > 0 || refreshing;
   if (!visible) return null;
 
+  // Pinned to the middle of the viewport rather than sliding down from the top,
+  // so the pull drives how the indicator *looks* rather than where it sits.
   return (
     <Box
       aria-live="polite"
       aria-label={refreshing ? 'Refreshing' : 'Pull to refresh'}
       sx={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
+        top: '50%',
+        left: '50%',
         zIndex: 1200,
+        // Never intercepts the gesture that summoned it.
+        pointerEvents: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        height: refreshing ? 56 : Math.max(0, distance),
-        pointerEvents: 'none',
-        transition: refreshing ? 'height 120ms ease-out' : 'none',
+        width: 48,
+        height: 48,
+        borderRadius: '50%',
+        bgcolor: 'background.paper',
+        boxShadow: 3,
+        // Grows into place as the pull arms, so the gesture still feels
+        // connected to something even though the position is fixed.
+        transform: `translate(-50%, -50%) scale(${refreshing ? 1 : 0.7 + progress * 0.3})`,
+        opacity: refreshing ? 1 : Math.max(0.35, progress),
+        transition: refreshing ? 'transform 140ms ease-out, opacity 140ms ease-out' : 'none',
       }}
     >
       <CircularProgress
         size={24}
         thickness={4}
-        // Determinate while the finger is down so the ring fills as the
-        // gesture arms, then a real spinner once it fires.
+        // Determinate while the finger is down so the ring fills as the gesture
+        // arms, then a real spinner once it fires.
         variant={refreshing ? 'indeterminate' : 'determinate'}
-        value={refreshing ? undefined : Math.min(100, (distance / 35) * 100)}
+        value={refreshing ? undefined : progress * 100}
         sx={{ color: armed || refreshing ? 'primary.main' : 'text.disabled' }}
       />
     </Box>
