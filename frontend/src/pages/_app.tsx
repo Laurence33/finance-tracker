@@ -10,11 +10,12 @@ import { SWRConfig } from 'swr';
 import { useEffect, useMemo } from 'react';
 import theme from '@/theme';
 import { cacheNamespaceFor, createCacheProvider } from '@/utils/swr-cache';
+import { authServices } from '@/utils/auth-services';
 
 /**
  * Holds the persisted cache for exactly one identity.
  *
- * Mounted inside the `<Authenticator>` render callback because the cache
+ * Mounted inside the `<Authenticator services={authServices}>` render callback because the cache
  * namespace needs the Cognito sub *synchronously* — `fetchAuthSession()` is
  * async, so a module-scope provider could not partition itself, and an
  * unpartitioned cache would paint the previous user's balances to whoever signs
@@ -69,7 +70,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Authenticator signUpAttributes={['email']}>
+      <Authenticator services={authServices}>
         {({ user }) => (
           // Keyed on the identity so a different user gets a fresh provider
           // rather than inheriting the previous one's hydrated cache.
