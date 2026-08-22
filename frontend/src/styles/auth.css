@@ -1,0 +1,726 @@
+/*
+ * The signed-out front door: sign in, create account, forgot password, and the
+ * two confirmation-code screens those flows lead to.
+ *
+ * Everything here is scoped to `[data-amplify-authenticator]`, which the
+ * Amplify `<Authenticator>` renders only while there is no session — see
+ * `Authenticator.mjs`, which returns bare `children` once the route is
+ * `authenticated`. So none of this can leak into the app itself.
+ *
+ * Amplify's own theming is a flat set of `--amplify-*` custom properties;
+ * `createTheme()` exists only to emit them. Setting them directly is the same
+ * mechanism with one less indirection, and it keeps the whole visual layer —
+ * tokens, layout, motion — in one readable file. It also reaches every route
+ * for free, which matters because `initialState` only accepts the three entry
+ * routes: `confirmSignUp` and `confirmResetPassword` are reachable only by
+ * completing a flow, and they must not fall back to stock styling.
+ *
+ * Design: "ledger ink". An ink-black panel carrying the wordmark, an editorial
+ * serif headline and a miniature of the app's own ledger list, beside a warm
+ * paper panel holding the form. Fields are hairline-ruled rather than boxed,
+ * so the paper reads as a page rather than a dialog.
+ */
+
+[data-amplify-authenticator] {
+  /*
+   * The accent hues are `theme.ts`'s `palette.primary` main/dark/light and
+   * `palette.error.main`, verbatim. Amplify's tokens are CSS custom properties
+   * and cannot reference the MUI theme object, so this block is the seam:
+   * change a hue here and in `theme.ts` together, and never anywhere else in
+   * this file.
+   */
+  --auth-teal: #0d9488;
+  --auth-teal-dark: #0f766e;
+  --auth-teal-light: #5eead4;
+  --auth-error: #ef4444;
+
+  --auth-ink: #06100f;
+  --auth-ink-raised: #0c1f1c;
+  --auth-ink-text: #e6f0ee;
+  --auth-ink-muted: #8aa5a0;
+  --auth-ink-rule: rgba(255, 255, 255, 0.09);
+
+  --auth-paper: #fbfaf6;
+  --auth-text: #16211f;
+  --auth-muted: #6a7a77;
+  --auth-rule: rgba(10, 32, 29, 0.18);
+  --auth-error-ink: #9a2020;
+  --auth-error-wash: rgba(239, 68, 68, 0.08);
+
+  --auth-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --auth-sans: 'IBM Plex Sans', 'Roboto', system-ui, sans-serif;
+
+  /* Amplify component tokens, all driven from the palette above. */
+  --amplify-components-authenticator-router-box-shadow: none;
+  --amplify-components-authenticator-router-border-width: 0;
+  --amplify-components-authenticator-form-padding: 0;
+  --amplify-components-authenticator-footer-padding-bottom: 0;
+  --amplify-components-fieldcontrol-focus-box-shadow: none;
+  /*
+   * Must be nulled separately, even though Amplify declares it as
+   * `var(--amplify-components-fieldcontrol-focus-box-shadow)`. That declaration
+   * sits on the theme root, so it resolves against the *stock* fieldcontrol
+   * value; overriding that token here, on a descendant, is too late to reach
+   * it. Left alone, every button keeps Amplify's navy ring on plain `:focus` —
+   * which a mouse click sets, so clicking the password toggle boxed it in navy.
+   * Focus indication is the `:focus-visible` rule further down instead.
+   */
+  --amplify-components-button-focus-box-shadow: none;
+  --amplify-components-fieldcontrol-border-radius: 0;
+  --amplify-colors-font-primary: var(--auth-text);
+  --amplify-colors-font-secondary: var(--auth-muted);
+  --amplify-colors-font-tertiary: var(--auth-muted);
+  --amplify-colors-font-error: var(--auth-error-ink);
+  --amplify-colors-border-focus: var(--auth-teal);
+}
+
+/*
+ * In dark mode the paper has to stay a *visibly raised* surface against the
+ * ink, or the two panels merge into one dark field and the composition — which
+ * is carried entirely by the seam between them — disappears. The first attempt
+ * used #101a18, four L* steps above the ink, and a render check showed one flat
+ * rectangle. #182422 is about eight steps up and reads as two surfaces.
+ */
+@media (prefers-color-scheme: dark) {
+  [data-amplify-authenticator] {
+    --auth-paper: #182422;
+    --auth-text: #e8ece9;
+    --auth-muted: #93a4a0;
+    --auth-rule: rgba(255, 255, 255, 0.17);
+    --auth-error-ink: #fca5a5;
+    --auth-error-wash: rgba(239, 68, 68, 0.12);
+  }
+}
+
+/* ── Shell ─────────────────────────────────────────────────────────────────
+ * The two panels are the Authenticator's own children: `components.Header` is
+ * the ink panel, `[data-amplify-router]` is the form. Laying them out as grid
+ * areas of `[data-amplify-container]` avoids wrapping `<Authenticator>` in a
+ * shell element, which would also have to wrap the authenticated app.
+ */
+
+[data-amplify-authenticator] {
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--auth-sans);
+  color: var(--auth-text);
+  background-color: var(--auth-paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-amplify-authenticator] [data-amplify-container] {
+  /* Supersedes the stock `place-self: center` and its 30rem width cap. */
+  place-self: stretch;
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'brand'
+    'form'
+    'foot';
+}
+
+[data-amplify-authenticator] [data-amplify-router] {
+  grid-area: form;
+  background-color: var(--auth-paper);
+  border: none;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(30px, 6vw, 60px) clamp(22px, 6vw, 60px) clamp(22px, 4vw, 40px);
+}
+
+/* The route content — a tabs container, or a single route's form. */
+[data-amplify-authenticator] [data-amplify-router] > * {
+  width: 100%;
+  max-width: 390px;
+}
+
+@media (min-width: 60rem) {
+  [data-amplify-authenticator] [data-amplify-container] {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'brand form'
+      'brand foot';
+  }
+
+  /* The seam between ink and paper, one hairline wide. */
+  [data-amplify-authenticator] [data-amplify-router] {
+    border-left: 1px solid var(--auth-rule);
+  }
+}
+
+/* ── Ink panel ─────────────────────────────────────────────────────────── */
+
+.auth-brand {
+  grid-area: brand;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--auth-ink);
+  color: var(--auth-ink-text);
+  padding: clamp(26px, 5vw, 60px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(24px, 4vw, 48px);
+}
+
+/*
+ * The ruled grid of a ledger page: horizontal rules at a fixed 34px rhythm and
+ * a single vertical margin rule, faded out toward the bottom-right so the
+ * texture never competes with the headline.
+ */
+.auth-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      var(--auth-ink-rule) 0 1px,
+      transparent 1px 34px
+    ),
+    linear-gradient(to right, transparent 0 13%, rgba(94, 234, 212, 0.16) 13% calc(13% + 1px), transparent calc(13% + 1px));
+  -webkit-mask-image: radial-gradient(120% 90% at 12% 0%, #000 10%, transparent 78%);
+  mask-image: radial-gradient(120% 90% at 12% 0%, #000 10%, transparent 78%);
+}
+
+/* Two teal blooms, low and wide, for depth without a second gradient sheet. */
+.auth-brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(70% 55% at 8% 4%, rgba(13, 148, 136, 0.34), transparent 62%),
+    radial-gradient(58% 48% at 96% 96%, rgba(94, 234, 212, 0.12), transparent 66%);
+  pointer-events: none;
+}
+
+/* Print grain. Inline SVG so the panel stays a single network-free asset. */
+.auth-brand__grain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.5;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E");
+}
+
+.auth-brand__wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--auth-ink-text);
+}
+
+/* The mark: a teal tile with a single ledger rule struck through it. */
+.auth-brand__mark {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--auth-teal-light) 0%, var(--auth-teal) 100%);
+  position: relative;
+}
+
+.auth-brand__mark::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--auth-ink);
+  opacity: 0.75;
+}
+
+.auth-brand__headline {
+  font-family: var(--auth-serif);
+  font-weight: 400;
+  font-size: clamp(2.15rem, 6.2vw, 3.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.auth-brand__headline em {
+  font-style: italic;
+  color: var(--auth-teal-light);
+}
+
+.auth-brand__sub {
+  margin-top: 16px;
+  max-width: 34ch;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--auth-ink-muted);
+}
+
+/*
+ * A miniature of the app's own ledger list (§2 of docs/ui-patterns.md): name
+ * left, figure right, hairline dividers, tabular figures. It is decorative, so
+ * it is `aria-hidden` in the markup — but the figures still follow §3, because
+ * a specimen that breaks the house numeric rules teaches the wrong thing.
+ */
+.auth-brand__ledger {
+  border-top: 1px solid var(--auth-ink-rule);
+}
+
+.auth-brand__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--auth-ink-rule);
+  font-size: 0.8125rem;
+}
+
+.auth-brand__row span:first-child {
+  color: var(--auth-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The figure is a real `<Money component="span" surface="inherit">`, so the
+ * tabular numerals, the tracking and the de-emphasised glyph all come from the
+ * house atom (§3). Only the face and weight are the panel's business — MUI's
+ * `fontFamily` would otherwise pull the app's sans onto the ink.
+ */
+.auth-brand__row span:last-child {
+  flex-shrink: 0;
+  font-family: var(--auth-sans);
+  font-weight: 600;
+  color: var(--auth-ink-text);
+}
+
+.auth-brand__caption {
+  margin-top: 14px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--auth-ink-muted);
+}
+
+/*
+ * Below the split, the ink panel is a masthead rather than a column: the
+ * ledger specimen would push the form off the fold on a 390px screen, and the
+ * form is what the screen is for.
+ */
+@media (max-width: 59.99rem) {
+  .auth-brand__ledger,
+  .auth-brand__caption {
+    display: none;
+  }
+
+  .auth-brand__sub {
+    margin-top: 12px;
+    font-size: 0.875rem;
+  }
+}
+
+/* ── Legal strip ───────────────────────────────────────────────────────── */
+
+.auth-legal {
+  grid-area: foot;
+  background-color: var(--auth-paper);
+  padding: 0 clamp(22px, 6vw, 60px) clamp(22px, 4vw, 40px);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: var(--auth-muted);
+  text-align: center;
+}
+
+@media (min-width: 60rem) {
+  .auth-legal {
+    border-left: 1px solid var(--auth-rule);
+  }
+}
+
+/* ── Tabs: sign in / create account ────────────────────────────────────── */
+
+[data-amplify-authenticator] .amplify-tabs__list {
+  display: flex;
+  justify-content: flex-start;
+  gap: 26px;
+  border: none;
+  background-color: transparent;
+  margin-bottom: 34px;
+}
+
+[data-amplify-authenticator] .amplify-tabs__item {
+  position: relative;
+  flex: 0 0 auto;
+  border: none;
+  background-color: transparent;
+  padding: 0 0 12px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+  transition: color 0.2s ease;
+}
+
+[data-amplify-authenticator] .amplify-tabs__item::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background-color: var(--auth-teal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+[data-amplify-authenticator] .amplify-tabs__item:hover {
+  color: var(--auth-text);
+}
+
+[data-amplify-authenticator] .amplify-tabs__item--active,
+[data-amplify-authenticator] .amplify-tabs__item[aria-selected='true'] {
+  color: var(--auth-text);
+}
+
+[data-amplify-authenticator] .amplify-tabs__item--active::after,
+[data-amplify-authenticator] .amplify-tabs__item[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+
+/* ── Route headings ────────────────────────────────────────────────────── */
+
+[data-amplify-authenticator] .amplify-heading {
+  font-family: var(--auth-serif);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--auth-text);
+  margin-bottom: 10px;
+}
+
+.auth-route-note {
+  margin-bottom: 30px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--auth-muted);
+}
+
+/* ── Form ──────────────────────────────────────────────────────────────── */
+
+[data-amplify-authenticator] [data-amplify-form] {
+  padding: 0;
+}
+
+[data-amplify-authenticator] fieldset.amplify-flex {
+  gap: 22px;
+}
+
+[data-amplify-authenticator] .amplify-field {
+  gap: 6px;
+}
+
+[data-amplify-authenticator] .amplify-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+}
+
+/*
+ * The rule lives on the field group, not the input: a password field puts its
+ * show/hide button in `__outer-end`, a sibling of the input, so an underline
+ * on the input alone would stop short of the field's actual right edge.
+ */
+[data-amplify-authenticator] .amplify-field-group {
+  position: relative;
+  border-bottom: 1px solid var(--auth-rule);
+  transition: border-color 0.2s ease;
+}
+
+[data-amplify-authenticator] .amplify-field-group::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+  background-color: var(--auth-teal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+[data-amplify-authenticator] .amplify-field-group:focus-within::after {
+  transform: scaleX(1);
+}
+
+[data-amplify-authenticator] .amplify-input {
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  padding: 9px 0;
+  font-family: var(--auth-sans);
+  font-size: 1rem;
+  color: var(--auth-text);
+}
+
+[data-amplify-authenticator] .amplify-input:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+[data-amplify-authenticator] .amplify-input::placeholder {
+  color: var(--auth-muted);
+  opacity: 0.65;
+}
+
+/* The password reveal toggle, reduced to a quiet glyph on the rule. */
+[data-amplify-authenticator] .amplify-field-group__outer-end .amplify-button {
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--auth-muted);
+  padding-inline: 10px;
+}
+
+[data-amplify-authenticator] .amplify-field-group__outer-end .amplify-button:hover {
+  background-color: transparent;
+  color: var(--auth-teal-dark);
+}
+
+[data-amplify-authenticator] .amplify-field__error-message {
+  font-size: 0.75rem;
+  color: var(--auth-error-ink);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+
+/*
+ * The gradient and the hover shadow are `theme.ts`'s `MuiButton.contained`
+ * treatment and the `SummaryHeroCard` gradient idiom, so the front door's one
+ * filled element already looks like the app behind it.
+ */
+[data-amplify-authenticator] .amplify-button--primary {
+  margin-top: 12px;
+  border: none;
+  border-radius: 10px;
+  min-height: 52px;
+  background: linear-gradient(135deg, var(--auth-teal) 0%, var(--auth-teal-dark) 100%);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: none;
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
+}
+
+[data-amplify-authenticator] .amplify-button--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--auth-teal) 0%, var(--auth-teal-dark) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+[data-amplify-authenticator] .amplify-button--primary:disabled,
+[data-amplify-authenticator] .amplify-button--primary.amplify-button--loading {
+  background: var(--auth-rule);
+  color: var(--auth-muted);
+  transform: none;
+  box-shadow: none;
+}
+
+/*
+ * The default variation. Exactly one button in the whole Authenticator has it:
+ * ConfirmSignUp renders "Resend Code" as a bare `<Button type="button">` with
+ * no `variation`, so without a rule here that one screen shows a stock bordered
+ * button beside a gradient one. It is a secondary action, so it gets the
+ * hairline treatment the fields use rather than a second filled button.
+ *
+ * Scoped to that route's form, and deliberately not written as
+ * `.amplify-button:not(--primary):not(--link)`. That shape looks tidier but its
+ * `:not()` chain scores (0,5,0), which out-specifies the
+ * `.amplify-field-group__outer-end .amplify-button` reset below at (0,3,0) —
+ * so it captured the password show/hide toggle and drew it as a 46px bordered
+ * pill hanging past the field's rule. A route-scoped selector cannot reach
+ * inside a field group at all, which is the property worth having here.
+ */
+[data-amplify-authenticator]
+  [data-amplify-authenticator-confirmsignup]
+  .amplify-button:not(.amplify-button--primary) {
+  border: 1px solid var(--auth-rule);
+  border-radius: 10px;
+  min-height: 46px;
+  background-color: transparent;
+  color: var(--auth-text);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+[data-amplify-authenticator]
+  [data-amplify-authenticator-confirmsignup]
+  .amplify-button:not(.amplify-button--primary):hover {
+  border-color: var(--auth-teal);
+  background-color: transparent;
+  color: var(--auth-teal-dark);
+}
+
+/* "We sent a code to a***@b.com" — the line under a confirmation heading. */
+[data-amplify-authenticator] .amplify-authenticator__subtitle {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--auth-muted);
+}
+
+[data-amplify-authenticator] .amplify-button--link {
+  align-self: center;
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--auth-teal-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 8px 4px;
+  text-underline-offset: 4px;
+}
+
+[data-amplify-authenticator] .amplify-button--link:hover {
+  background-color: transparent;
+  color: var(--auth-teal);
+  text-decoration: underline;
+}
+
+[data-amplify-authenticator] [data-amplify-footer] {
+  padding-bottom: 0;
+}
+
+/*
+ * Focus.
+ *
+ * `--amplify-components-fieldcontrol-focus-box-shadow: none` is what the fields
+ * want — they show the animated teal underline on `:focus-within` instead — but
+ * `--amplify-components-button-focus-box-shadow` inherits from it, so it also
+ * stripped every button's keyboard indicator. Tabbing through the sign-in form
+ * confirmed the submit button rendering `outline: none` with `box-shadow: none`
+ * and nothing else. This restores one indicator for all of them, in the accent
+ * rather than Amplify's navy.
+ */
+[data-amplify-authenticator] .amplify-button:focus-visible,
+[data-amplify-authenticator] .amplify-tabs__item:focus-visible {
+  outline: 2px solid var(--auth-teal);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+/*
+ * The password toggle needs the selector spelled out — it also carries
+ * `.amplify-field-group__control`, whose own focus rule would otherwise win and
+ * paint a 3px `currentColor` outline. Its offset is tighter than the rest so the
+ * ring stays inside the field's rule rather than straddling it.
+ */
+[data-amplify-authenticator] .amplify-field-group__outer-end .amplify-button:focus-visible {
+  outline: 2px solid var(--auth-teal);
+  outline-offset: -2px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+/* ── Errors ────────────────────────────────────────────────────────────── */
+
+[data-amplify-authenticator] .amplify-alert--error {
+  align-items: flex-start;
+  border-radius: 8px;
+  border-left: 2px solid var(--auth-error);
+  background-color: var(--auth-error-wash);
+  color: var(--auth-error-ink);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  padding: 12px 14px;
+}
+
+[data-amplify-authenticator] [data-amplify-sign-up-errors] {
+  font-size: 0.75rem;
+  color: var(--auth-muted);
+}
+
+/* ── Entrance ──────────────────────────────────────────────────────────────
+ * One orchestrated page load rather than scattered micro-interactions, per §7
+ * of docs/ui-patterns.md. The panels rise in from opposite sides of the seam.
+ */
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes auth-seam {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* `:nth-child` counts the grain layer, which is the first child and static. */
+.auth-brand > *:not(.auth-brand__grain) {
+  animation: auth-rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.auth-brand > *:nth-child(3) {
+  animation-delay: 90ms;
+}
+
+.auth-brand > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+[data-amplify-authenticator] [data-amplify-router] > * {
+  animation: auth-seam 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) 120ms both;
+}
+
+.auth-legal {
+  animation: auth-rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) 260ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-brand > *,
+  [data-amplify-authenticator] [data-amplify-router] > *,
+  .auth-legal {
+    animation: none;
+  }
+
+  [data-amplify-authenticator] .amplify-tabs__item::after,
+  [data-amplify-authenticator] .amplify-field-group::after,
+  [data-amplify-authenticator] .amplify-button--primary {
+    transition: none;
+  }
+}

@@ -3,6 +3,9 @@ import Layout from '@/components/layout/Layout';
 import '@/utils/amplify-config';
 import '@/styles/globals.css';
 import '@aws-amplify/ui-react/styles.css';
+// After Amplify's own stylesheet — it supersedes rules in both that file and
+// globals.css. See the header of auth.css.
+import '@/styles/auth.css';
 import type { AppProps } from 'next/app';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { Authenticator } from '@aws-amplify/ui-react';
@@ -11,6 +14,7 @@ import { useEffect, useMemo } from 'react';
 import theme from '@/theme';
 import { cacheNamespaceFor, createCacheProvider } from '@/utils/swr-cache';
 import { authServices } from '@/utils/auth-services';
+import { authComponents, authFormFields } from '@/components/layout/AuthLayout';
 
 /**
  * Holds the persisted cache for exactly one identity.
@@ -70,7 +74,11 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Authenticator services={authServices}>
+      <Authenticator
+        services={authServices}
+        components={authComponents}
+        formFields={authFormFields}
+      >
         {({ user }) => (
           // Keyed on the identity so a different user gets a fresh provider
           // rather than inheriting the previous one's hydrated cache.

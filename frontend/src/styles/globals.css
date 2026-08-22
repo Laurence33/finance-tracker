@@ -70,9 +70,4 @@ a {
   background: rgba(0, 0, 0, 0.25);
 }
 
-[data-amplify-authenticator] {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* The signed-out Authenticator is laid out entirely in src/styles/auth.css. */
