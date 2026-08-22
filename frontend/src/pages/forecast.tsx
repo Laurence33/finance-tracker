@@ -41,28 +41,36 @@ export default function ForecastPage() {
     return [1, 2].map((back) => format(subMonths(now, back), 'yyyy-MM'));
   }, []);
 
-  const { data: prior1, error: error1 } = useSWR(KEYS.incomes(priorMonths[0]), swrFetcher);
-  const { data: prior2, error: error2 } = useSWR(KEYS.incomes(priorMonths[1]), swrFetcher);
-  const priorSettled = Boolean((prior1 || error1) && (prior2 || error2));
+  // Two hooks because the count must be fixed, but the results collapse into one
+  // shape per month so the rest of the page reads a list rather than four
+  // positionally-named values. A month that failed contributes nothing rather
+  // than poisoning the average — computeAverageIncome reports how many it used.
+  const priorResults = [
+    useSWR(KEYS.incomes(priorMonths[0]), swrFetcher),
+    useSWR(KEYS.incomes(priorMonths[1]), swrFetcher),
+  ].map((result) => ({
+    settled: Boolean(result.data || result.error),
+    total: result.error ? null : (result.data?.data?.totalIncome ?? 0),
+  }));
+
+  const priorSettled = priorResults.every((month) => month.settled);
+  const usableTotals = priorResults.flatMap((month) =>
+    month.total === null ? [] : [month.total],
+  );
+  // A primitive dep, so the effect doesn't re-run on every render just because
+  // the array above is rebuilt.
+  const usableTotalsKey = usableTotals.join(',');
 
   useEffect(() => {
     if (!priorSettled) return;
 
-    // A failed month contributes nothing rather than poisoning the average —
-    // computeAverageIncome reports how many months it actually used.
-    const totals = [
-      totalIncome,
-      ...(error1 ? [] : [prior1?.data?.totalIncome || 0]),
-      ...(error2 ? [] : [prior2?.data?.totalIncome || 0]),
-    ];
-
-    const { average, monthsUsed } = computeAverageIncome(totals);
+    const { average, monthsUsed } = computeAverageIncome([totalIncome, ...usableTotals]);
     setAverageIncome(average);
     setIncomeMonthsUsed(monthsUsed);
     setIncomeOverride(Math.round(average).toString());
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priorSettled, totalIncome, prior1, prior2, error1, error2]);
+  }, [priorSettled, totalIncome, usableTotalsKey]);
 
   const effectiveIncome = incomeOverride !== ''
     ? Number(incomeOverride) || 0

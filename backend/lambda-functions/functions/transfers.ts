@@ -1,5 +1,4 @@
-import middy from '@middy/core';
-import cors from '@middy/http-cors';
+import { withApiMiddleware } from 'utils/apiMiddleware';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import {
     HttpMethod,
@@ -10,8 +9,6 @@ import {
 } from 'ft-common-layer';
 import { TransfersController } from 'controllers/TransfersController';
 import { getUserIdFromEvent } from 'utils/getUserId';
-import { requestIdMiddleware } from 'utils/requestIdMiddleware';
-import { cacheControlMiddleware } from 'utils/cacheControlMiddleware';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
@@ -40,14 +37,4 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 };
 
-export const lambdaHandler = middy(handler)
-    .use(
-        cors({
-            headers: 'Content-Type, Authorization, x-api-key',
-            methods: 'GET, POST, OPTIONS',
-            origins: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
-            maxAge: 86400,
-        }),
-    )
-    .use(requestIdMiddleware())
-    .use(cacheControlMiddleware());
+export const lambdaHandler = withApiMiddleware(handler, 'GET, POST, OPTIONS');

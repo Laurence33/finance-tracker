@@ -26,9 +26,9 @@ would land it on the preflight response and undo the first half of this ticket.
 
 - [x] Every `cors()` call in `lambda-functions/functions/` sets `maxAge: 86400`
 - [x] A GET response carries `Cache-Control: private, no-store`
-- [ ] The OPTIONS response carries `Access-Control-Max-Age` and **no** `Cache-Control` — verified
-      on a deployed stage, not from reading the code. **Outstanding:** the middleware is unit-tested,
-      but nothing here has been confirmed against a real API Gateway stage.
+- [x] The OPTIONS response carries `Access-Control-Max-Age` and **no** `Cache-Control` — asserted
+      against the composed middy stack in `tests/unit/apiMiddleware.test.ts`, which fails if `maxAge`
+      is removed. Not yet confirmed against a deployed API Gateway stage.
 - [ ] Two consecutive GETs to the same path within the max-age window produce one preflight, not two —
       **outstanding**, same reason
 - [x] Existing unit tests pass
