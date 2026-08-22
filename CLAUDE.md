@@ -1,5 +1,10 @@
 # finance-tracker
 
+## Design
+
+### Design Document
+There is a file - frontend/docs/ui-patterns.md, if you are going to implement a new page or ui.
+
 ## Agent skills
 
 ### Issue tracker
