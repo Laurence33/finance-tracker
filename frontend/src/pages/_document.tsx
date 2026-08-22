@@ -5,16 +5,24 @@ export default function Document() {
     <Html lang="en">
       <Head>
         {/*
-         * Loaded as a plain stylesheet rather than through `next/font` because
-         * these two faces are used by the signed-out auth screens only — see
-         * `src/styles/auth.css`. `next/font` inlines and self-hosts at build
-         * time, which would put both families in the critical path of every
-         * authenticated page that never renders them.
+         * Inter is what `theme.ts` and `globals.css` have always asked for
+         * first — nothing was loading it, so the whole app was falling through
+         * to Roboto and then to Arial. Loading it here settles that for every
+         * screen, not just the signed-out ones.
+         *
+         * Newsreader is the display face for the auth screens' headline (see
+         * `src/styles/auth.css`); it is a screen-first text serif, so it sits
+         * beside Inter without the two looking like they came from different
+         * eras.
+         *
+         * A plain stylesheet rather than `next/font`: that would inline and
+         * self-host at build time, which is a build-time network dependency for
+         * a face only one screen uses.
          */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;1,400&display=swap"
           rel="stylesheet"
         />
       </Head>

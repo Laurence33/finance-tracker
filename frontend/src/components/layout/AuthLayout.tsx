@@ -43,6 +43,7 @@ const SPECIMEN: { name: string; amount: MoneyAmount }[] = [
 function AuthBrand() {
   return (
     <div className="auth-brand">
+      <div className="auth-brand__glow" aria-hidden="true" />
       <div className="auth-brand__grain" aria-hidden="true" />
 
       <div className="auth-brand__wordmark">

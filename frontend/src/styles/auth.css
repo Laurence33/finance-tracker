@@ -34,21 +34,30 @@
   --auth-teal-light: #5eead4;
   --auth-error: #ef4444;
 
-  --auth-ink: #06100f;
-  --auth-ink-raised: #0c1f1c;
-  --auth-ink-text: #e6f0ee;
-  --auth-ink-muted: #8aa5a0;
-  --auth-ink-rule: rgba(255, 255, 255, 0.09);
+  /*
+   * The brand panel is `SummaryHeroCard`'s surface at full-screen scale: the
+   * same `135deg, primary.main → primary.dark` gradient, the same white text,
+   * and the same `alpha('#ffffff', 0.09)` highlight circle (§5). It was a
+   * near-black ink field, which looked like a different product to the one
+   * behind the sign-in.
+   */
+  --auth-hero: linear-gradient(135deg, var(--auth-teal) 0%, var(--auth-teal-dark) 100%);
+  --auth-on-hero: #ffffff;
+  --auth-hero-rule: rgba(255, 255, 255, 0.16);
 
-  --auth-paper: #fbfaf6;
-  --auth-text: #16211f;
-  --auth-muted: #6a7a77;
-  --auth-rule: rgba(10, 32, 29, 0.18);
+  /* `theme.ts`: background.default, background.paper, text.primary, text.secondary. */
+  --auth-paper: #f5f7fa;
+  --auth-text: #1e293b;
+  --auth-muted: #64748b;
+  --auth-rule: rgba(10, 32, 29, 0.23);
+  --auth-rule-strong: rgba(10, 32, 29, 0.6);
+  --auth-field: #ffffff;
   --auth-error-ink: #9a2020;
   --auth-error-wash: rgba(239, 68, 68, 0.08);
 
-  --auth-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
-  --auth-sans: 'IBM Plex Sans', 'Roboto', system-ui, sans-serif;
+  /* Character-for-character `theme.ts`'s `typography.fontFamily`. */
+  --auth-sans: 'Inter', 'Roboto', 'Arial', sans-serif;
+  --auth-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
 
   /* Amplify component tokens, all driven from the palette above. */
   --amplify-components-authenticator-router-box-shadow: none;
@@ -75,22 +84,11 @@
 }
 
 /*
- * In dark mode the paper has to stay a *visibly raised* surface against the
- * ink, or the two panels merge into one dark field and the composition — which
- * is carried entirely by the seam between them — disappears. The first attempt
- * used #101a18, four L* steps above the ink, and a render check showed one flat
- * rectangle. #182422 is about eight steps up and reads as two surfaces.
+ * No dark scheme here on purpose. `theme.ts` declares a light palette only and
+ * `CssBaseline` paints it, so the app behind this sign-in is light whatever the
+ * device is set to. A dark front door would hand off to a light app one frame
+ * later, which reads as a bug rather than a theme.
  */
-@media (prefers-color-scheme: dark) {
-  [data-amplify-authenticator] {
-    --auth-paper: #182422;
-    --auth-text: #e8ece9;
-    --auth-muted: #93a4a0;
-    --auth-rule: rgba(255, 255, 255, 0.17);
-    --auth-error-ink: #fca5a5;
-    --auth-error-wash: rgba(239, 68, 68, 0.12);
-  }
-}
 
 /* ── Shell ─────────────────────────────────────────────────────────────────
  * The two panels are the Authenticator's own children: `components.Header` is
@@ -163,8 +161,8 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background-color: var(--auth-ink);
-  color: var(--auth-ink-text);
+  background: var(--auth-hero);
+  color: var(--auth-on-hero);
   padding: clamp(26px, 5vw, 60px);
   display: flex;
   flex-direction: column;
@@ -185,7 +183,7 @@
   background-image:
     repeating-linear-gradient(
       to bottom,
-      var(--auth-ink-rule) 0 1px,
+      var(--auth-hero-rule) 0 1px,
       transparent 1px 34px
     ),
     linear-gradient(to right, transparent 0 13%, rgba(94, 234, 212, 0.16) 13% calc(13% + 1px), transparent calc(13% + 1px));
@@ -193,16 +191,21 @@
   mask-image: radial-gradient(120% 90% at 12% 0%, #000 10%, transparent 78%);
 }
 
-/* Two teal blooms, low and wide, for depth without a second gradient sheet. */
-.auth-brand::after {
-  content: '';
+/*
+ * §5: depth comes from one oversized off-canvas circle, not from a second
+ * gradient. Scaled up from `SummaryHeroCard`'s 216px because this surface is a
+ * full-height panel rather than a card; the alpha is unchanged.
+ */
+.auth-brand__glow {
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    radial-gradient(70% 55% at 8% 4%, rgba(13, 148, 136, 0.34), transparent 62%),
-    radial-gradient(58% 48% at 96% 96%, rgba(94, 234, 212, 0.12), transparent 66%);
+  top: -300px;
+  right: -240px;
+  width: 780px;
+  height: 780px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.09);
   pointer-events: none;
+  z-index: -1;
 }
 
 /* Print grain. Inline SVG so the panel stays a single network-free asset. */
@@ -223,7 +226,7 @@
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--auth-ink-text);
+  color: var(--auth-on-hero);
 }
 
 /* The mark: a teal tile with a single ledger rule struck through it. */
@@ -232,7 +235,7 @@
   height: 22px;
   flex-shrink: 0;
   border-radius: 5px;
-  background: linear-gradient(135deg, var(--auth-teal-light) 0%, var(--auth-teal) 100%);
+  background-color: var(--auth-on-hero);
   position: relative;
 }
 
@@ -244,7 +247,7 @@
   top: 50%;
   height: 2px;
   border-radius: 1px;
-  background-color: var(--auth-ink);
+  background-color: var(--auth-teal-dark);
   opacity: 0.75;
 }
 
@@ -267,7 +270,7 @@
   max-width: 34ch;
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: var(--auth-ink-muted);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /*
@@ -277,7 +280,7 @@
  * a specimen that breaks the house numeric rules teaches the wrong thing.
  */
 .auth-brand__ledger {
-  border-top: 1px solid var(--auth-ink-rule);
+  border-top: 1px solid var(--auth-hero-rule);
 }
 
 .auth-brand__row {
@@ -286,12 +289,12 @@
   justify-content: space-between;
   gap: 16px;
   padding: 11px 0;
-  border-bottom: 1px solid var(--auth-ink-rule);
+  border-bottom: 1px solid var(--auth-hero-rule);
   font-size: 0.8125rem;
 }
 
 .auth-brand__row span:first-child {
-  color: var(--auth-ink-muted);
+  color: rgba(255, 255, 255, 0.85);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -307,7 +310,7 @@
   flex-shrink: 0;
   font-family: var(--auth-sans);
   font-weight: 600;
-  color: var(--auth-ink-text);
+  color: var(--auth-on-hero);
 }
 
 .auth-brand__caption {
@@ -316,7 +319,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--auth-ink-muted);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /*
@@ -446,38 +449,41 @@
 }
 
 /*
- * The rule lives on the field group, not the input: a password field puts its
- * show/hide button in `__outer-end`, a sibling of the input, so an underline
- * on the input alone would stop short of the field's actual right edge.
+ * A box, not an underline. Every form in the app uses MUI `TextField
+ * variant="outlined"` — a 12px-radius box that takes a 2px `primary` border
+ * when focused — so a hairline-underlined field was the one control here that
+ * had no counterpart behind the sign-in.
+ *
+ * The border lives on the field group rather than the input because a password
+ * field puts its show/hide button in `__outer-end`, a sibling of the input; a
+ * border on the input alone would cut the box short of the field's right edge.
+ * The 2px focus border is drawn as an inset shadow so it does not resize the
+ * box and shift the text inside it, which is how MUI avoids the same jump.
  */
 [data-amplify-authenticator] .amplify-field-group {
   position: relative;
-  border-bottom: 1px solid var(--auth-rule);
-  transition: border-color 0.2s ease;
+  border: 1px solid var(--auth-rule);
+  border-radius: 12px;
+  background-color: var(--auth-field);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-[data-amplify-authenticator] .amplify-field-group::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 -1px 0;
-  height: 2px;
-  background-color: var(--auth-teal);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1);
+[data-amplify-authenticator] .amplify-field-group:hover {
+  border-color: var(--auth-rule-strong);
 }
 
-[data-amplify-authenticator] .amplify-field-group:focus-within::after {
-  transform: scaleX(1);
+[data-amplify-authenticator] .amplify-field-group:focus-within {
+  border-color: var(--auth-teal);
+  box-shadow: inset 0 0 0 1px var(--auth-teal);
 }
 
 [data-amplify-authenticator] .amplify-input {
   border: none;
-  border-radius: 0;
+  border-radius: 12px;
   background-color: transparent;
-  padding: 9px 0;
+  padding: 13px 14px;
   font-family: var(--auth-sans);
-  font-size: 1rem;
+  font-size: 0.9375rem;
   color: var(--auth-text);
 }
 
@@ -525,10 +531,10 @@
   min-height: 52px;
   background: linear-gradient(135deg, var(--auth-teal) 0%, var(--auth-teal-dark) 100%);
   color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
   box-shadow: none;
   transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
@@ -570,10 +576,8 @@
   min-height: 46px;
   background-color: transparent;
   color: var(--auth-text);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.9375rem;
+  font-weight: 600;
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -690,16 +694,16 @@
   }
 }
 
-/* `:nth-child` counts the grain layer, which is the first child and static. */
-.auth-brand > *:not(.auth-brand__grain) {
+/* `:nth-child` counts the two static backdrop layers, which do not animate. */
+.auth-brand > *:not(.auth-brand__grain):not(.auth-brand__glow) {
   animation: auth-rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
-.auth-brand > *:nth-child(3) {
+.auth-brand > *:nth-child(4) {
   animation-delay: 90ms;
 }
 
-.auth-brand > *:nth-child(4) {
+.auth-brand > *:nth-child(5) {
   animation-delay: 180ms;
 }
 
