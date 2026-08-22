@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/**
+ * Where the page is actually scrolled to.
+ *
+ * `window.scrollY` alone is not enough: `globals.css` sets `overflow-x: hidden`
+ * on both `html` and `body`, which in some engines makes `body` the scroll
+ * container and leaves `window.scrollY` pinned at 0. Trusting it there made
+ * every downward drag anywhere on the page look like a pull-to-refresh, and the
+ * `preventDefault` that follows killed scrolling outright.
+ */
+function scrollOffset(): number {
+  return Math.max(
+    window.scrollY || 0,
+    document.documentElement?.scrollTop || 0,
+    document.body?.scrollTop || 0,
+  );
+}
+
 const TRIGGER_DISTANCE = 70;
 const MAX_PULL = 110;
 // Below this the gesture is almost certainly a tap or a horizontal swipe.
@@ -44,7 +61,7 @@ export function usePullToRefresh({ onRefresh, disabled = false }: Options) {
       if (busy.current || event.touches.length !== 1) return;
       // Only arm the gesture at the very top; a pull that begins mid-page is a
       // scroll, not a refresh.
-      if (window.scrollY > 0) return;
+      if (scrollOffset() > 0) return;
       startY.current = event.touches[0].clientY;
       startX.current = event.touches[0].clientX;
       active.current = false;
@@ -64,9 +81,16 @@ export function usePullToRefresh({ onRefresh, disabled = false }: Options) {
           return;
         }
         active.current = true;
+      } else if (dy < START_SLOP) {
+        // The finger reversed. Hand the gesture back to the browser instead of
+        // holding it for the rest of the touch — otherwise a small downward dip
+        // before an upward flick would block the scroll it turned into.
+        active.current = false;
+        setDistance(0);
+        return;
       }
 
-      if (window.scrollY > 0) {
+      if (scrollOffset() > 0) {
         reset();
         return;
       }
