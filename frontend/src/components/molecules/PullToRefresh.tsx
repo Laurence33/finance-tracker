@@ -44,20 +44,16 @@ export default function PullToRefresh() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 48,
-        height: 48,
+        width: 38,
+        height: 38,
         borderRadius: '50%',
-        // Translucent rather than a solid disc: a filled white circle over the
-        // ledger reads as a card that has appeared, which pulls the eye away
-        // from the content the refresh is about to update. The blur keeps the
-        // ring legible over whatever it happens to sit on.
-        bgcolor: (theme) => alpha(theme.palette.background.paper, 0.55),
+        // Translucent, with no border or elevation: anything more reads as a
+        // card that has appeared, which pulls the eye away from the content the
+        // refresh is about to update. The blur alone separates the ring from
+        // whatever it happens to sit on.
+        bgcolor: (theme) => alpha(theme.palette.background.paper, 0.35),
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
-        // A hairline instead of elevation — a shadow would put the solidity
-        // straight back.
-        border: '1px solid',
-        borderColor: (theme) => alpha(theme.palette.divider, 0.6),
         // Grows into place as the pull arms, so the gesture still feels
         // connected to something even though the position is fixed.
         transform: `translate(-50%, -50%) scale(${refreshing ? 1 : 0.7 + progress * 0.3})`,
