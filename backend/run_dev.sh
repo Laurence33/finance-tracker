@@ -15,4 +15,7 @@ else
 fi
 
 sam build
-sam local start-api --env-vars env.json
+# Bind to every interface, not just 127.0.0.1, so a phone on the same network
+# can reach the API. Without this the frontend is reachable at the machine's LAN
+# address but the backend is not, and every request fails at the TCP level.
+sam local start-api --env-vars env.json --host 0.0.0.0

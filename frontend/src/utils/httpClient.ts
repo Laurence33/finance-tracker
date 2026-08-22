@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 import { createRequestQueue } from './requestQueue';
 import { clearAllCacheNamespaces } from './swr-cache';
+import { isLocalApiUrl } from './isLocalApi';
 
 const MAX_RETRIES = 3;
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
@@ -28,11 +29,7 @@ type RequestConfig = Parameters<typeof httpClient.request>[0] & {
 // The user's throttling key, fetched once from GET /me/api-key and memoized for the session.
 let apiKeyPromise: Promise<string | undefined> | null = null;
 
-// Usage plans/keys aren't enforced by `sam local`, and fetching one would hit real
-// AWS from a dev machine — so skip the bootstrap entirely against a local API.
-const isLocalApi = /^https?:\/\/(localhost|127\.0\.0\.1)/.test(
-  process.env.NEXT_PUBLIC_API_URL ?? '',
-);
+const isLocalApi = isLocalApiUrl(process.env.NEXT_PUBLIC_API_URL);
 
 function getApiKey(): Promise<string | undefined> {
   if (isLocalApi) return Promise.resolve(undefined);
