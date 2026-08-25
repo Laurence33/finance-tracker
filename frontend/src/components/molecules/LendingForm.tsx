@@ -1,5 +1,5 @@
 import { AppContext } from '@/context/AppContext';
-import { formatMoney } from '@/utils/money';
+import { formatMoney, parseMoneyInput, toMoneyInput } from '@/utils/money';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
   Autocomplete,
@@ -18,7 +18,8 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type LendingFormData = {
   borrower: string;
-  amount: number;
+  /** Raw input string — see `parseMoneyInput`. */
+  amount: string;
   fundSource: string;
   promisedDate: string;
   notes: string;
@@ -27,7 +28,7 @@ type LendingFormData = {
 
 const initialFormData: LendingFormData = {
   borrower: '',
-  amount: 0,
+  amount: '',
   fundSource: '',
   promisedDate: '',
   notes: '',
@@ -56,7 +57,7 @@ export default function LendingForm({
     isEdit
       ? {
           borrower: lending.borrower,
-          amount: lending.amount,
+          amount: toMoneyInput(lending.amount),
           fundSource: lending.fundSource,
           promisedDate: lending.promisedDate,
           notes: lending.notes,
@@ -67,10 +68,6 @@ export default function LendingForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const onChangeHandler = (value: any, field: string) => {
-    if (field === 'amount') {
-      value = parseFloat(value);
-      if (isNaN(value)) value = 0;
-    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -85,13 +82,16 @@ export default function LendingForm({
       if (isEdit) {
         await HttpClient.patch(`/lendings?timestamp=${encodeURIComponent(lending.timestamp)}`, {
           borrower: formData.borrower,
-          amount: formData.amount,
+          amount: parseMoneyInput(formData.amount),
           promisedDate: formData.promisedDate,
           notes: formData.notes,
         });
         showSuccessSnackBar('Lending updated successfully!');
       } else {
-        await HttpClient.post('/lendings', formData);
+        await HttpClient.post('/lendings', {
+          ...formData,
+          amount: parseMoneyInput(formData.amount),
+        });
         showSuccessSnackBar('Lending created successfully!');
       }
       setFormData(initialFormData);
@@ -139,7 +139,7 @@ export default function LendingForm({
             label="Amount"
             variant="outlined"
             type="number"
-            value={formData.amount || ''}
+            value={formData.amount}
             onChange={(e) => onChangeHandler(e.target.value, 'amount')}
             error={!!fieldErrors.amount}
             helperText={getError('amount')}

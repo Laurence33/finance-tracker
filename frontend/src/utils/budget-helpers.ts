@@ -37,15 +37,24 @@ export function computeAllocations(
   return result;
 }
 
-export function sumAllocations(allocations: Record<string, number>): number {
+/**
+ * Tolerates raw input strings as well as numbers: while a bucket field is
+ * being typed its value is the unparsed string (see `parseMoneyInput`).
+ */
+export function sumAllocations(
+  allocations: Record<string, number | string>
+): number {
   return round2(
-    Object.values(allocations).reduce((sum, v) => sum + (Number(v) || 0), 0)
+    Object.values(allocations).reduce<number>(
+      (sum, v) => sum + (Number(v) || 0),
+      0
+    )
   );
 }
 
 /** True when the allocation values sum to `amount` within half a cent. */
 export function allocationsMatchAmount(
-  allocations: Record<string, number>,
+  allocations: Record<string, number | string>,
   amount: number
 ): boolean {
   return Math.abs(sumAllocations(allocations) - amount) <= 0.005;

@@ -1,5 +1,5 @@
 import { AppContext } from '@/context/AppContext';
-import { formatMoney } from '@/utils/money';
+import { formatMoney, parseMoneyInput, toMoneyInput } from '@/utils/money';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
   Box,
@@ -17,7 +17,8 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type PaymentFormData = {
   periodKey: string;
-  amount: number;
+  /** Raw input string — see `parseMoneyInput`. */
+  amount: string;
   fundSource: string;
   notes: string;
 };
@@ -43,17 +44,16 @@ export default function RecurringPaymentForm({
 
   const [formData, setFormData] = useState<PaymentFormData>({
     periodKey: currentPeriodKey,
-    amount: recurringExpense.amountType === 'fixed' ? recurringExpense.amount : 0,
+    amount:
+      recurringExpense.amountType === 'fixed'
+        ? toMoneyInput(recurringExpense.amount)
+        : '',
     fundSource: '',
     notes: '',
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const onChangeHandler = (value: any, field: string) => {
-    if (field === 'amount') {
-      value = parseFloat(value);
-      if (isNaN(value)) value = 0;
-    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -71,7 +71,7 @@ export default function RecurringPaymentForm({
         : formData.periodKey;
       await HttpClient.post(
         `/recurring-expenses/${encodeURIComponent(recurringExpense.name)}/pay`,
-        { ...formData, periodKey },
+        { ...formData, periodKey, amount: parseMoneyInput(formData.amount) },
       );
       showSuccessSnackBar('Payment recorded successfully!');
       invalidate.afterRecurringPaymentWrite();
@@ -118,7 +118,7 @@ export default function RecurringPaymentForm({
             label="Amount"
             variant="outlined"
             type="number"
-            value={formData.amount || ''}
+            value={formData.amount}
             onChange={(e) => onChangeHandler(e.target.value, 'amount')}
             error={!!fieldErrors.amount}
             helperText={getError('amount')}

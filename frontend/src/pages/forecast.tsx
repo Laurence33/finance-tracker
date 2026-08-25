@@ -129,6 +129,7 @@ export default function ForecastPage() {
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
+              htmlInput: { step: 'any' },
             }}
             sx={{ width: 180 }}
           />

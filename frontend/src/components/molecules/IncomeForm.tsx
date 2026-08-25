@@ -1,5 +1,10 @@
 import { AppContext } from '@/context/AppContext';
-import { formatMoney, formatMoneyValue } from '@/utils/money';
+import {
+  formatMoney,
+  formatMoneyValue,
+  parseMoneyInput,
+  toMoneyInput,
+} from '@/utils/money';
 import { currentTimestampForInput } from '@/utils/date-functions';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
@@ -25,17 +30,19 @@ import {
 } from '@/utils/budget-helpers';
 
 type IncomeFormDataType = {
-  amount: number;
+  /** Raw input string — see `parseMoneyInput`. */
+  amount: string;
   timestamp: string;
   fundSource: string;
   source: string;
   tags: string[];
   notes: string;
-  allocations?: Record<string, number>;
+  /** Raw input strings, keyed by bucket. */
+  allocations?: Record<string, string>;
 };
 
 const initialFormData: IncomeFormDataType = {
-  amount: 0,
+  amount: '',
   timestamp: currentTimestampForInput(),
   fundSource: '',
   source: '',
@@ -45,6 +52,27 @@ const initialFormData: IncomeFormDataType = {
 };
 
 type FieldErrors = Record<string, string[]>;
+
+/** A computed split, rendered back into the raw-string bucket fields. */
+function toAllocationInputs(
+  allocations: Record<string, number>
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(allocations).map(([key, value]) => [key, toMoneyInput(value)])
+  );
+}
+
+/** The raw-string bucket fields, coerced for the wire. */
+function fromAllocationInputs(
+  allocations: Record<string, string>
+): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(allocations).map(([key, value]) => [
+      key,
+      parseMoneyInput(value),
+    ])
+  );
+}
 
 export default function IncomeForm() {
   const {
@@ -65,13 +93,14 @@ export default function IncomeForm() {
     if (incomeFormAction === 'update') {
       const existing = selectedIncome!;
       // Seed allocations: keep the income's saved split, else derive from amount.
-      const allocations =
+      const allocations = toAllocationInputs(
         existing.allocations && Object.keys(existing.allocations).length > 0
           ? existing.allocations
           : budgetEnabled
             ? computeAllocations(existing.amount, buckets)
-            : {};
-      return { ...existing, allocations };
+            : {}
+      );
+      return { ...existing, amount: toMoneyInput(existing.amount), allocations };
     }
     return { ...initialFormData, timestamp: currentTimestampForInput(), allocations: {} };
   });
@@ -79,19 +108,20 @@ export default function IncomeForm() {
 
   const allocations = formData.allocations ?? {};
   const allocationTotal = sumAllocations(allocations);
-  const allocationsValid = allocationsMatchAmount(allocations, Number(formData.amount) || 0);
+  const allocationsValid = allocationsMatchAmount(
+    allocations,
+    parseMoneyInput(formData.amount)
+  );
 
   const onChangeHandler = (event: any, field: string) => {
-    let value = event.target.value;
-    if (event.target.type === 'number') {
-      value = parseFloat(event.target.value);
-      if (isNaN(value)) value = '';
-    }
+    const value = event.target.value;
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
       // Re-derive the bucket split whenever the amount changes (still editable after).
       if (field === 'amount' && budgetEnabled) {
-        next.allocations = computeAllocations(Number(value) || 0, buckets);
+        next.allocations = toAllocationInputs(
+          computeAllocations(parseMoneyInput(value), buckets)
+        );
       }
       return next;
     });
@@ -103,10 +133,9 @@ export default function IncomeForm() {
   };
 
   const onAllocationChange = (key: string, raw: string) => {
-    const num = parseFloat(raw);
     setFormData((prev) => ({
       ...prev,
-      allocations: { ...(prev.allocations ?? {}), [key]: isNaN(num) ? 0 : num },
+      allocations: { ...(prev.allocations ?? {}), [key]: raw },
     }));
   };
 
@@ -117,7 +146,10 @@ export default function IncomeForm() {
       return;
     }
     // Only send allocations while a framework is active.
-    const payload = budgetEnabled ? formData : { ...formData, allocations: undefined };
+    const withAmount = { ...formData, amount: parseMoneyInput(formData.amount) };
+    const payload = budgetEnabled
+      ? { ...withAmount, allocations: fromAllocationInputs(allocations) }
+      : { ...withAmount, allocations: undefined };
     try {
       if (incomeFormAction === 'update') {
         await HttpClient.patch(
@@ -196,6 +228,7 @@ export default function IncomeForm() {
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
+              htmlInput: { min: 0, step: 'any' },
             }}
           />
         </Box>
@@ -216,7 +249,7 @@ export default function IncomeForm() {
                   size="small"
                   type="number"
                   label={`${bucket.displayLabel} (${bucket.percentage}%)`}
-                  value={allocations[bucket.key] ?? 0}
+                  value={allocations[bucket.key] ?? ''}
                   onChange={(event) => onAllocationChange(bucket.key, event.target.value)}
                   slotProps={{
                     input: {
@@ -224,6 +257,7 @@ export default function IncomeForm() {
                         <InputAdornment position="start">₱</InputAdornment>
                       ),
                     },
+                    htmlInput: { min: 0, step: 'any' },
                   }}
                 />
               ))}
@@ -242,7 +276,7 @@ export default function IncomeForm() {
                 color={allocationsValid ? 'text.primary' : 'error'}
               >
                 {formatMoney(allocationTotal)} /{' '}
-                {formatMoneyValue(Number(formData.amount) || 0)}
+                {formatMoneyValue(parseMoneyInput(formData.amount))}
               </Typography>
             </Stack>
           </Box>

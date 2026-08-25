@@ -4,6 +4,7 @@ import { Tags } from '@/types/Tags';
 import { Box, Button, InputAdornment, Stack, TextField } from '@mui/material';
 import { use, useRef, useState } from 'react';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { parseMoneyInput, toMoneyInput } from '@/utils/money';
 
 export default function TagForm({
   onClose,
@@ -15,7 +16,11 @@ export default function TagForm({
   const isEdit = !!tag;
   const { showErrorSnackBar, showSuccessSnackBar, invalidate } = use(AppContext);
   const [tagName, setTagName] = useState(isEdit ? tag.name : '');
-  const [budget, setBudget] = useState<number>(isEdit ? tag.budget ?? 0 : 0);
+  // Raw input string — see `parseMoneyInput`.
+  const [budgetInput, setBudgetInput] = useState<string>(
+    isEdit ? toMoneyInput(tag.budget) : ''
+  );
+  const budget = parseMoneyInput(budgetInput);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -106,9 +111,9 @@ export default function TagForm({
             label="Monthly Budget (optional)"
             variant="outlined"
             type="number"
-            value={budget}
+            value={budgetInput}
             onChange={(e) => {
-              setBudget(parseFloat(e.target.value) || 0);
+              setBudgetInput(e.target.value);
               setFieldErrors((prev) => {
                 const next = { ...prev };
                 delete next.budget;
@@ -125,6 +130,7 @@ export default function TagForm({
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
+              htmlInput: { min: 0, step: 'any' },
             }}
           />
         </Box>

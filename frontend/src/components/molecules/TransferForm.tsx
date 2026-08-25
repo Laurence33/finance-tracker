@@ -1,5 +1,5 @@
 import { use, useState } from 'react';
-import { formatMoney } from '@/utils/money';
+import { formatMoney, parseMoneyInput } from '@/utils/money';
 import {
   Box,
   Button,
@@ -21,8 +21,9 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 type TransferFormData = {
   sourceFundSource: string;
   destinationFundSource: string;
-  amount: number;
-  fee: number;
+  /** Raw input strings — see `parseMoneyInput`. */
+  amount: string;
+  fee: string;
   timestamp: string;
   note: string;
 };
@@ -30,8 +31,8 @@ type TransferFormData = {
 const initialFormData: TransferFormData = {
   sourceFundSource: '',
   destinationFundSource: '',
-  amount: 0,
-  fee: 0,
+  amount: '',
+  fee: '',
   timestamp: currentTimestampForInput(),
   note: '',
 };
@@ -52,7 +53,9 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
 
   const sourceFund = fundSources.find((fs) => fs.name === formData.sourceFundSource);
   const sourceBalance = sourceFund?.balance ?? 0;
-  const totalDeducted = (formData.amount || 0) + (formData.fee || 0);
+  const amount = parseMoneyInput(formData.amount);
+  const fee = parseMoneyInput(formData.fee);
+  const totalDeducted = amount + fee;
   const insufficient =
     !!formData.sourceFundSource && totalDeducted > sourceBalance;
 
@@ -85,7 +88,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
     }
 
     try {
-      await HttpClient.post('/transfers', formData);
+      await HttpClient.post('/transfers', { ...formData, amount, fee });
       showSuccessSnackBar('Transfer completed successfully!');
       invalidate.afterTransferWrite();
       onClose();
@@ -171,7 +174,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
             label="Amount"
             type="number"
             value={formData.amount}
-            onChange={(e) => setField('amount', parseFloat(e.target.value) || 0)}
+            onChange={(e) => setField('amount', e.target.value)}
             error={!!fieldErrors.amount || insufficient}
             helperText={
               fieldErrors.amount ||
@@ -185,6 +188,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
+              htmlInput: { min: 0, step: 'any' },
             }}
           />
         </Box>
@@ -196,7 +200,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
             label="Fee (optional)"
             type="number"
             value={formData.fee}
-            onChange={(e) => setField('fee', parseFloat(e.target.value) || 0)}
+            onChange={(e) => setField('fee', e.target.value)}
             error={!!fieldErrors.fee}
             helperText={
               fieldErrors.fee ||
@@ -208,6 +212,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
+              htmlInput: { min: 0, step: 'any' },
             }}
           />
         </Box>

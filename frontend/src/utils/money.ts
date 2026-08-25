@@ -68,3 +68,30 @@ export function formatMoneyLong(amount: MoneyAmount): string {
   }
   return `${CURRENCY_GLYPH}${formatNumber(amount.min)} - ${CURRENCY_GLYPH}${formatNumber(amount.max)}`;
 }
+
+/**
+ * A stored amount, put back into a money field. Nullish becomes an empty
+ * field rather than the string `"undefined"`.
+ */
+export function toMoneyInput(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value);
+}
+
+/**
+ * The inverse of the formatters: an amount as the user typed it, coerced for
+ * the wire.
+ *
+ * Money fields hold the **raw input string**, not a number, because a
+ * `type="number"` input reports its value mid-entry in ways that destroy a
+ * half-typed decimal: a lone `.` comes back as `''` (so coercing to `0` turns
+ * `.5` into `5`, a 10x error), and `45.50` round-tripped through `parseFloat`
+ * renders back as `45.5`, eating the zero the user just typed. Parse once, at
+ * submit — never per keystroke.
+ *
+ * Pair this with `step: 'any'` on the input: `step` defaults to `1`, which
+ * makes the browser reject every fractional amount and block form submission.
+ */
+export function parseMoneyInput(raw: string | number): number {
+  const value = typeof raw === 'number' ? raw : parseFloat(raw);
+  return Number.isFinite(value) ? value : 0;
+}

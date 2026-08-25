@@ -12,17 +12,19 @@ import {
 import { use, useState } from 'react';
 import { FundSource } from '@/types/FundSource';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { parseMoneyInput, toMoneyInput } from '@/utils/money';
 
+/** `balance` is held as the raw input string — see `parseMoneyInput`. */
 type FundSourceFormData = {
   name: string;
-  balance: number;
+  balance: string;
   displayText: string;
   isCreditCard: boolean;
 };
 
 const initialFormData: FundSourceFormData = {
   name: '',
-  balance: 0,
+  balance: '',
   displayText: '',
   isCreditCard: false,
 };
@@ -40,16 +42,19 @@ export default function FundSourceForm({
   const { showErrorSnackBar, showSuccessSnackBar, invalidate } =
     use(AppContext);
   const [formData, setFormData] = useState<FundSourceFormData>(
-    isEdit ? fundSource : initialFormData,
+    isEdit
+      ? {
+          name: fundSource.name,
+          balance: toMoneyInput(fundSource.balance),
+          displayText: fundSource.displayText,
+          isCreditCard: fundSource.isCreditCard,
+        }
+      : initialFormData,
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const onChangeHandler = (event: any, field: string) => {
     let value = event.target.value;
-    if (field === 'balance') {
-      value = parseFloat(value);
-      if (isNaN(value)) value = 0;
-    }
     if (field === 'name') {
       value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     }
@@ -63,16 +68,17 @@ export default function FundSourceForm({
 
   const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
+    const balance = parseMoneyInput(formData.balance);
     try {
       if (isEdit) {
         await HttpClient.patch(`/fund-sources/${fundSource.name}`, {
-          balance: formData.balance,
+          balance,
           displayText: formData.displayText,
           isCreditCard: formData.isCreditCard,
         });
         showSuccessSnackBar('Fund source updated successfully!');
       } else {
-        await HttpClient.post('/fund-sources', formData);
+        await HttpClient.post('/fund-sources', { ...formData, balance });
         showSuccessSnackBar('Fund source created successfully!');
       }
       setFormData(initialFormData);
@@ -139,7 +145,10 @@ export default function FundSourceForm({
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
-              htmlInput: formData.isCreditCard ? {} : { min: 0 },
+              htmlInput: {
+                step: 'any',
+                ...(formData.isCreditCard ? {} : { min: 0 }),
+              },
             }}
           />
         </Box>

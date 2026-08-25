@@ -34,7 +34,12 @@ import {
   computeAllocations,
   sumAllocations,
 } from '@/utils/budget-helpers';
-import { CURRENCY_GLYPH, formatMoneyLong } from '@/utils/money';
+import {
+  CURRENCY_GLYPH,
+  formatMoneyLong,
+  parseMoneyInput,
+  toMoneyInput,
+} from '@/utils/money';
 
 /**
  * §3's numeric treatment for the figures that are *not* money — the bucket
@@ -80,7 +85,10 @@ export default function BudgetPage() {
   }, [frameworks, budgetFramework]);
   const [seedFromBalance, setSeedFromBalance] = useState<boolean>(false);
   const [resetBalances, setResetBalances] = useState<boolean>(false);
-  const [seedAllocations, setSeedAllocations] = useState<Record<string, number>>({});
+  // Raw input strings, keyed by bucket — see `parseMoneyInput`.
+  const [seedAllocations, setSeedAllocations] = useState<Record<string, string>>(
+    {}
+  );
   const [submitting, setSubmitting] = useState(false);
   const [disableConfirm, setDisableConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -102,7 +110,13 @@ export default function BudgetPage() {
   const handleToggleSeed = (checked: boolean) => {
     setSeedFromBalance(checked);
     if (checked && seedBasis.length) {
-      setSeedAllocations(computeAllocations(availableBalance, seedBasis));
+      setSeedAllocations(
+        Object.fromEntries(
+          Object.entries(computeAllocations(availableBalance, seedBasis)).map(
+            ([key, value]) => [key, toMoneyInput(value)]
+          )
+        )
+      );
     } else {
       setSeedAllocations({});
     }
@@ -117,8 +131,7 @@ export default function BudgetPage() {
   };
 
   const handleSeedChange = (key: string, value: string) => {
-    const num = parseFloat(value);
-    setSeedAllocations((prev) => ({ ...prev, [key]: isNaN(num) ? 0 : num }));
+    setSeedAllocations((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleEnable = async () => {
@@ -130,7 +143,16 @@ export default function BudgetPage() {
         enabled: true,
         framework: selectedFramework,
         ...(hasExistingBuckets && resetBalances ? { reseed: true } : {}),
-        ...(applySeed && seedFromBalance ? { initialAllocations: seedAllocations } : {}),
+        ...(applySeed && seedFromBalance
+          ? {
+              initialAllocations: Object.fromEntries(
+                Object.entries(seedAllocations).map(([key, value]) => [
+                  key,
+                  parseMoneyInput(value),
+                ])
+              ),
+            }
+          : {}),
       });
       showSuccessSnackBar('Budgeting framework enabled!');
       setSeedFromBalance(false);
@@ -438,7 +460,7 @@ export default function BudgetPage() {
                       size="small"
                       type="number"
                       label={`${b.displayLabel} (${b.percentage}%)`}
-                      value={seedAllocations[b.key] ?? 0}
+                      value={seedAllocations[b.key] ?? ''}
                       onChange={(e) => handleSeedChange(b.key, e.target.value)}
                       slotProps={{
                         input: {
@@ -448,6 +470,7 @@ export default function BudgetPage() {
                             </InputAdornment>
                           ),
                         },
+                        htmlInput: { min: 0, step: 'any' },
                       }}
                     />
                   ))}

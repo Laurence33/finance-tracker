@@ -15,10 +15,12 @@ import {
 import { use, useState } from 'react';
 import { Asset } from '@/types/Asset';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { parseMoneyInput, toMoneyInput } from '@/utils/money';
 
 type AssetFormData = {
   name: string;
-  value: number;
+  /** Raw input string — see `parseMoneyInput`. */
+  value: string;
   category: string;
   notes: string;
   fundSource: string;
@@ -26,7 +28,7 @@ type AssetFormData = {
 
 const initialFormData: AssetFormData = {
   name: '',
-  value: 0,
+  value: '',
   category: '',
   notes: '',
   fundSource: '',
@@ -49,7 +51,7 @@ export default function AssetForm({
     isEdit
       ? {
           name: asset.name,
-          value: asset.value,
+          value: toMoneyInput(asset.value),
           category: asset.category,
           notes: asset.notes,
           fundSource: asset.fundSource ?? '',
@@ -59,10 +61,6 @@ export default function AssetForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const onChangeHandler = (value: any, field: string) => {
-    if (field === 'value') {
-      value = parseFloat(value);
-      if (isNaN(value)) value = 0;
-    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -79,11 +77,14 @@ export default function AssetForm({
         const { fundSource, ...editPayload } = formData;
         await HttpClient.patch(
           `/assets?timestamp=${encodeURIComponent(asset.timestamp)}`,
-          editPayload,
+          { ...editPayload, value: parseMoneyInput(formData.value) },
         );
         showSuccessSnackBar('Asset updated successfully!');
       } else {
-        await HttpClient.post('/assets', formData);
+        await HttpClient.post('/assets', {
+          ...formData,
+          value: parseMoneyInput(formData.value),
+        });
         showSuccessSnackBar('Asset created successfully!');
       }
       setFormData(initialFormData);
@@ -125,7 +126,7 @@ export default function AssetForm({
             label="Value"
             variant="outlined"
             type="number"
-            value={formData.value || ''}
+            value={formData.value}
             onChange={(e) => onChangeHandler(e.target.value, 'value')}
             error={!!fieldErrors.value}
             helperText={getError('value')}

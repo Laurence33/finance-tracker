@@ -1,5 +1,5 @@
 import { AppContext } from '@/context/AppContext';
-import { formatMoney } from '@/utils/money';
+import { formatMoney, parseMoneyInput, toMoneyInput } from '@/utils/money';
 import { currentTimestampForInput } from '@/utils/date-functions';
 import { HttpClient } from '@/utils/httpClient';
 import {
@@ -18,7 +18,8 @@ import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type ExpenseFormDataType = {
-  amount: number;
+  /** Raw input string — see `parseMoneyInput`. */
+  amount: string;
   timestamp: string;
   fundSource: string;
   tags: string[];
@@ -27,7 +28,7 @@ type ExpenseFormDataType = {
 };
 
 const initialFormData: ExpenseFormDataType = {
-  amount: 0,
+  amount: '',
   timestamp: currentTimestampForInput(),
   fundSource: '',
   tags: [],
@@ -51,16 +52,16 @@ export default function ExpenseForm() {
   } = use(AppContext);
   const [formData, setFormData] = useState<ExpenseFormDataType>(
     formAction == 'update'
-      ? { ...selectedExpense!, bucket: selectedExpense!.bucket ?? '' }
+      ? {
+          ...selectedExpense!,
+          amount: toMoneyInput(selectedExpense!.amount),
+          bucket: selectedExpense!.bucket ?? '',
+        }
       : { ...initialFormData, timestamp: currentTimestampForInput() }
   );
 
   const onChangeHandler = (event: any, field: string) => {
-    let value = event.target.value;
-    if (event.target.type === 'number') {
-      value = parseFloat(event.target.value);
-      if (isNaN(value)) value = '';
-    }
+    const value = event.target.value;
     setFormData((prevFormData) => {
       return {
         ...prevFormData,
@@ -77,7 +78,8 @@ export default function ExpenseForm() {
       return;
     }
     // Only send a bucket while a framework is active.
-    const payload = budgetEnabled ? formData : { ...formData, bucket: undefined };
+    const withAmount = { ...formData, amount: parseMoneyInput(formData.amount) };
+    const payload = budgetEnabled ? withAmount : { ...withAmount, bucket: undefined };
     try {
       if (formAction === 'update') {
         await HttpClient.patch(
@@ -148,6 +150,7 @@ export default function ExpenseForm() {
                   <InputAdornment position="start">₱</InputAdornment>
                 ),
               },
+              htmlInput: { min: 0, step: 'any' },
             }}
           />
         </Box>

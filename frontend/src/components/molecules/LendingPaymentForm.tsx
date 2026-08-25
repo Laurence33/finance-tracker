@@ -1,5 +1,5 @@
 import { AppContext } from '@/context/AppContext';
-import { formatMoney } from '@/utils/money';
+import { formatMoney, parseMoneyInput, toMoneyInput } from '@/utils/money';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import {
   Box,
@@ -17,7 +17,8 @@ import { Lending } from '@/types/Lending';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 type PaymentFormData = {
-  amount: number;
+  /** Raw input string — see `parseMoneyInput`. */
+  amount: string;
   fundSource: string;
   notes: string;
   addedToBalance: boolean;
@@ -42,7 +43,7 @@ export default function LendingPaymentForm({
   const remaining = lending.amount - lending.totalPaid;
 
   const [formData, setFormData] = useState<PaymentFormData>({
-    amount: remaining,
+    amount: toMoneyInput(remaining),
     fundSource: '',
     notes: '',
     addedToBalance: true,
@@ -50,10 +51,6 @@ export default function LendingPaymentForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const onChangeHandler = (value: any, field: string) => {
-    if (field === 'amount') {
-      value = parseFloat(value);
-      if (isNaN(value)) value = 0;
-    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -67,7 +64,7 @@ export default function LendingPaymentForm({
     try {
       await HttpClient.post('/lendings/payments', {
         lendingTimestamp: lending.timestamp,
-        amount: formData.amount,
+        amount: parseMoneyInput(formData.amount),
         fundSource: formData.fundSource,
         notes: formData.notes,
         addedToBalance: formData.addedToBalance,
@@ -102,7 +99,7 @@ export default function LendingPaymentForm({
             label="Payment Amount"
             variant="outlined"
             type="number"
-            value={formData.amount || ''}
+            value={formData.amount}
             onChange={(e) => onChangeHandler(e.target.value, 'amount')}
             error={!!fieldErrors.amount}
             helperText={getError('amount') || `Max: ${formatMoney(remaining)}`}

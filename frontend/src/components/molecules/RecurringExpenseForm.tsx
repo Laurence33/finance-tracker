@@ -15,14 +15,16 @@ import { use, useState } from 'react';
 import { RecurringExpense } from '@/types/RecurringExpense';
 import ChipSelectMultiple from '@/components/atoms/ChipSelectMultiple';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { parseMoneyInput, toMoneyInput } from '@/utils/money';
 
 type RecurringExpenseFormData = {
   name: string;
   displayName: string;
   amountType: 'fixed' | 'range';
-  amount: number;
-  amountMin: number;
-  amountMax: number;
+  /** Raw input strings — see `parseMoneyInput`. */
+  amount: string;
+  amountMin: string;
+  amountMax: string;
   frequency: 'weekly' | 'monthly' | 'yearly' | 'as_needed';
   startDate: string;
   endDate: string;
@@ -34,9 +36,9 @@ const initialFormData: RecurringExpenseFormData = {
   name: '',
   displayName: '',
   amountType: 'fixed',
-  amount: 0,
-  amountMin: 0,
-  amountMax: 0,
+  amount: '',
+  amountMin: '',
+  amountMax: '',
   frequency: 'monthly',
   startDate: '',
   endDate: '',
@@ -67,9 +69,20 @@ export default function RecurringExpenseForm({
           name: recurringExpense.name,
           displayName: recurringExpense.displayName,
           amountType: recurringExpense.amountType,
-          amount: recurringExpense.amount,
-          amountMin: recurringExpense.amountMin,
-          amountMax: recurringExpense.amountMax,
+          // Only the fields this amountType uses; the others stay blank so
+          // `required` still blocks a submit of 0.
+          amount:
+            recurringExpense.amountType === 'fixed'
+              ? toMoneyInput(recurringExpense.amount)
+              : '',
+          amountMin:
+            recurringExpense.amountType === 'range'
+              ? toMoneyInput(recurringExpense.amountMin)
+              : '',
+          amountMax:
+            recurringExpense.amountType === 'range'
+              ? toMoneyInput(recurringExpense.amountMax)
+              : '',
           frequency: recurringExpense.frequency,
           startDate: recurringExpense.startDate,
           endDate: recurringExpense.endDate,
@@ -83,10 +96,6 @@ export default function RecurringExpenseForm({
   const isAsNeeded = formData.frequency === 'as_needed';
 
   const onChangeHandler = (value: any, field: string) => {
-    if (['amount', 'amountMin', 'amountMax'].includes(field)) {
-      value = parseFloat(value);
-      if (isNaN(value)) value = 0;
-    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -97,17 +106,24 @@ export default function RecurringExpenseForm({
 
   const { submitting, handleSubmit } = useFormSubmit(async () => {
     setFieldErrors({});
+    // The three amount fields are held as raw strings; only the ones the
+    // chosen `amountType` actually uses are worth coercing.
+    const amounts = {
+      amount: parseMoneyInput(formData.amount),
+      amountMin: parseMoneyInput(formData.amountMin),
+      amountMax: parseMoneyInput(formData.amountMax),
+    };
     try {
       if (isEdit) {
         const { name: _name, ...updateData } = formData;
         void _name;
         await HttpClient.patch(
           `/recurring-expenses/${encodeURIComponent(recurringExpense.name)}`,
-          updateData,
+          { ...updateData, ...amounts },
         );
         showSuccessSnackBar('Recurring expense updated successfully!');
       } else {
-        await HttpClient.post('/recurring-expenses', formData);
+        await HttpClient.post('/recurring-expenses', { ...formData, ...amounts });
         showSuccessSnackBar('Recurring expense created successfully!');
       }
       setFormData(initialFormData);
@@ -185,7 +201,7 @@ export default function RecurringExpenseForm({
               label="Amount"
               variant="outlined"
               type="number"
-              value={formData.amount || ''}
+              value={formData.amount}
               onChange={(e) => onChangeHandler(e.target.value, 'amount')}
               error={!!fieldErrors.amount}
               helperText={getError('amount')}
@@ -206,7 +222,7 @@ export default function RecurringExpenseForm({
               label="Min Amount"
               variant="outlined"
               type="number"
-              value={formData.amountMin || ''}
+              value={formData.amountMin}
               onChange={(e) => onChangeHandler(e.target.value, 'amountMin')}
               error={!!fieldErrors.amountMin}
               helperText={getError('amountMin')}
@@ -224,7 +240,7 @@ export default function RecurringExpenseForm({
               label="Max Amount"
               variant="outlined"
               type="number"
-              value={formData.amountMax || ''}
+              value={formData.amountMax}
               onChange={(e) => onChangeHandler(e.target.value, 'amountMax')}
               error={!!fieldErrors.amountMax}
               helperText={getError('amountMax')}
