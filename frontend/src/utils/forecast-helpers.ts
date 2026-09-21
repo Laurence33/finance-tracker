@@ -8,14 +8,30 @@ type GenerateForecastParams = {
   recurringExpenses: RecurringExpense[];
   lendings: Lending[];
   averageMonthlyIncome: number;
+  /**
+   * Spending that is *not* one of the projected recurring expenses — see
+   * `computeAverageSpending`. Spread evenly like income. Defaults to 0 for
+   * callers that only have the recurring schedule to go on.
+   */
+  averageMonthlySpending?: number;
   horizonDays: ForecastHorizon;
 };
+
+/**
+ * Which recurring expenses the forecast projects as dated events. The same
+ * predicate decides which historical payments are netted out of the spending
+ * average, so an expense is counted in exactly one of the two places.
+ */
+export function isProjectedRecurring(re: RecurringExpense): boolean {
+  return re.status === 'active' && re.frequency !== 'as_needed';
+}
 
 export function generateForecast({
   fundSources,
   recurringExpenses,
   lendings,
   averageMonthlyIncome,
+  averageMonthlySpending = 0,
   horizonDays,
 }: GenerateForecastParams): ForecastDataPoint[] {
   const currentBalance = fundSources.reduce((sum, fs) => sum + Number(fs.balance), 0);
@@ -23,6 +39,7 @@ export function generateForecast({
   today.setHours(0, 0, 0, 0);
 
   const weeklyIncome = (averageMonthlyIncome * 7) / 30;
+  const weeklySpending = (averageMonthlySpending * 7) / 30;
 
   // Generate weekly date buckets
   const weeks: Date[] = [];
@@ -32,9 +49,7 @@ export function generateForecast({
     weeks.push(weekDate);
   }
 
-  const activeRecurring = recurringExpenses.filter(
-    (re) => re.status === 'active' && re.frequency !== 'as_needed',
-  );
+  const activeRecurring = recurringExpenses.filter(isProjectedRecurring);
 
   const activeLendings = lendings.filter((l) => l.status !== 'paid');
 
@@ -69,6 +84,21 @@ export function generateForecast({
         type: 'income',
         label: 'Projected income',
         amount: weeklyIncome,
+      });
+    }
+
+    // Non-recurring spending (spread evenly, same on every line — the
+    // best/worst spread comes from range expenses and lendings, not from here)
+    runningBest -= weeklySpending;
+    runningExpected -= weeklySpending;
+    runningWorst -= weeklySpending;
+
+    if (weeklySpending > 0) {
+      events.push({
+        date: formatDate(weekEnd),
+        type: 'spending',
+        label: 'Projected spending',
+        amount: -weeklySpending,
       });
     }
 
@@ -211,6 +241,58 @@ export function computeAverageIncome(monthlyTotals: number[]): AverageIncome {
     average: nonZero.reduce((sum, t) => sum + t, 0) / nonZero.length,
     monthsUsed: nonZero.length,
   };
+}
+
+export type MonthSpending = {
+  /** `totalExpenses` from `/expenses?month=`. */
+  totalExpenses: number;
+  /** Payments of projected recurring expenses that landed in the same month. */
+  recurringPaid: number;
+};
+
+/**
+ * Average monthly spending *excluding* the recurring expenses the forecast
+ * already projects as dated events — paying one writes an ordinary expense
+ * (`RecurringExpensesService.pay`), so the month total contains it and it
+ * would otherwise be counted twice.
+ *
+ * Months with nothing recorded are skipped like income; a month that nets to
+ * zero after the subtraction is real data and counts. Each month is clamped at
+ * zero so a bill paid for a prior period can't drag the average negative.
+ */
+export function computeAverageSpending(months: MonthSpending[]): AverageIncome {
+  const recorded = months.filter((m) => m.totalExpenses > 0);
+  if (recorded.length === 0) return { average: 0, monthsUsed: 0 };
+  const total = recorded.reduce(
+    (sum, m) => sum + Math.max(0, m.totalExpenses - m.recurringPaid),
+    0,
+  );
+  return { average: total / recorded.length, monthsUsed: recorded.length };
+}
+
+type PaidRecurring = { recurringName: string; amount: number; expenseTimestamp: string };
+
+/**
+ * How much of a month's expense total came from projected recurring expenses.
+ *
+ * Bucketed on `expenseTimestamp`, not `periodKey`: the expense row written
+ * alongside the payment uses that timestamp as its key, so this is the month
+ * `/expenses?month=` counted it in — even when August's rent was paid in
+ * September. A payment whose recurring expense is gone, cancelled, or
+ * as-needed is left in the total: nothing projects it, so it is ordinary
+ * spending.
+ */
+export function recurringPaidInMonth(
+  payments: PaidRecurring[],
+  recurringExpenses: RecurringExpense[],
+  month: string,
+): number {
+  const projected = new Set(
+    recurringExpenses.filter(isProjectedRecurring).map((re) => re.name),
+  );
+  return payments
+    .filter((p) => projected.has(p.recurringName) && p.expenseTimestamp.startsWith(month))
+    .reduce((sum, p) => sum + p.amount, 0);
 }
 
 function formatDate(date: Date): string {

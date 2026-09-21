@@ -9,6 +9,7 @@ import {
 import RepeatIcon from '@mui/icons-material/Repeat';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import Money from '@/components/atoms/Money';
 import { ForecastEvent } from '@/types/Forecast';
 
@@ -16,6 +17,7 @@ const EVENT_ICONS = {
   recurring: <RepeatIcon sx={{ fontSize: 18 }} />,
   lending_repayment: <HandshakeIcon sx={{ fontSize: 18 }} />,
   income: <TrendingUpIcon sx={{ fontSize: 18 }} />,
+  spending: <TrendingDownIcon sx={{ fontSize: 18 }} />,
 } as const;
 
 const INITIAL_LIMIT = 15;
@@ -27,9 +29,9 @@ export default function ForecastBreakdown({
 }) {
   const [showAll, setShowAll] = useState(false);
 
-  // Filter out generic weekly income entries, keep only specific events
+  // Filter out the generic weekly income/spending entries, keep only specific events
   const specificEvents = events.filter(
-    (e) => e.type !== 'income',
+    (e) => e.type !== 'income' && e.type !== 'spending',
   );
 
   const displayed = showAll

@@ -1,11 +1,17 @@
 import * as z from 'zod/v4';
 
 const lettersAndDashes = /^[a-z0-9-]+$/;
+// `/recurring-expenses/payments` is the all-payments collection, so a record
+// with that name could never be reached at `/recurring-expenses/{name}`.
+const RESERVED_NAMES = ['payments'];
 
 export const CreateRecurringExpenseValidator = z.object({
     name: z.preprocess(
         (value) => (typeof value === 'string' ? value.toLowerCase() : value),
-        z.string().regex(lettersAndDashes, { message: 'Name must contain lowercase letters, numbers, and dashes only.' }),
+        z
+            .string()
+            .regex(lettersAndDashes, { message: 'Name must contain lowercase letters, numbers, and dashes only.' })
+            .refine((name) => !RESERVED_NAMES.includes(name), { message: 'That name is reserved.' }),
     ),
     displayName: z.string().min(1, 'Display name is required.'),
     amountType: z.enum(['fixed', 'range']),

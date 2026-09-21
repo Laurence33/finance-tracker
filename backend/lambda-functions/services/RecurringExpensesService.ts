@@ -97,17 +97,34 @@ export class RecurringExpensesService {
         return payments || [];
     }
 
-    async getAllPayments() {
-        const command = new QueryCommand({
-            TableName: SINGLE_TABLE_NAME,
-            KeyConditionExpression: 'PK = :pk',
-            ExpressionAttributeValues: {
-                ':pk': this.recurringPaymentPk,
-            },
-        });
-        const response = await ddbDocClient.send(command);
-        const payments = response.Items?.map((item) => new RecurringExpensePayment(item, this.userId).toNormalItem());
-        return payments || [];
+    /**
+     * Every payment whose expense landed on or after `from` (a `YYYY-MM`), across
+     * all recurring expenses. Reads LSI1 so the cost scales with the window, not
+     * with the years of history behind it. Paginated: the window is small, but a
+     * silently truncated page would under-net the forecast with no error.
+     */
+    async getPaymentsSince(from: string) {
+        const payments: ReturnType<RecurringExpensePayment['toNormalItem']>[] = [];
+        let ExclusiveStartKey: Record<string, any> | undefined;
+        do {
+            const response = await ddbDocClient.send(
+                new QueryCommand({
+                    TableName: SINGLE_TABLE_NAME,
+                    IndexName: 'LSI1',
+                    KeyConditionExpression: 'PK = :pk AND LSI1SK >= :from',
+                    ExpressionAttributeValues: {
+                        ':pk': this.recurringPaymentPk,
+                        ':from': from,
+                    },
+                    ExclusiveStartKey,
+                }),
+            );
+            for (const item of response.Items ?? []) {
+                payments.push(new RecurringExpensePayment(item, this.userId).toNormalItem());
+            }
+            ExclusiveStartKey = response.LastEvaluatedKey;
+        } while (ExclusiveStartKey);
+        return payments;
     }
 
     async getPayment(recurringName: string, periodKey: string) {

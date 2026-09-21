@@ -26,13 +26,15 @@ const PAGE_KEYS: Record<string, (month: string) => string[]> = {
   '/assets': () => [KEYS.assets, KEYS.fundSources],
   '/tags': (month) => [KEYS.tags, KEYS.expenses(month)],
   '/recurring': () => [KEYS.recurringExpenses, KEYS.fundSources],
-  // Matching an income prefix here would revalidate every cached month — 16 of
-  // them after a dashboard visit — on a screen that shows three.
+  // Matching an income or expense prefix here would revalidate every cached
+  // month — 16 of them after a dashboard visit — on a screen that shows three.
   '/forecast': (month) => [
     ...forecastMonths(month).map((m) => KEYS.incomes(m)),
+    ...forecastMonths(month).map((m) => KEYS.expenses(m)),
     KEYS.fundSources,
     KEYS.recurringExpenses,
     KEYS.lendings,
+    KEYS.recurringPaymentsSince(forecastMonths(month)[2]),
   ],
   '/dashboard': () => [KEYS.fundSources, KEYS.recurringExpenses, KEYS.lendings],
 };

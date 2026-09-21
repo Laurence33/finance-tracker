@@ -33,6 +33,13 @@ const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
             return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
         }
 
+        if (path === '/recurring-expenses/payments') {
+            if (event.httpMethod === HttpMethod.GET) {
+                return await controller.getPaymentsSince(event.queryStringParameters?.from);
+            }
+            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Invalid request method.');
+        }
+
         if (path === '/recurring-expenses/{name}/payments') {
             if (event.httpMethod === HttpMethod.GET) {
                 return await controller.getPayments(name!);

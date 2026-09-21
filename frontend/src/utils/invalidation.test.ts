@@ -136,6 +136,8 @@ describe('writes that only touch their own collection and balances', () => {
     const h = harness();
     h.invalidators.afterRecurringPaymentWrite();
     expect(h.evicted(KEYS.recurringPayments('Netflix'))).toBe(true);
+    // The forecast's all-payments aggregate shares the prefix by design.
+    expect(h.evicted(KEYS.recurringPaymentsSince('2026-06'))).toBe(true);
     // The collection key itself must survive — it is being revalidated.
     expect(h.evicted(KEYS.recurringExpenses)).toBe(false);
   });

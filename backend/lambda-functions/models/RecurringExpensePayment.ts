@@ -32,6 +32,10 @@ export class RecurringExpensePayment {
         return {
             PK: DDBConstants.PARTITIONS.RECURRING_EXPENSE_PAYMENT(this.userId),
             SK: `${this.recurringName}#${this.periodKey}`,
+            // The SK groups by bill; LSI1 orders by date so "everything since
+            // <month>" is a key range rather than a scan of the whole history.
+            // Omitted when blank — an index key can't be an empty string.
+            ...(this.expenseTimestamp && { LSI1SK: this.expenseTimestamp }),
             amount: this.amount,
             fundSource: this.fundSource,
             expenseTimestamp: this.expenseTimestamp,

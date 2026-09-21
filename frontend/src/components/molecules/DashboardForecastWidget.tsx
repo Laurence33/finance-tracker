@@ -95,7 +95,7 @@ export default function DashboardForecastWidget({
               variant="caption"
               sx={{ color: 'text.disabled', mt: 0.5 }}
             >
-              Based on this month&apos;s income
+              Based on this month&apos;s income · recurring only, no other spending
             </Typography>
           </Stack>
         </CardContent>

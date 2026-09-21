@@ -21,6 +21,10 @@ export const KEYS = {
     `/lendings/payments?lendingTimestamp=${encodeURIComponent(lendingTimestamp)}`,
   recurringPayments: (name: string) =>
     `/recurring-expenses/${encodeURIComponent(name)}/payments`,
+  // Payments across every recurring expense since a month. Sits under
+  // RECURRING_PAYMENTS_PREFIX on purpose: a payment write evicts it along with
+  // the per-record histories, which is exactly when it goes stale.
+  recurringPaymentsSince: (month: string) => `/recurring-expenses/payments?from=${month}`,
 } as const;
 
 export const EXPENSES_PREFIX = '/expenses?month=';

@@ -105,6 +105,20 @@ export class RecurringExpensesController implements Controller {
         });
     }
 
+    // Payments across every recurring expense since a month, in one request —
+    // the forecast nets these out of monthly totals and can't afford one call
+    // per recurring expense.
+    async getPaymentsSince(from: string | undefined) {
+        if (!from || !/^\d{4}-\d{2}$/.test(from)) {
+            return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'from must be a month in YYYY-MM format.');
+        }
+        const payments = await this.recurringExpensesService.getPaymentsSince(from);
+        return createSuccessResponse(HttpStatus.OK, {
+            message: 'Payments retrieved successfully',
+            data: { payments },
+        });
+    }
+
     async pay(name: string, body: any) {
         const validationResult = PayRecurringExpenseValidator.safeParse(body);
         if (!validationResult.success) {

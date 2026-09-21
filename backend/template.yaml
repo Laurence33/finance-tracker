@@ -763,6 +763,23 @@ Resources:
             Auth:
               Authorizer: NONE
               ApiKeyRequired: false
+        GetAllRecurringPayments:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/payments
+            Method: get
+            RestApiId:
+              Ref: ApiGatewayApi
+        AllRecurringPaymentsOptions:
+          Type: Api
+          Properties:
+            Path: /recurring-expenses/payments
+            Method: options
+            RestApiId:
+              Ref: ApiGatewayApi
+            Auth:
+              Authorizer: NONE
+              ApiKeyRequired: false
         GetRecurringPayments:
           Type: Api
           Properties:

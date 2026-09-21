@@ -63,6 +63,15 @@ describe('page-scoped refresh', () => {
     expect(h.refetchedByFilter(KEYS.incomes('2026-01'))).toBe(false);
   });
 
+  it('forecast refreshes the same three months of expenses and the payments it nets out', async () => {
+    const h = harness('/forecast');
+    await h.run();
+    expect(h.revalidated).toContain(KEYS.expenses('2026-08'));
+    expect(h.revalidated).toContain(KEYS.expenses('2026-06'));
+    expect(h.revalidated).not.toContain(KEYS.expenses('2026-01'));
+    expect(h.revalidated).toContain(KEYS.recurringPaymentsSince('2026-06'));
+  });
+
   it('an unknown route refreshes nothing rather than guessing', async () => {
     const h = harness('/some/new/page');
     await h.run();

@@ -2,7 +2,7 @@ export type ForecastHorizon = 30 | 60 | 90;
 
 export type ForecastEvent = {
   date: string;
-  type: 'recurring' | 'lending_repayment' | 'income';
+  type: 'recurring' | 'lending_repayment' | 'income' | 'spending';
   label: string;
   amount: number;
 };
