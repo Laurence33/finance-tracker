@@ -121,6 +121,14 @@ export class FundSourcesController implements Controller {
             );
         }
 
+        const fundSourceInUseByLendings = await this.fundSourcesService.checkInUseByActiveLendings(name);
+        if (fundSourceInUseByLendings) {
+            return createBadRequestResponse(
+                HttpStatus.BAD_REQUEST,
+                'Cannot delete fund source that is in use by active lendings.',
+            );
+        }
+
         await this.fundSourcesService.delete(name);
 
         return createSuccessResponse(HttpStatus.NO_CONTENT);

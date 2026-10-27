@@ -3,6 +3,8 @@ import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { FundSource } from 'models/FundSource';
 import { NotFoundException } from 'utils/Exceptions';
+import { LendingsService } from './LendingsService';
+import { lendingsBlockFundSourceDeletion } from 'utils/lendingsBlockFundSourceDeletion';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 
@@ -80,6 +82,12 @@ export class FundSourcesService {
         const checkResponse = await ddbDocClient.send(checkCmd);
         if (!checkResponse.Items) return false;
         return checkResponse.Items?.length > 0;
+    }
+
+    // Lendings aren't indexed by Fund Source, so read the user's Lendings and filter.
+    async checkInUseByActiveLendings(fundSourceName: string): Promise<boolean> {
+        const lendings = await new LendingsService(this.userId).getAll();
+        return lendingsBlockFundSourceDeletion(lendings, fundSourceName);
     }
 
     async getFundSource(name: string) {
