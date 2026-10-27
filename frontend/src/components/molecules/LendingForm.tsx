@@ -106,6 +106,10 @@ export default function LendingForm({
     }
   });
 
+  const isCreditCard =
+    fundSources.find((fs) => fs.name === formData.fundSource)?.isCreditCard ??
+    false;
+
   const getError = (field: string) => fieldErrors[field]?.join(', ') || '';
 
   return (
@@ -167,7 +171,9 @@ export default function LendingForm({
             helperText={
               getError('fundSource') ||
               (formData.deductedFromBalance
-                ? 'Balance will be deducted from this source'
+                ? isCreditCard
+                  ? 'Will be charged to this card'
+                  : 'Balance will be deducted from this source'
                 : 'Recorded for reference only — balance unchanged')
             }
             disabled={isEdit}
@@ -190,7 +196,11 @@ export default function LendingForm({
                   }
                 />
               }
-              label="Deduct from fund source balance"
+              label={
+                isCreditCard
+                  ? 'Charge to card balance'
+                  : 'Deduct from fund source balance'
+              }
             />
           )}
         </Box>

@@ -2,6 +2,7 @@ import { createBadRequestResponse, createSuccessResponse, generateValidationErro
 import { LendingsService } from 'services/LendingsService';
 import { FundSourcesService } from 'services/FundSourcesService';
 import { Controller } from 'types/Controller';
+import { canDebitFundSource } from 'utils/fundSourceBalance';
 import { CreateLendingValidator, UpdateLendingValidator, CreateLendingPaymentValidator } from 'validators/CreateLendingValidator';
 import { treeifyError } from 'zod/v4';
 
@@ -44,8 +45,7 @@ export class LendingsController implements Controller {
         }
 
         if (validationResult.data.deductedFromBalance) {
-            const fsItem = fundSource.toNormalItem();
-            if (Number(fsItem.balance) < validationResult.data.amount) {
+            if (!canDebitFundSource(fundSource.toNormalItem(), validationResult.data.amount)) {
                 return createBadRequestResponse(
                     HttpStatus.BAD_REQUEST,
                     'Validation failed',
