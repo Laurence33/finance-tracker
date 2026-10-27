@@ -3,6 +3,7 @@ import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { Lending } from 'models/Lending';
 import { LendingPayment } from 'models/LendingPayment';
+import { fundSourceAdjustmentItem } from 'utils/fundSourceBalance';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 
@@ -72,21 +73,7 @@ export class LendingsService {
         ];
 
         if (deductedFromBalance) {
-            transactItems.push({
-                Update: {
-                    TableName: SINGLE_TABLE_NAME,
-                    Key: {
-                        PK: this.fundSourcePk,
-                        SK: data.fundSource,
-                    },
-                    UpdateExpression: 'SET balance = balance - :amt',
-                    ConditionExpression: 'attribute_exists(PK) AND (isCreditCard = :true OR balance >= :amt)',
-                    ExpressionAttributeValues: {
-                        ':amt': data.amount,
-                        ':true': true,
-                    },
-                },
-            });
+            transactItems.push(fundSourceAdjustmentItem(this.userId, data.fundSource, -data.amount));
         }
 
         const transactCmd = new TransactWriteCommand({
@@ -218,19 +205,9 @@ export class LendingsService {
         ];
 
         if (lendingItem.deductedFromBalance) {
-            transactItems.push({
-                Update: {
-                    TableName: SINGLE_TABLE_NAME,
-                    Key: {
-                        PK: this.fundSourcePk,
-                        SK: lendingItem.fundSource,
-                    },
-                    UpdateExpression: 'SET balance = balance + :amt',
-                    ExpressionAttributeValues: {
-                        ':amt': remainingAmount,
-                    },
-                },
-            });
+            // Conditioned on existence: a removed fund source fails the transaction
+            // instead of being re-created with only a balance.
+            transactItems.push(fundSourceAdjustmentItem(this.userId, lendingItem.fundSource, remainingAmount));
         }
 
         const transactCmd = new TransactWriteCommand({

@@ -22,15 +22,27 @@ _Avoid_: Move, payment
 
 **Fund Source**:
 An account money sits in or is charged against — a bank account, a wallet, a credit card.
-Carries a balance, and a credit card is a Fund Source whose balance may go negative.
+Carries a balance, and a credit card is a Fund Source whose balance may go negative: any
+debit — Expense, Transfer, Lending — may be charged to a credit card regardless of its
+balance, while any other Fund Source can only be debited up to what it holds.
 _Avoid_: Account, wallet, source
 
 ### Obligations
 
 **Lending**:
 Money the user has lent out to a borrower, drawn down by Lending Payments as it is repaid.
+It may be drawn from any Fund Source. When drawn from a credit card it deepens the card's
+debt exactly as an Expense would — it is the same Lending, not a distinct kind.
+A Lending is **active** until something is repaid, **partially paid** while repayments fall
+short of its amount, and **paid** once they reach it. Its amount can never be set below what
+has already been repaid.
 _Avoid_: Loan — reserved for a future feature covering money the user *owes*. Also avoid
 debt, receivable.
+
+**Lending Payment**:
+A repayment against a Lending, credited to whichever Fund Source the user chooses — not
+necessarily the one the Lending was drawn from. Crediting a credit card reduces its debt.
+_Avoid_: Repayment installment, collection
 
 **Recurring Expense**:
 A repeating obligation the user records once and then settles period by period. Settling one
