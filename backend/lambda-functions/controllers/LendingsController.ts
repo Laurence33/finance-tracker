@@ -3,6 +3,7 @@ import { LendingsService } from 'services/LendingsService';
 import { FundSourcesService } from 'services/FundSourcesService';
 import { Controller } from 'types/Controller';
 import { canDebitFundSource } from 'utils/fundSourceBalance';
+import { planLendingEdit } from 'utils/lendingStatus';
 import { CreateLendingValidator, UpdateLendingValidator, CreateLendingPaymentValidator } from 'validators/CreateLendingValidator';
 import { treeifyError } from 'zod/v4';
 
@@ -84,11 +85,46 @@ export class LendingsController implements Controller {
             return createBadRequestResponse(HttpStatus.NOT_FOUND, 'Lending not found.');
         }
 
-        const updatedLending = await this.lendingsService.update(timestamp, validationResult.data);
-        return createSuccessResponse(HttpStatus.OK, {
-            message: 'Lending updated successfully',
-            data: updatedLending,
-        });
+        const existingItem = existingLending.toNormalItem();
+        const plan = planLendingEdit(existingItem, validationResult.data.amount);
+        if (!plan.ok) {
+            return createBadRequestResponse(
+                HttpStatus.BAD_REQUEST,
+                'Validation failed',
+                generateValidationErrors({ amount: [`Amount cannot be less than the ${plan.totalPaid} already repaid.`] }),
+            );
+        }
+
+        if (plan.balanceDelta < 0) {
+            const fundSource = await this.fundSourcesService.getFundSource(existingItem.fundSource);
+            if (!fundSource) {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Validation failed',
+                    generateValidationErrors({ amount: ['Fund source not found.'] }),
+                );
+            }
+            if (!canDebitFundSource(fundSource.toNormalItem(), -plan.balanceDelta)) {
+                return createBadRequestResponse(
+                    HttpStatus.BAD_REQUEST,
+                    'Validation failed',
+                    generateValidationErrors({ amount: ['Insufficient fund source balance.'] }),
+                );
+            }
+        }
+
+        try {
+            const updatedLending = await this.lendingsService.update(existingItem, validationResult.data, plan);
+            return createSuccessResponse(HttpStatus.OK, {
+                message: 'Lending updated successfully',
+                data: updatedLending,
+            });
+        } catch (error: any) {
+            if (error.name === 'TransactionCanceledException') {
+                return createBadRequestResponse(HttpStatus.BAD_REQUEST, 'Transaction failed. Fund source may have insufficient balance.');
+            }
+            throw error;
+        }
     }
 
     async delete(timestamp: string | undefined) {

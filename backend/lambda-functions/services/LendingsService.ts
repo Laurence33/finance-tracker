@@ -1,9 +1,10 @@
-import { PutCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { DDBConstants } from 'ft-common-layer';
 import { ddbDocClient } from './ddb-client';
 import { Lending } from 'models/Lending';
 import { LendingPayment } from 'models/LendingPayment';
 import { fundSourceAdjustmentItem } from 'utils/fundSourceBalance';
+import { lendingStatus, LendingStatus } from 'utils/lendingStatus';
 
 const SINGLE_TABLE_NAME = DDBConstants.DDB_TABLE_NAME;
 
@@ -92,7 +93,7 @@ export class LendingsService {
 
         const lendingItem = lending.toNormalItem();
         const newTotalPaid = lendingItem.totalPaid + data.amount;
-        const newStatus = newTotalPaid >= lendingItem.amount ? 'paid' : 'partially_paid';
+        const newStatus = lendingStatus(lendingItem.amount, newTotalPaid);
         const addedToBalance = data.addedToBalance ?? true;
 
         const payment = new LendingPayment(
@@ -217,14 +218,15 @@ export class LendingsService {
         await ddbDocClient.send(transactCmd);
     }
 
-    async update(timestamp: string, body: any) {
-        const lending = await this.getLending(timestamp);
-        if (!lending) {
-            throw new Error('Lending not found.');
-        }
-
-        const existingItem = lending.toNormalItem();
-        const updatedData = { ...existingItem, ...body };
+    // Applies an edit plan (see planLendingEdit) in one transaction: the Lending
+    // put with its new amount and status, plus the Fund Source adjustment when
+    // the amount change moves a deducted balance.
+    async update(
+        existingItem: ReturnType<Lending['toNormalItem']>,
+        body: any,
+        plan: { balanceDelta: number; status: LendingStatus },
+    ) {
+        const updatedData = { ...existingItem, ...body, status: plan.status };
 
         const updatedLending = new Lending(
             {
@@ -235,12 +237,25 @@ export class LendingsService {
             this.userId,
         );
 
-        const putCmd = new PutCommand({
-            TableName: SINGLE_TABLE_NAME,
-            Item: updatedLending.toDdbItem(),
-        });
-        await ddbDocClient.send(putCmd);
+        const transactItems: any[] = [
+            {
+                Put: {
+                    TableName: SINGLE_TABLE_NAME,
+                    Item: updatedLending.toDdbItem(),
+                    ConditionExpression: 'attribute_exists(PK)',
+                },
+            },
+        ];
 
+        if (plan.balanceDelta !== 0) {
+            transactItems.push(fundSourceAdjustmentItem(this.userId, existingItem.fundSource, plan.balanceDelta));
+        }
+
+        const transactCmd = new TransactWriteCommand({
+            TransactItems: transactItems,
+        });
+
+        await ddbDocClient.send(transactCmd);
         return updatedLending.toNormalItem();
     }
 }
