@@ -42,9 +42,16 @@ export default function LendingPaymentForm({
 
   const remaining = lending.amount - lending.totalPaid;
 
+  // Start on the Fund Source the Lending was drawn from — the common case — but
+  // only while it still exists, so a deleted source never becomes an invalid
+  // pre-selection. The user can still credit any other Fund Source.
+  const lendingFundSourceExists = fundSources.some(
+    (fs) => fs.name === lending.fundSource,
+  );
+
   const [formData, setFormData] = useState<PaymentFormData>({
     amount: toMoneyInput(remaining),
-    fundSource: '',
+    fundSource: lendingFundSourceExists ? lending.fundSource : '',
     notes: '',
     addedToBalance: true,
   });
