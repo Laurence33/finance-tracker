@@ -2,6 +2,7 @@ import { createBadRequestResponse, createSuccessResponse, generateValidationErro
 import { TransfersService } from 'services/TransfersService';
 import { FundSourcesService } from 'services/FundSourcesService';
 import { Controller } from 'types/Controller';
+import { canDebitFundSource } from 'utils/fundSourceBalance';
 import { CreateTransferValidator } from 'validators/CreateTransferValidator';
 import { treeifyError } from 'zod/v4';
 
@@ -49,9 +50,7 @@ export class TransfersController implements Controller {
             );
         }
 
-        const totalDeducted = data.amount + data.fee;
-        const sourceBalance = Number(sourceFund.toNormalItem().balance);
-        if (sourceBalance < totalDeducted) {
+        if (!canDebitFundSource(sourceFund.toNormalItem(), data.amount + data.fee)) {
             return createBadRequestResponse(
                 HttpStatus.BAD_REQUEST,
                 'Validation failed',

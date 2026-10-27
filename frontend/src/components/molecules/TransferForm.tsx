@@ -17,6 +17,7 @@ import { AppContext } from '@/context/AppContext';
 import { HttpClient, HttpError } from '@/utils/httpClient';
 import { currentTimestampForInput } from '@/utils/date-functions';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { canDebitFundSource } from '@/utils/fund-source-debit';
 
 type TransferFormData = {
   sourceFundSource: string;
@@ -56,8 +57,9 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
   const amount = parseMoneyInput(formData.amount);
   const fee = parseMoneyInput(formData.fee);
   const totalDeducted = amount + fee;
+  const isCreditCard = !!sourceFund?.isCreditCard;
   const insufficient =
-    !!formData.sourceFundSource && totalDeducted > sourceBalance;
+    !!sourceFund && !canDebitFundSource(sourceFund, totalDeducted);
 
   const destinationOptions = fundSources.filter(
     (fs) => fs.name !== formData.sourceFundSource,
@@ -133,8 +135,10 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
               </MenuItem>
             ))}
           </Select>
-          {fieldErrors.sourceFundSource && (
-            <FormHelperText>{fieldErrors.sourceFundSource}</FormHelperText>
+          {(fieldErrors.sourceFundSource || isCreditCard) && (
+            <FormHelperText>
+              {fieldErrors.sourceFundSource || 'Will be charged to this card'}
+            </FormHelperText>
           )}
         </FormControl>
 
@@ -244,7 +248,7 @@ export default function TransferForm({ onClose }: { onClose: () => void }) {
           />
         </Box>
 
-        {sourceFund && (
+        {sourceFund && !isCreditCard && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Available in {sourceFund.displayText}: {formatMoney(sourceBalance)}
           </Typography>
